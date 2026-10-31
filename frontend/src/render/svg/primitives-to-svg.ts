@@ -123,6 +123,11 @@ function toNode(p: Primitive, font: string): SvgNode {
   }
 }
 
+/** Nós SVG soltos (sem a raiz <svg>), para compor dentro de outro desenho. */
+export function primitiveNodes(prims: readonly Primitive[], fontFamily = 'Roboto'): SvgNode[] {
+  return prims.map((p) => toNode(p, fontFamily))
+}
+
 export function primitivesToSvg(prims: readonly Primitive[], o: SvgSheetOptions): SvgNode {
   const font = o.fontFamily ?? 'Roboto'
   const children: SvgNode[] = []

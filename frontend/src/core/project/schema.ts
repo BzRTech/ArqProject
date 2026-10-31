@@ -1,0 +1,109 @@
+import { z } from 'zod'
+
+/**
+ * Documento do projeto (formato v1). Fonte única da verdade: na Fase 2 este schema é
+ * exportado como JSON Schema para o Django validar o JSONB.
+ * Todas as medidas em MILÍMETROS INTEIROS.
+ */
+
+export const SCHEMA_VERSION = 1
+
+const mm = z.number().int()
+const positiveMm = mm.positive()
+const id = z.string().min(1)
+
+export const Vec2Schema = z.object({ x: mm, y: mm })
+
+export const WallSchema = z.object({
+  id,
+  kind: z.literal('wall'),
+  /** Eixo da parede. */
+  points: z.array(Vec2Schema).min(2),
+  closed: z.boolean(),
+  thicknessMm: positiveMm,
+})
+
+export const DimensionSchema = z.object({
+  id,
+  kind: z.literal('dimension'),
+  p1: Vec2Schema,
+  p2: Vec2Schema,
+  orientation: z.enum(['aligned', 'horizontal', 'vertical']),
+  /** Afastamento em mm do MODELO (vira mm de papel dividindo pela escala). */
+  offsetMm: mm,
+})
+
+export const TextSchema = z.object({
+  id,
+  kind: z.literal('text'),
+  at: Vec2Schema,
+  text: z.string(),
+  /** Corpo em mm de papel. */
+  sizeMm: z.number().positive(),
+})
+
+export const DrawingSchema = z.discriminatedUnion('kind', [WallSchema, DimensionSchema, TextSchema])
+
+export const ItemSchema = z.object({
+  id,
+  /** Referência ao bloco do catálogo (vira libraryRef {kind,id,version} na Fase 3). */
+  blockId: z.string(),
+  blockVersion: z.number().int().positive(),
+  name: z.string(),
+  /** Centro do item no modelo. */
+  position: Vec2Schema,
+  rotationDeg: z.number(),
+  mirrored: z.boolean(),
+  sizeMm: z.object({ w: positiveMm, d: positiveMm, h: positiveMm.optional() }),
+  notes: z.string().optional(),
+})
+
+export const BasePlanSchema = z.object({
+  /** Chave do arquivo (IndexedDB agora; Asset no S3 na Fase 2). */
+  assetId: z.string(),
+  /** Canto superior esquerdo e tamanho no modelo (após calibração). */
+  x: z.number(),
+  y: z.number(),
+  widthMm: z.number().positive(),
+  heightMm: z.number().positive(),
+  opacity: z.number().min(0).max(1),
+  locked: z.boolean(),
+  visible: z.boolean(),
+  calibrated: z.boolean(),
+})
+
+export const EnvironmentSchema = z.object({
+  id,
+  name: z.string().min(1),
+  ceilingHeightMm: positiveMm,
+  basePlan: BasePlanSchema.nullable(),
+  drawings: z.array(DrawingSchema),
+  items: z.array(ItemSchema),
+})
+
+export const ProjectSchema = z.object({
+  schemaVersion: z.literal(SCHEMA_VERSION),
+  name: z.string().min(1),
+  environments: z.array(EnvironmentSchema).min(1),
+})
+
+export type Wall = z.infer<typeof WallSchema>
+export type DimensionDrawing = z.infer<typeof DimensionSchema>
+export type TextDrawing = z.infer<typeof TextSchema>
+export type Drawing = z.infer<typeof DrawingSchema>
+export type Item = z.infer<typeof ItemSchema>
+export type BasePlan = z.infer<typeof BasePlanSchema>
+export type Environment = z.infer<typeof EnvironmentSchema>
+export type Project = z.infer<typeof ProjectSchema>
+
+export function newEnvironment(envId: string, name: string): Environment {
+  return { id: envId, name, ceilingHeightMm: 2700, basePlan: null, drawings: [], items: [] }
+}
+
+export function newProject(envId: string): Project {
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    name: 'Projeto sem nome',
+    environments: [newEnvironment(envId, 'Ambiente 1')],
+  }
+}

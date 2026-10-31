@@ -265,6 +265,16 @@ São pontos de partida: valide com um marceneiro.
 
 ## 5. Fases de execução no Claude Code
 
+> **Ordem ajustada (31/10/2026):** depois das Fases 0 e 1, foi feito primeiro um **editor com
+> blocos rodando no navegador**: o essencial das Fases 4 e 5, com o projeto salvo no
+> navegador (IndexedDB) e PDF A3 por ambiente. O objetivo foi validar cedo o diferencial do
+> produto (montar o layout no sistema com blocos paramétricos). As Fases 2 e 3 vêm em seguida
+> e ligam esse editor ao servidor e ao banco, com o mesmo formato de documento (schema zod) e
+> de bloco (ADR 004). Pendente das Fases 4–5: PDF como planta base (pdf.js), marcadores
+> numerados e legenda, disciplinas como filtro, área (m²), guia, modo humanizada, preço,
+> fornecedor e aprovação no painel de itens, e o recorte de parede pela porta.
+
+
 Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fases.
 
 ### Fase 0 — Monorepo, Docker e spikes (2 dias)

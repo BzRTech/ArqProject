@@ -43,16 +43,16 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
 4. atualizar "Estado atual" abaixo.
 
 ## Estado atual
-- Fase: **1 concluída** (branch `fase-1-nucleo`, empilhada sobre `fase-0-fundacao`). Próxima: Fase 2 — contas, organizações e projetos.
+- Etapa atual: **editor com blocos concluído** (branch `fase-editor-blocos`, empilhada sobre `fase-1-nucleo` → `fase-0-fundacao`). Próxima: Fase 2 (contas, organizações, projetos no servidor) e depois Fase 3 (bancos). Ordem ajustada: ver nota no início da seção 5 do PLANO.
 - Fase 0: monorepo + Docker Compose (postgres 16, redis 7, SeaweedFS S3, backend, frontend); Django 5.2 LTS com custom `User` (login por e-mail), DRF, drf-spectacular, `/api/health/`, `ensure_bucket`; front Vite 8 + React 19 + TS 5.9 strict, ESLint, Vitest, Playwright, `gen:api`.
-- Fase 1 (núcleo em `frontend/src/core`, convenções em `core/README.md` e ADR 003):
-  - `units` (mm inteiros, `formatCm` "45,2"/"318", `parseCm`, m, m²), `geometry` (vec, transform, bbox, polygon com área/centroide/hachura recortada, viewport de pan/zoom).
-  - `drawing`: `Entity` (modelo) → `compileView({scale, origin})` → `Primitive` (mm de papel); penas e tipos de linha; métricas aproximadas da Roboto.
-  - `dimensions`: cota simples (horizontal/vertical/alinhada) e cota em cadeia com total; texto legível (NBR 10126), texto que não cabe vai para fora ou é escalonado; soma dos vãos = total.
-  - `sheets`: formatos A4–A1, margens NBR 10068, escala gráfica.
-  - `render/svg` (árvore `SvgNode` → markup ou React) e `render/pdf` (svg2pdf, várias páginas).
-  - Página `/dev/primitivas`: prancha A3 com planta 1:50, vista 1:20 e corte 1:10 do rack M01, legenda; na tela (pan/zoom, "tamanho real") e em PDF. Os testes medem 3 linhas dentro do PDF (Vitest e e2e).
-  - Spikes de SVG e PDF removidos (migrados); spike 3D mantido até a Fase 9. Prints em `docs/prints/fase-1/`.
-- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), ADR 002 (S3 local: SeaweedFS), ADR 003 (convenções do núcleo).
+- Fase 1: núcleo em `frontend/src/core` (units, geometry, drawing/compileView, dimensions com cadeia, sheets), `render/svg` e `render/pdf`; página `/dev/primitivas` (A3 de catálogo). ADR 003.
+- Editor com blocos (`/editor`, `frontend/src/features/plan-editor`):
+  - Núcleo novo: `core/blocks` (expressões sem eval, símbolos paramétricos em JSON, catálogo com 15 blocos — ADR 004), `core/project` (schema zod v1 do documento, itens, paredes com meia-esquadria, calibração da planta base, `environmentEntities`), `core/editor/snap`, `core/sheets/fit` + `plan-sheet` (A3 com escala automática), `drawing/bounds` e `drawing/transform-entities`.
+  - Estado: zustand + immer + zundo (desfazer/refazer; arrasto = 1 passo). Persistência local em IndexedDB (projeto + imagens), autosave.
+  - Ferramentas: selecionar/arrastar, parede (snap em extremidade, ortogonal, grade; fecha no 1º ponto), cota (2 pontos + afastamento), texto, inserir bloco (clique ou arrastar do catálogo); item: L×P em cm, rotação, espelhar, duplicar, excluir; ambientes em abas; importar imagem da planta e calibrar; PDF com uma prancha A3 por ambiente.
+  - Tela usa a mesma compilação do PDF na escala de exibição 1:50 (penas e textos como no papel).
+  - Prints em `docs/prints/editor/`.
+- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).
 - Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.
-- Pendências: aguardando material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ver ADR 002); `DimStyle` virá do `SheetTemplate` (Fase 6).
+- Pendências: material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ADR 002); `DimStyle` do `SheetTemplate` (Fase 6); itens pendentes das Fases 4–5 listados na nota da seção 5 do PLANO.
+- Dica de dev: depois de instalar dependências novas no front, reinicie o container `frontend` (o `npm ci` roda só na subida).

@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router'
 
 const links = [
   { to: '/', label: 'Início', end: true },
+  { to: '/editor', label: 'Editor' },
   { to: '/dev/primitivas', label: 'Primitivas' },
   { to: '/spikes/3d', label: '3D (spike)' },
 ]

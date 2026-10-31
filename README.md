@@ -64,6 +64,26 @@ npm run test:e2e        # precisa do backend rodando
 npm run gen:api         # regenera src/api/schema.d.ts a partir do OpenAPI
 ```
 
+## Editor de planta
+
+Em **http://localhost:5173/editor**:
+
+- **Blocos:** clique num bloco do catálogo e depois na planta, ou arraste o bloco. Mude L × P
+  no painel da direita e o bloco se redesenha (travesseiros, portas, módulos e assentos
+  acompanham a medida).
+- **Parede (W):** clique nos pontos e clique no primeiro para fechar o ambiente. Enter ou Esc
+  termina; Shift desliga o modo ortogonal.
+- **Cota (C):** clique nos dois pontos e mova para afastar a cota.
+- **Texto (T).**
+- **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e
+  refaz, F enquadra.
+- **Importar planta:** carregue uma imagem, clique em dois pontos de medida conhecida e
+  informe a distância real.
+- **Baixar PDF:** gera uma prancha A3 por ambiente, na maior escala que couber.
+
+Por enquanto o projeto fica salvo **neste navegador**. A Fase 2 leva para o servidor. Há prints
+em [`docs/prints/editor/`](docs/prints/editor/).
+
 ## Núcleo de geometria (Fase 1)
 
 `frontend/src/core` é TypeScript puro: unidades, geometria, primitivas de desenho, cotas e

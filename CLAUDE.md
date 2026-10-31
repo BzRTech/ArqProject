@@ -5,9 +5,9 @@ Sistema web para projetos de arquitetura de interiores: planta baixa sobre plant
 Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Material adicional do usuário: `docs/material/` (ler o `LEIAME.md` de lá).
 
 ## Stack
-- **Backend:** Python 3.12, Django 5, DRF, drf-spectacular, PostgreSQL 16 (JSONB), django-storages + S3/MinIO, WeasyPrint, Celery + Redis (só quando necessário), pytest-django, factory_boy, ruff.
+- **Backend:** Python 3.12, Django 5, DRF, drf-spectacular, PostgreSQL 16 (JSONB), django-storages + S3 (SeaweedFS em dev — ADR 002), WeasyPrint, Celery + Redis (só quando necessário), pytest-django, factory_boy, ruff.
 - **Frontend:** React + TypeScript (strict) + Vite, Zustand + immer + zundo, TanStack Query, zod, SVG, jsPDF + svg2pdf.js, three.js/@react-three/fiber, Vitest, Playwright.
-- **Infra local:** Docker Compose (postgres, minio, redis, backend, frontend).
+- **Infra local:** Docker Compose (postgres, s3/SeaweedFS, redis, backend, frontend).
 
 ## Regras de arquitetura (não negociáveis)
 - **Unidades:** milímetros inteiros em todo lugar (JSON, tabelas, núcleo). cm só na exibição, pt-BR ("45,2").
@@ -31,7 +31,8 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
 
 ## Comandos
 - `docker compose up` — sobe tudo
-- `docker compose exec backend python manage.py migrate | seed_library | import_library --kind <k> <arquivo>`
+- `docker compose exec backend python manage.py migrate | ensure_bucket | seed_library | import_library --kind <k> <arquivo>`
+- Sem Docker: `cd backend && uv sync && uv run pytest`
 - `docker compose exec backend pytest` · `ruff check .`
 - `cd frontend && npm run dev | test | test:e2e | lint | typecheck | gen:api`
 
@@ -42,6 +43,12 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
 4. atualizar "Estado atual" abaixo.
 
 ## Estado atual
-- Fase: 0 (não iniciada)
-- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase)
-- Pendências: aguardando material adicional do usuário em `docs/material/`
+- Fase: **0 concluída** (branch `fase-0-fundacao`). Próxima: Fase 1 — núcleo de geometria.
+- Feito na Fase 0:
+  - Monorepo + `docker-compose.yml` (postgres 16, redis 7, SeaweedFS S3, backend, frontend com proxy `/api`).
+  - Django 5.2 LTS: settings `base/dev/test/prod`, custom `User` (login por e-mail) na 1ª migration, DRF, drf-spectacular (`/api/schema/`, `/api/docs/`), django-storages, `/api/health/`, comando `ensure_bucket`.
+  - Front: Vite 8 + React 19 + TS 5.9 strict, ESLint (com regra que proíbe React/three em `src/core`), Prettier, Vitest, Playwright, `gen:api` (openapi-typescript + openapi-fetch).
+  - Spikes em `frontend/src/spikes/` (SVG pan/zoom 2 000 linhas, PDF A3 1:50 vetorial com teste que mede a escala, three.js 10 caixas texturizadas). Código descartável: o que servir migra para `core/` e `render/` na Fase 1.
+- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); `docs/adr/001-pdf.md` (jsPDF + svg2pdf, SVG em mm de papel, TTF embutida); `docs/adr/002-s3-local.md` (SeaweedFS no lugar do MinIO).
+- Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.
+- Pendências: aguardando material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ver ADR 002).

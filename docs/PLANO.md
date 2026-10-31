@@ -272,7 +272,8 @@ São pontos de partida: valide com um marceneiro.
 > e ligam esse editor ao servidor e ao banco, com o mesmo formato de documento (schema zod) e
 > de bloco (ADR 004). Pendente das Fases 4–5: PDF como planta base (pdf.js), marcadores
 > numerados e legenda, disciplinas como filtro, área (m²), guia, modo humanizada, preço,
-> fornecedor e aprovação no painel de itens, e o recorte de parede pela porta.
+> fornecedor e aprovação no painel de itens. (Esquadrias como vãos na parede, comprimento digitado e
+> ambiente retangular já entraram.) Próximas entradas de planta: PDF como base e importação de DXF.
 
 
 Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fases.

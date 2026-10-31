@@ -4,19 +4,24 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getBlock } from '@/core/blocks/catalog'
 import type { Vec2 } from '@/core/geometry/vec'
+import { openingDef } from '@/core/project/openings'
 import {
   newEnvironment,
   newProject,
   type BasePlan,
+  type ChainDrawing,
   type Drawing,
   type Environment,
   type Item,
+  type Opening,
+  type OpeningType,
   type Project,
 } from '@/core/project/schema'
 import { roundMm } from '@/core/units'
 
-export type Tool = 'select' | 'wall' | 'dimension' | 'text' | 'place' | 'calibrate'
-export type Selection = { kind: 'item' | 'drawing'; id: string } | null
+export type Tool =
+  'select' | 'wall' | 'room' | 'dimension' | 'text' | 'place' | 'opening' | 'calibrate'
+export type Selection = { kind: 'item' | 'drawing' | 'opening'; id: string } | null
 
 export const newId = (): string => crypto.randomUUID()
 const rp = (p: Vec2): Vec2 => ({ x: roundMm(p.x), y: roundMm(p.y) })
@@ -27,13 +32,18 @@ export interface EditorState {
   selection: Selection
   tool: Tool
   placeBlockId: string | null
+  placeOpeningType: OpeningType | null
   wallThicknessMm: number
+  /** Medidas INTERNAS da ferramenta "ambiente retangular". */
+  roomSize: { w: number; d: number }
   /** Pontos marcados na calibração da planta base. */
   calibration: Vec2[]
 
   // --- UI (não entra no histórico)
   setTool: (tool: Tool) => void
   startPlacing: (blockId: string) => void
+  startOpening: (type: OpeningType) => void
+  setRoomSize: (size: { w: number; d: number }) => void
   select: (sel: Selection) => void
   setWallThickness: (mm: number) => void
   setCalibration: (pts: Vec2[]) => void
@@ -50,6 +60,11 @@ export interface EditorState {
   addWall: (points: Vec2[], closed: boolean) => string
   addDimension: (d: Omit<Extract<Drawing, { kind: 'dimension' }>, 'id' | 'kind'>) => string
   addText: (at: Vec2, text?: string) => string
+  addChains: (chains: Omit<ChainDrawing, 'id' | 'kind'>[]) => void
+  /** Ambiente retangular pelas medidas INTERNAS; `corner` = canto interno superior esquerdo. */
+  addRoom: (corner: Vec2) => string
+  addOpening: (o: Omit<Opening, 'id' | 'widthMm' | 'heightMm' | 'sillMm' | 'hinge'>) => string
+  updateOpening: (id: string, patch: Partial<Omit<Opening, 'id'>>) => void
   updateDrawing: (id: string, patch: Partial<Drawing>) => void
   moveSelection: (dx: number, dy: number) => void
   rotateSelection: (deg: number) => void
@@ -82,13 +97,16 @@ export const useEditor = create<EditorState>()(
         selection: null,
         tool: 'select',
         placeBlockId: null,
+        placeOpeningType: null,
         wallThicknessMm: 150,
+        roomSize: { w: 3000, d: 3000 },
         calibration: [],
 
         setTool: (tool) =>
           set((s) => {
             s.tool = tool
             s.placeBlockId = tool === 'place' ? s.placeBlockId : null
+            s.placeOpeningType = tool === 'opening' ? s.placeOpeningType : null
             s.calibration = []
           }),
         startPlacing: (blockId) =>
@@ -96,6 +114,16 @@ export const useEditor = create<EditorState>()(
             s.tool = 'place'
             s.placeBlockId = blockId
             s.selection = null
+          }),
+        startOpening: (type) =>
+          set((s) => {
+            s.tool = 'opening'
+            s.placeOpeningType = type
+            s.selection = null
+          }),
+        setRoomSize: (size) =>
+          set((s) => {
+            s.roomSize = { w: Math.max(300, roundMm(size.w)), d: Math.max(300, roundMm(size.d)) }
           }),
         select: (sel) => set((s) => void (s.selection = sel)),
         setWallThickness: (mm) => set((s) => void (s.wallThicknessMm = Math.max(10, roundMm(mm)))),
@@ -206,6 +234,75 @@ export const useEditor = create<EditorState>()(
           })
           return id
         },
+        addChains: (chains) =>
+          set((s) => {
+            for (const c of chains) {
+              env(s).drawings.push({
+                ...c,
+                id: newId(),
+                kind: 'chain',
+                points: c.points.map(rp),
+                offsetMm: roundMm(c.offsetMm),
+              })
+            }
+          }),
+        addRoom: (corner) => {
+          const id = newId()
+          set((s) => {
+            const h = s.wallThicknessMm / 2
+            const { w, d } = s.roomSize
+            const c = rp(corner)
+            // Eixo afastado meia espessura para fora: as faces internas medem w × d.
+            const x0 = c.x - h
+            const y0 = c.y - h
+            const x1 = c.x + w + h
+            const y1 = c.y + d + h
+            env(s).drawings.push({
+              id,
+              kind: 'wall',
+              points: [
+                { x: x0, y: y0 },
+                { x: x1, y: y0 },
+                { x: x1, y: y1 },
+                { x: x0, y: y1 },
+              ].map(rp),
+              closed: true,
+              thicknessMm: s.wallThicknessMm,
+            })
+            s.selection = { kind: 'drawing', id }
+            s.tool = 'select'
+          })
+          return id
+        },
+        addOpening: (o) => {
+          const def = openingDef(o.type)
+          const id = newId()
+          set((s) => {
+            env(s).openings.push({
+              ...o,
+              id,
+              offsetMm: roundMm(o.offsetMm),
+              widthMm: def.widthMm,
+              heightMm: def.heightMm,
+              sillMm: def.sillMm,
+              hinge: 'start',
+            })
+            s.selection = { kind: 'opening', id }
+            s.tool = 'select'
+            s.placeOpeningType = null
+          })
+          return id
+        },
+        updateOpening: (id, patch) =>
+          set((s) => {
+            const o = env(s).openings.find((x) => x.id === id)
+            if (!o) return
+            Object.assign(o, patch)
+            o.offsetMm = roundMm(o.offsetMm)
+            o.widthMm = Math.max(300, roundMm(o.widthMm))
+            o.heightMm = Math.max(100, roundMm(o.heightMm))
+            o.sillMm = Math.max(0, roundMm(o.sillMm))
+          }),
         updateDrawing: (id, patch) =>
           set((s) => {
             const d = env(s).drawings.find((x) => x.id === id)
@@ -224,7 +321,7 @@ export const useEditor = create<EditorState>()(
             }
             const d = env(s).drawings.find((x) => x.id === sel.id)
             if (!d) return
-            if (d.kind === 'wall') d.points = d.points.map(mv)
+            if (d.kind === 'wall' || d.kind === 'chain') d.points = d.points.map(mv)
             else if (d.kind === 'dimension') {
               d.p1 = mv(d.p1)
               d.p2 = mv(d.p2)
@@ -232,6 +329,11 @@ export const useEditor = create<EditorState>()(
           }),
         rotateSelection: (deg) => {
           const sel = get().selection
+          if (sel?.kind === 'opening') {
+            const o = env(get()).openings.find((x) => x.id === sel.id)
+            if (o) get().updateOpening(sel.id, { side: o.side === 'left' ? 'right' : 'left' })
+            return
+          }
           if (sel?.kind !== 'item') return
           const it = env(get()).items.find((i) => i.id === sel.id)
           if (it) get().updateItem(sel.id, { rotationDeg: it.rotationDeg + deg })
@@ -239,6 +341,11 @@ export const useEditor = create<EditorState>()(
         mirrorSelection: () =>
           set((s) => {
             const sel = s.selection
+            if (sel?.kind === 'opening') {
+              const o = env(s).openings.find((x) => x.id === sel.id)
+              if (o) o.hinge = o.hinge === 'start' ? 'end' : 'start'
+              return
+            }
             if (sel?.kind !== 'item') return
             const it = env(s).items.find((i) => i.id === sel.id)
             if (it) it.mirrored = !it.mirrored
@@ -249,6 +356,17 @@ export const useEditor = create<EditorState>()(
             if (!sel) return
             const id = newId()
             const offset = (p: Vec2) => ({ x: p.x + 200, y: p.y + 200 })
+            if (sel.kind === 'opening') {
+              const o = env(s).openings.find((x) => x.id === sel.id)
+              if (!o) return
+              env(s).openings.push({
+                ...structuredClone(current(o)),
+                id,
+                offsetMm: o.offsetMm + o.widthMm + 200,
+              })
+              s.selection = { kind: 'opening', id }
+              return
+            }
             if (sel.kind === 'item') {
               const it = env(s).items.find((i) => i.id === sel.id)
               if (!it) return
@@ -261,7 +379,8 @@ export const useEditor = create<EditorState>()(
               const d = env(s).drawings.find((x) => x.id === sel.id)
               if (!d) return
               const copy = { ...structuredClone(current(d)), id }
-              if (copy.kind === 'wall') copy.points = copy.points.map(offset)
+              if (copy.kind === 'wall' || copy.kind === 'chain')
+                copy.points = copy.points.map(offset)
               else if (copy.kind === 'dimension') {
                 copy.p1 = offset(copy.p1)
                 copy.p2 = offset(copy.p2)
@@ -276,7 +395,12 @@ export const useEditor = create<EditorState>()(
             if (!sel) return
             const e = env(s)
             if (sel.kind === 'item') e.items = e.items.filter((i) => i.id !== sel.id)
-            else e.drawings = e.drawings.filter((d) => d.id !== sel.id)
+            else if (sel.kind === 'opening') e.openings = e.openings.filter((o) => o.id !== sel.id)
+            else {
+              e.drawings = e.drawings.filter((d) => d.id !== sel.id)
+              // Portas e janelas vão junto com a parede.
+              e.openings = e.openings.filter((o) => o.wallId !== sel.id)
+            }
             s.selection = null
           }),
         setBasePlan: (bp) => set((s) => void (env(s).basePlan = bp)),
@@ -322,3 +446,8 @@ export const selectActiveEnv = (s: EditorState): Environment =>
 export const undo = () => useEditor.temporal.getState().undo()
 export const redo = () => useEditor.temporal.getState().redo()
 export const clearHistory = () => useEditor.temporal.getState().clear()
+
+// Acesso ao estado pelo console/testes em desenvolvimento.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as unknown as { __editor: typeof useEditor }).__editor = useEditor
+}

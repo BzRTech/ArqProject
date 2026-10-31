@@ -27,4 +27,17 @@ describe('bounds', () => {
     ])
     expect(b).toEqual({ minX: -5, minY: -5, maxX: 110, maxY: 60 })
   })
+
+  it('com escala, inclui a linha de cota afastada e a linha de total', () => {
+    const chain = {
+      kind: 'chain' as const,
+      points: [vec(0, 0), vec(1000, 0), vec(2000, 0)],
+      orientation: 'horizontal' as const,
+      offset: 10,
+      total: true,
+    }
+    expect(entitiesBBox([chain]).minY).toBe(0)
+    // 10 mm + 6 mm (total) + texto, em 1:50 → bem acima do objeto
+    expect(entitiesBBox([chain], 50).minY).toBeLessThan(-(10 + 6) * 50)
+  })
 })

@@ -1,4 +1,5 @@
-import { ProjectSchema, type Project } from '@/core/project/schema'
+import { migrateProject } from '@/core/project/migrations'
+import type { Project } from '@/core/project/schema'
 
 /**
  * Persistência local no navegador (IndexedDB). Na Fase 2 o documento passa a ser salvo
@@ -42,12 +43,12 @@ async function tx<T>(
 export async function loadProject(): Promise<Project | null> {
   const raw = await tx<unknown>(KV, 'readonly', (s) => s.get('project'))
   if (!raw) return null
-  const parsed = ProjectSchema.safeParse(raw)
-  if (!parsed.success) {
-    console.warn('Projeto salvo inválido; começando um novo.', parsed.error)
+  try {
+    return migrateProject(raw)
+  } catch (e) {
+    console.warn('Projeto salvo inválido; começando um novo.', e)
     return null
   }
-  return parsed.data
 }
 
 export const saveProject = (p: Project) =>

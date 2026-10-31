@@ -63,10 +63,4 @@ describe('parametria', () => {
     expect(seats(2100)).toBe(3)
     expect(seats(3000)).toBe(4)
   })
-
-  it('porta: arco de abertura com raio = largura', () => {
-    const es = buildSymbol(getBlock('porta').symbol, { w: 900, d: 900 })
-    const arc = es.find((e) => e.kind === 'arc')
-    expect(arc).toMatchObject({ kind: 'arc', radius: 900, startDeg: 90, sweepDeg: -90 })
-  })
 })

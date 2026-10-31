@@ -35,3 +35,21 @@ sofá…). Esses blocos precisam:
 - Novos blocos não exigem código. Um editor visual de blocos para o escritório pode vir depois.
 - Blocos de marcenaria (`joinery: true`) são só a representação em planta. O detalhamento
   (Fases 7–8) gera as vistas a partir do `RuleProfile`.
+
+## Adendo — esquadrias não são blocos (31/10/2026)
+
+Porta e janela **não** são blocos soltos. São **vãos que pertencem a um trecho de parede**
+(`Opening {wallId, segment, offsetMm, widthMm, heightMm, sillMm, type, hinge, side}`).
+
+- A parede é dividida em peças nos vãos (`wallPieces`). Os batentes saem naturalmente das
+  pontas, e a meia-esquadria dos cantos se mantém mesmo numa parede fechada (a peça "dá a
+  volta").
+- Tipos: porta de abrir, de correr e pivotante; janela de correr 2 e 4 folhas, maxim-ar,
+  basculante e fixa. Cada tipo tem um símbolo próprio, desenhado no núcleo
+  (`core/project/openings.ts`).
+- O vão é limitado ao trecho (não atravessa canto). Arrastar faz o vão deslizar pela parede
+  ou passar para outra. Apagar a parede apaga os vãos dela.
+- "Cotar parede" gera uma cota em cadeia por trecho, pela **face externa**, com os batentes
+  (`core/project/auto-dims.ts`).
+- O documento passou para o **schema v2** (`openings` + desenho `chain`). A migração v1 → v2
+  (`core/project/migrations.ts`) remove a antiga "porta" como bloco.

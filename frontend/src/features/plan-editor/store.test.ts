@@ -107,3 +107,83 @@ describe('editor — ambientes', () => {
     expect(env().items).toHaveLength(1)
   })
 })
+
+describe('editor — ambiente retangular, esquadrias e cotas', () => {
+  it('ambiente retangular pelas medidas internas: eixo afastado meia espessura', () => {
+    S().setRoomSize({ w: 4400, d: 3800 })
+    S().setWallThickness(150)
+    S().addRoom({ x: 0, y: 0 })
+    const wall = env().drawings[0]!
+    expect(wall).toMatchObject({
+      kind: 'wall',
+      closed: true,
+      thicknessMm: 150,
+      points: [
+        { x: -75, y: -75 },
+        { x: 4475, y: -75 },
+        { x: 4475, y: 3875 },
+        { x: -75, y: 3875 },
+      ],
+    })
+    expect(S().tool).toBe('select')
+  })
+
+  it('porta: inserir, inverter lado e dobradiça, e sumir junto com a parede', () => {
+    const wallId = S().addWall(
+      [
+        { x: 0, y: 0 },
+        { x: 4000, y: 0 },
+      ],
+      false,
+    )
+    const id = S().addOpening({
+      type: 'porta-abrir',
+      wallId,
+      segment: 0,
+      offsetMm: 1000,
+      side: 'right',
+    })
+    expect(env().openings[0]).toMatchObject({
+      id,
+      widthMm: 800,
+      heightMm: 2100,
+      hinge: 'start',
+      side: 'right',
+    })
+    expect(S().selection).toEqual({ kind: 'opening', id })
+    S().rotateSelection(90)
+    S().mirrorSelection()
+    expect(env().openings[0]).toMatchObject({ side: 'left', hinge: 'end' })
+    S().updateOpening(id, { widthMm: 120 })
+    expect(env().openings[0]!.widthMm).toBe(300) // largura mínima
+    S().select({ kind: 'drawing', id: wallId })
+    S().deleteSelection()
+    expect(env().openings).toHaveLength(0)
+    undo()
+    expect(env().openings).toHaveLength(1)
+  })
+
+  it('cadeias de cota entram como desenho e se movem juntas', () => {
+    S().addChains([
+      {
+        points: [
+          { x: 0, y: 0 },
+          { x: 1000, y: 0 },
+        ],
+        orientation: 'horizontal',
+        offsetMm: 500,
+        total: false,
+      },
+    ])
+    const chain = env().drawings[0]!
+    S().select({ kind: 'drawing', id: chain.id })
+    S().moveSelection(10, 20)
+    expect(env().drawings[0]).toMatchObject({
+      kind: 'chain',
+      points: [
+        { x: 10, y: 20 },
+        { x: 1010, y: 20 },
+      ],
+    })
+  })
+})

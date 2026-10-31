@@ -1,13 +1,36 @@
 import type { Entity } from '../drawing/entities'
 import { itemEntities } from './items'
-import type { Drawing, Environment } from './schema'
+import { openingEntities, openingGaps } from './openings'
+import type { Drawing, Environment, Opening } from './schema'
 import { wallEntities } from './walls'
 
-/** Entidades de um desenho do usuário. `scale` converte afastamentos do modelo em papel. */
-export function drawingEntities(d: Drawing, scale: number): Entity[] {
+/**
+ * Entidades de um desenho do usuário. `scale` converte afastamentos do modelo em papel.
+ * Paredes recebem as esquadrias do ambiente: são recortadas e desenham os símbolos.
+ */
+export function drawingEntities(
+  d: Drawing,
+  scale: number,
+  openings: readonly Opening[] = [],
+): Entity[] {
   switch (d.kind) {
-    case 'wall':
-      return wallEntities(d)
+    case 'wall': {
+      const own = openings.filter((o) => o.wallId === d.id)
+      return [
+        ...wallEntities(d, '#000000', openingGaps(d, own)),
+        ...own.flatMap((o) => openingEntities(d, o)),
+      ]
+    }
+    case 'chain':
+      return [
+        {
+          kind: 'chain',
+          points: d.points,
+          orientation: d.orientation,
+          offset: d.offsetMm / scale,
+          total: d.total,
+        },
+      ]
     case 'dimension':
       return [
         {
@@ -56,7 +79,7 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
   out.push({
     kind: 'group',
     role: 'paredes',
-    children: walls.flatMap((d) => drawingEntities(d, o.scale)),
+    children: walls.flatMap((d) => drawingEntities(d, o.scale, env.openings)),
   })
   out.push({
     kind: 'group',

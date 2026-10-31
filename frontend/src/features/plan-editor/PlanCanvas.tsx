@@ -5,15 +5,25 @@ import { entitiesBBox } from '@/core/drawing/bounds'
 import type { Entity } from '@/core/drawing/entities'
 import { snapPoint, type SnapKind } from '@/core/editor/snap'
 import { expand, isEmpty } from '@/core/geometry/bbox'
-import { distance, dot, leftNormal, sub, type Vec2 } from '@/core/geometry/vec'
+import {
+  add,
+  distance,
+  dot,
+  leftNormal,
+  normalize,
+  scale,
+  sub,
+  type Vec2,
+} from '@/core/geometry/vec'
 import { fit, pan, screenToWorld, zoomAt, type Viewport } from '@/core/geometry/viewport'
 import { itemCorners, itemEntities } from '@/core/project/items'
+import { openingDef, openingEntities, openingFrame } from '@/core/project/openings'
 import { drawingEntities, environmentEntities } from '@/core/project/render'
-import type { Drawing, Environment, Item } from '@/core/project/schema'
-import { wallEntities, wallOutline } from '@/core/project/walls'
-import { formatDecimal } from '@/core/units'
+import type { Drawing, Environment, Item, Opening, OpeningType } from '@/core/project/schema'
+import { nearestWall, wallEntities, wallOutline } from '@/core/project/walls'
+import { formatCm, formatDecimal, parseCm } from '@/core/units'
 import { Compiled } from './Compiled'
-import { DISPLAY_SCALE, dimensionLine, hitTest, snapPoints, textBox } from './geometry'
+import { DISPLAY_SCALE, dimensionLine, hitTest, snapPoints, textBox, wallsOf } from './geometry'
 import { useAssetUrl } from './hooks'
 import { redo, selectActiveEnv, undo, useEditor, type Selection } from './store'
 
@@ -26,8 +36,18 @@ const ItemView = memo(function ItemView({ item }: { item: Item }) {
   return <Compiled entities={entities} role="item" />
 })
 
-const DrawingView = memo(function DrawingView({ d }: { d: Drawing }) {
-  const entities = useMemo(() => drawingEntities(d, DISPLAY_SCALE), [d])
+const NO_OPENINGS: Opening[] = []
+/** Distância máxima (px de tela) para uma porta/janela "grudar" numa parede. */
+const OPENING_REACH_PX = 40
+
+const DrawingView = memo(function DrawingView({
+  d,
+  openings,
+}: {
+  d: Drawing
+  openings: Opening[]
+}) {
+  const entities = useMemo(() => drawingEntities(d, DISPLAY_SCALE, openings), [d, openings])
   return <Compiled entities={entities} role={`drawing-${d.kind}`} />
 })
 
@@ -88,6 +108,24 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
       </g>
     )
   }
+  if (sel.kind === 'opening') {
+    const o = env.openings.find((x) => x.id === sel.id)
+    const w = o && wallsOf(env).find((x) => x.id === o.wallId)
+    const f = o && w && openingFrame(w, o)
+    if (!f) return null
+    const h = f.halfThickness + 4 * px
+    const c = [
+      add(f.a, scale(f.n, h)),
+      add(f.b, scale(f.n, h)),
+      add(f.b, scale(f.n, -h)),
+      add(f.a, scale(f.n, -h)),
+    ]
+    return (
+      <g data-testid="selection">
+        <polygon points={c.map((q) => `${q.x},${q.y}`).join(' ')} {...common} />
+      </g>
+    )
+  }
   const d = env.drawings.find((x) => x.id === sel.id)
   if (!d) return null
   if (d.kind === 'wall') {
@@ -100,7 +138,7 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
       </g>
     )
   }
-  if (d.kind === 'dimension') {
+  if (d.kind === 'dimension' || d.kind === 'chain') {
     const [a, b] = dimensionLine(d)
     return (
       <g data-testid="selection">
@@ -142,12 +180,17 @@ export function PlanCanvas({ fitSignal }: Props) {
   const placeBlockId = useEditor((s) => s.placeBlockId)
   const wallThickness = useEditor((s) => s.wallThicknessMm)
   const calibration = useEditor((s) => s.calibration)
+  const placeOpeningType = useEditor((s) => s.placeOpeningType)
+  const roomSize = useEditor((s) => s.roomSize)
 
   const [view, setView] = useState<Viewport>({ scale: 0.15, tx: 40, ty: 40 })
   const [cursor, setCursor] = useState<Vec2 | null>(null)
   const [snapKind, setSnapKind] = useState<SnapKind>('free')
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
+  /** Comprimento digitado durante o desenho de parede (cm, pt-BR). */
+  const [typed, setTyped] = useState('')
+  const cursorRef = useRef<Vec2 | null>(null)
   // Troca de ferramenta ou de ambiente descarta rascunhos (ajuste de estado no render).
   const draftKey = `${tool}:${env.id}`
   const [prevDraftKey, setPrevDraftKey] = useState(draftKey)
@@ -155,11 +198,60 @@ export function PlanCanvas({ fitSignal }: Props) {
     setPrevDraftKey(draftKey)
     setWallDraft([])
     setDimDraft([])
+    setTyped('')
   }
-  const drag = useRef<{ mode: 'pan' | 'move'; last: Vec2; start: Vec2; applied: Vec2 } | null>(null)
+  const drag = useRef<{
+    mode: 'pan' | 'move' | 'opening'
+    last: Vec2
+    start: Vec2
+    applied: Vec2
+    /** Arrasto de esquadria: posição inicial e ponto de pega projetado na parede. */
+    opening?: {
+      offsetMm: number
+      wallId: string
+      segment: number
+      grabAlong: number
+      startScreen: Vec2
+    }
+  } | null>(null)
 
   const px = 1 / view.scale // 1 px de tela em mm do modelo
   const endpoints = useMemo(() => snapPoints(env), [env])
+  const walls = useMemo(() => wallsOf(env), [env])
+  const openingsByWall = useMemo(() => {
+    const m = new Map<string, Opening[]>()
+    for (const o of env.openings) m.set(o.wallId, [...(m.get(o.wallId) ?? []), o])
+    return m
+  }, [env.openings])
+
+  /** Ponto do próximo vértice quando o usuário digitou um comprimento. */
+  const typedPoint = useCallback(
+    (from: Vec2, toward: Vec2 | null): Vec2 | null => {
+      const mm = parseCm(typed)
+      if (!mm || mm <= 0) return null
+      const d =
+        toward && distance(from, toward) > 0.5 ? normalize(sub(toward, from)) : { x: 1, y: 0 }
+      const q = add(from, scale(d, mm))
+      return { x: Math.round(q.x), y: Math.round(q.y) }
+    },
+    [typed],
+  )
+
+  /** Onde uma porta/janela cairia com o cursor em `p`. */
+  const openingTarget = useCallback(
+    (p: Vec2, type: OpeningType, reach = OPENING_REACH_PX * px) => {
+      const hit = nearestWall(walls, p, reach)
+      if (!hit) return null
+      return {
+        wallId: hit.wallId,
+        segment: hit.segment,
+        offsetMm: Math.round(hit.along / GRID_MOVE) * GRID_MOVE,
+        side: hit.side,
+        type,
+      }
+    },
+    [walls, px],
+  )
 
   const toModel = useCallback(
     (e: { clientX: number; clientY: number }): Vec2 => {
@@ -176,9 +268,10 @@ export function PlanCanvas({ fitSignal }: Props) {
     const e = selectActiveEnv(s)
     let bb = entitiesBBox(
       environmentEntities(e, { scale: DISPLAY_SCALE, basePlanHref: e.basePlan ? 'x' : undefined }),
+      DISPLAY_SCALE,
     )
     if (isEmpty(bb)) bb = { minX: 0, minY: 0, maxX: 6000, maxY: 4500 }
-    bb = expand(bb, 600)
+    bb = expand(bb, 300)
     setView(
       fit(
         { x: bb.minX, y: bb.minY, width: bb.maxX - bb.minX, height: bb.maxY - bb.minY },
@@ -255,6 +348,23 @@ export function PlanCanvas({ fitSignal }: Props) {
       }
       if (mod) return
       if (s.tool === 'wall' && wallDraft.length) {
+        if (/^[0-9]$/.test(e.key) || e.key === ',' || e.key === '.') {
+          e.preventDefault()
+          setTyped((t) => (t + e.key).slice(0, 8))
+          return
+        }
+        if (e.key === 'Enter' && typed) {
+          e.preventDefault()
+          const last = wallDraft[wallDraft.length - 1]!
+          const q = typedPoint(last, cursorRef.current)
+          if (q) setWallDraft((d) => [...d, q])
+          setTyped('')
+          return
+        }
+        if (e.key === 'Escape' && typed) {
+          setTyped('')
+          return
+        }
         if (e.key === 'Enter' || e.key === 'Escape') {
           e.preventDefault()
           commitWall(wallDraft, false)
@@ -262,7 +372,8 @@ export function PlanCanvas({ fitSignal }: Props) {
         }
         if (e.key === 'Backspace') {
           e.preventDefault()
-          setWallDraft((d) => d.slice(0, -1))
+          if (typed) setTyped((t) => t.slice(0, -1))
+          else setWallDraft((d) => d.slice(0, -1))
           return
         }
       }
@@ -290,6 +401,15 @@ export function PlanCanvas({ fitSignal }: Props) {
             case 'w':
               s.setTool('wall')
               break
+            case 'a':
+              s.setTool('room')
+              break
+            case 'p':
+              s.startOpening('porta-abrir')
+              break
+            case 'j':
+              s.startOpening('janela-correr-2')
+              break
             case 'c':
               s.setTool('dimension')
               break
@@ -310,7 +430,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [wallDraft, dimDraft, commitWall, fitToContent])
+  }, [wallDraft, dimDraft, commitWall, fitToContent, typed, typedPoint])
 
   // --- Ponteiro --------------------------------------------------------------
   const screenPt = (e: React.PointerEvent) => {
@@ -333,7 +453,24 @@ export function PlanCanvas({ fitSignal }: Props) {
         s.select(hit)
         if (hit) {
           s.beginInteraction()
-          drag.current = { mode: 'move', last: sp, start: p, applied: { x: 0, y: 0 } }
+          const o = hit.kind === 'opening' ? env.openings.find((x) => x.id === hit.id) : undefined
+          const grab = o && openingTarget(p, o.type, 1500)
+          drag.current = {
+            mode: hit.kind === 'opening' ? 'opening' : 'move',
+            last: sp,
+            start: p,
+            applied: { x: 0, y: 0 },
+            opening:
+              o && grab
+                ? {
+                    offsetMm: o.offsetMm,
+                    wallId: o.wallId,
+                    segment: o.segment,
+                    grabAlong: grab.offsetMm,
+                    startScreen: sp,
+                  }
+                : undefined,
+          }
         } else {
           drag.current = { mode: 'pan', last: sp, start: p, applied: { x: 0, y: 0 } }
         }
@@ -342,9 +479,19 @@ export function PlanCanvas({ fitSignal }: Props) {
       case 'place':
         if (placeBlockId) s.addItem(placeBlockId, snap(p, { grid: GRID_MOVE }).point)
         break
+      case 'opening': {
+        const t = placeOpeningType && openingTarget(p, placeOpeningType)
+        if (t) s.addOpening(t)
+        break
+      }
+      case 'room':
+        s.addRoom(snap(p, { grid: GRID_DRAW }).point)
+        break
       case 'wall': {
         const last = wallDraft[wallDraft.length - 1]
-        const q = snap(p, { ortho: e.shiftKey ? undefined : last }).point
+        const snapped = snap(p, { ortho: e.shiftKey ? undefined : last }).point
+        const q = (last && typedPoint(last, snapped)) || snapped
+        setTyped('')
         const first = wallDraft[0]
         if (first && wallDraft.length >= 3 && distance(q, first) < 0.5) {
           commitWall(wallDraft, true)
@@ -391,6 +538,18 @@ export function PlanCanvas({ fitSignal }: Props) {
       }
       s.moveSelection(want.x - d.applied.x, want.y - d.applied.y)
       d.applied = want
+    } else if (d?.mode === 'opening' && d.opening && s.selection?.kind === 'opening') {
+      // A porta/janela desliza pela parede (relativo ao ponto de pega) ou passa para outra
+      // parede próxima. Só começa depois de alguns pixels, para um clique não deslocar.
+      const sel = s.selection
+      const g = d.opening
+      const o = selectActiveEnv(s).openings.find((x) => x.id === sel.id)
+      const t = distance(sp, g.startScreen) > 4 && o ? openingTarget(p, o.type, 1500) : null
+      if (o && t) {
+        const sameSegment = t.wallId === g.wallId && t.segment === g.segment
+        const offsetMm = sameSegment ? g.offsetMm + (t.offsetMm - g.grabAlong) : t.offsetMm
+        s.updateOpening(o.id, { wallId: t.wallId, segment: t.segment, offsetMm })
+      }
     }
     // Cursor "efetivo" para pré-visualizações
     if (s.tool === 'wall') {
@@ -401,8 +560,8 @@ export function PlanCanvas({ fitSignal }: Props) {
       const r = snap(p, { ortho: e.shiftKey ? undefined : dimDraft[0] })
       setCursor(r.point)
       setSnapKind(r.kind)
-    } else if (s.tool === 'place') {
-      setCursor(snap(p, { grid: GRID_MOVE }).point)
+    } else if (s.tool === 'place' || s.tool === 'room') {
+      setCursor(snap(p, { grid: s.tool === 'room' ? GRID_DRAW : GRID_MOVE }).point)
       setSnapKind('grid')
     } else {
       setCursor(p)
@@ -411,25 +570,32 @@ export function PlanCanvas({ fitSignal }: Props) {
   }
 
   const onPointerUp = () => {
-    if (drag.current?.mode === 'move') useEditor.getState().endInteraction()
+    if (drag.current?.mode === 'move' || drag.current?.mode === 'opening') {
+      useEditor.getState().endInteraction()
+    }
     drag.current = null
   }
+
+  useEffect(() => {
+    cursorRef.current = cursor
+  }, [cursor])
 
   // --- Pré-visualizações -----------------------------------------------------
   const draftEntities = useMemo((): Entity[] => {
     if (!cursor) return []
     if (tool === 'wall' && wallDraft.length) {
-      const pts = [...wallDraft, cursor]
       const last = wallDraft[wallDraft.length - 1]!
+      const end = typedPoint(last, cursor) ?? cursor
+      const pts = [...wallDraft, end]
       const out: Entity[] = wallEntities(
         { points: pts, thicknessMm: wallThickness, closed: false },
         DRAFT,
       )
-      if (distance(last, cursor) > 1) {
+      if (distance(last, end) > 1) {
         out.push({
           kind: 'dimension',
           p1: last,
-          p2: cursor,
+          p2: end,
           orientation: 'aligned',
           offset: 8,
           style: { color: DRAFT },
@@ -458,6 +624,75 @@ export function PlanCanvas({ fitSignal }: Props) {
         },
       ]
     }
+    if (tool === 'room') {
+      const h = wallThickness / 2
+      const { w, d } = roomSize
+      const x0 = cursor.x - h
+      const y0 = cursor.y - h
+      return [
+        ...wallEntities(
+          {
+            points: [
+              { x: x0, y: y0 },
+              { x: cursor.x + w + h, y: y0 },
+              { x: cursor.x + w + h, y: cursor.y + d + h },
+              { x: x0, y: cursor.y + d + h },
+            ],
+            thicknessMm: wallThickness,
+            closed: true,
+          },
+          DRAFT,
+        ),
+        {
+          kind: 'dimension',
+          p1: cursor,
+          p2: { x: cursor.x + w, y: cursor.y },
+          orientation: 'horizontal',
+          offset: -6,
+          style: { color: DRAFT },
+        },
+        {
+          kind: 'dimension',
+          p1: cursor,
+          p2: { x: cursor.x, y: cursor.y + d },
+          orientation: 'vertical',
+          offset: 6,
+          style: { color: DRAFT },
+        },
+      ]
+    }
+    if (tool === 'opening' && placeOpeningType) {
+      const t = openingTarget(cursor, placeOpeningType)
+      const w = t && walls.find((x) => x.id === t.wallId)
+      if (!t || !w) return []
+      const def = openingDef(placeOpeningType)
+      const ghost: Opening = {
+        ...t,
+        id: 'ghost',
+        widthMm: def.widthMm,
+        heightMm: def.heightMm,
+        sillMm: def.sillMm,
+        hinge: 'start',
+      }
+      const f = openingFrame(w, ghost)
+      if (!f) return []
+      const h = f.halfThickness
+      return [
+        {
+          kind: 'polyline',
+          points: [
+            add(f.a, scale(f.n, h)),
+            add(f.b, scale(f.n, h)),
+            add(f.b, scale(f.n, -h)),
+            add(f.a, scale(f.n, -h)),
+          ],
+          closed: true,
+          style: null,
+          fill: { color: '#ffffff' },
+        },
+        ...openingEntities(w, ghost),
+      ]
+    }
     if (tool === 'place' && placeBlockId) {
       const b = getBlock(placeBlockId)
       return itemEntities({
@@ -472,15 +707,29 @@ export function PlanCanvas({ fitSignal }: Props) {
       })
     }
     return []
-  }, [tool, cursor, wallDraft, dimDraft, placeBlockId, wallThickness])
+  }, [
+    tool,
+    cursor,
+    wallDraft,
+    dimDraft,
+    placeBlockId,
+    wallThickness,
+    typedPoint,
+    roomSize,
+    placeOpeningType,
+    openingTarget,
+    walls,
+  ])
 
   const gridMinorVisible = view.scale * 100 >= 6
 
   const hint = {
     select: 'Clique para selecionar · arraste para mover · R gira · M espelha · Del exclui',
     wall: wallDraft.length
-      ? 'Clique para o próximo ponto · Enter/Esc termina · clique no 1º ponto fecha · Shift livre · ⌫ desfaz ponto'
+      ? 'Clique ou DIGITE o comprimento (cm) + Enter · clique no 1º ponto fecha · Esc termina · Shift livre'
       : 'Clique para começar a parede (eixo) · Shift desliga o ortogonal',
+    room: `Clique para posicionar o canto interno · ${formatCm(roomSize.w)} × ${formatCm(roomSize.d)} cm internos`,
+    opening: 'Aproxime de uma parede e clique · o lado do cursor define para onde abre',
     dimension:
       ['Clique no 1º ponto da cota', 'Clique no 2º ponto', 'Mova para afastar a cota e clique'][
         dimDraft.length
@@ -506,13 +755,25 @@ export function PlanCanvas({ fitSignal }: Props) {
         }}
         onContextMenu={(e) => e.preventDefault()}
         onDragOver={(e) => {
-          if (e.dataTransfer.types.includes('application/x-prancheta-block')) e.preventDefault()
+          const types = e.dataTransfer.types
+          if (
+            types.includes('application/x-prancheta-block') ||
+            types.includes('application/x-prancheta-opening')
+          ) {
+            e.preventDefault()
+          }
         }}
         onDrop={(e) => {
-          const id = e.dataTransfer.getData('application/x-prancheta-block')
-          if (!id) return
+          const block = e.dataTransfer.getData('application/x-prancheta-block')
+          const opening = e.dataTransfer.getData('application/x-prancheta-opening') as
+            OpeningType | ''
           e.preventDefault()
-          useEditor.getState().addItem(id, snap(toModel(e), { grid: GRID_MOVE }).point)
+          if (block)
+            useEditor.getState().addItem(block, snap(toModel(e), { grid: GRID_MOVE }).point)
+          if (opening) {
+            const t = openingTarget(toModel(e), opening)
+            if (t) useEditor.getState().addOpening(t)
+          }
         }}
       >
         <defs>
@@ -537,12 +798,12 @@ export function PlanCanvas({ fitSignal }: Props) {
             {env.drawings
               .filter((d) => d.kind === 'wall')
               .map((d) => (
-                <DrawingView key={d.id} d={d} />
+                <DrawingView key={d.id} d={d} openings={openingsByWall.get(d.id) ?? NO_OPENINGS} />
               ))}
             {env.drawings
               .filter((d) => d.kind !== 'wall')
               .map((d) => (
-                <DrawingView key={d.id} d={d} />
+                <DrawingView key={d.id} d={d} openings={NO_OPENINGS} />
               ))}
           </g>
           <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />
@@ -573,6 +834,18 @@ export function PlanCanvas({ fitSignal }: Props) {
                 )}
               </g>
             ))}
+          {cursor && tool === 'wall' && wallDraft.length > 0 && (
+            <text
+              x={cursor.x + 12 * px}
+              y={cursor.y - 12 * px}
+              fontSize={13 * px}
+              fontFamily="Roboto, Arial, sans-serif"
+              fill={typed ? '#b23b3b' : DRAFT}
+              data-testid="typed-length"
+            >
+              {typed ? `${typed} cm ↵` : 'digite o comprimento'}
+            </text>
+          )}
           {cursor && (tool === 'wall' || tool === 'dimension') && (
             <rect
               x={cursor.x - 4 * px}

@@ -451,23 +451,6 @@ export const CATALOG: BlockDef[] = [
       ],
     },
   },
-  // --- Esquadrias ------------------------------------------------------------
-  {
-    id: 'porta',
-    version: 1,
-    name: 'Porta de abrir',
-    category: 'Esquadrias',
-    discipline: 'layout',
-    defaultSize: { w: 800, d: 800, h: 2100 },
-    minSize: { w: 600, d: 600 },
-    symbol: {
-      shapes: [
-        { type: 'line', x1: 0, y1: 0, x2: 'w', y2: 0, pen: 'extraFine', lineType: 'hidden' },
-        { type: 'rect', x: 0, y: 0, w: 35, h: 'd', pen: 'medium', fill: WHITE },
-        { type: 'arc', cx: 0, cy: 0, r: 'min(w, d)', start: 90, sweep: -90, pen: 'fine' },
-      ],
-    },
-  },
 ]
 
 export const CATALOG_BY_ID: ReadonlyMap<string, BlockDef> = new Map(CATALOG.map((b) => [b.id, b]))

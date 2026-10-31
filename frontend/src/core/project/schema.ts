@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v1). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v2 — v1 é migrado em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -33,6 +33,16 @@ export const DimensionSchema = z.object({
   offsetMm: mm,
 })
 
+/** Cota em cadeia gravada no documento (ex.: gerada a partir de uma parede com vãos). */
+export const ChainSchema = z.object({
+  id,
+  kind: z.literal('chain'),
+  points: z.array(Vec2Schema).min(2),
+  orientation: z.enum(['aligned', 'horizontal', 'vertical']),
+  offsetMm: mm,
+  total: z.boolean(),
+})
+
 export const TextSchema = z.object({
   id,
   kind: z.literal('text'),
@@ -42,7 +52,41 @@ export const TextSchema = z.object({
   sizeMm: z.number().positive(),
 })
 
-export const DrawingSchema = z.discriminatedUnion('kind', [WallSchema, DimensionSchema, TextSchema])
+export const DrawingSchema = z.discriminatedUnion('kind', [
+  WallSchema,
+  DimensionSchema,
+  ChainSchema,
+  TextSchema,
+])
+
+export const DOOR_TYPES = ['porta-abrir', 'porta-correr', 'porta-pivotante'] as const
+export const WINDOW_TYPES = [
+  'janela-correr-2',
+  'janela-correr-4',
+  'janela-maxim-ar',
+  'janela-basculante',
+  'janela-fixa',
+] as const
+export const OPENING_TYPES = [...DOOR_TYPES, ...WINDOW_TYPES] as const
+export type OpeningType = (typeof OPENING_TYPES)[number]
+
+/** Porta ou janela: um VÃO num trecho de parede. */
+export const OpeningSchema = z.object({
+  id,
+  wallId: z.string(),
+  /** Índice do trecho da parede (entre o ponto i e o i+1). */
+  segment: z.number().int().nonnegative(),
+  /** Centro do vão ao longo do trecho, mm a partir do ponto i (eixo). */
+  offsetMm: mm,
+  widthMm: positiveMm,
+  heightMm: positiveMm,
+  sillMm: mm.nonnegative(),
+  type: z.enum(OPENING_TYPES),
+  /** Porta: batente da dobradiça (início/fim do trecho). Correr: lado para onde a folha corre. */
+  hinge: z.enum(['start', 'end']),
+  /** Porta: lado para onde abre. Janela: lado externo. Relativo ao sentido do trecho. */
+  side: z.enum(['left', 'right']),
+})
 
 export const ItemSchema = z.object({
   id,
@@ -78,6 +122,7 @@ export const EnvironmentSchema = z.object({
   ceilingHeightMm: positiveMm,
   basePlan: BasePlanSchema.nullable(),
   drawings: z.array(DrawingSchema),
+  openings: z.array(OpeningSchema),
   items: z.array(ItemSchema),
 })
 
@@ -90,6 +135,8 @@ export const ProjectSchema = z.object({
 export type Wall = z.infer<typeof WallSchema>
 export type DimensionDrawing = z.infer<typeof DimensionSchema>
 export type TextDrawing = z.infer<typeof TextSchema>
+export type ChainDrawing = z.infer<typeof ChainSchema>
+export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>
 export type Item = z.infer<typeof ItemSchema>
 export type BasePlan = z.infer<typeof BasePlanSchema>
@@ -97,7 +144,15 @@ export type Environment = z.infer<typeof EnvironmentSchema>
 export type Project = z.infer<typeof ProjectSchema>
 
 export function newEnvironment(envId: string, name: string): Environment {
-  return { id: envId, name, ceilingHeightMm: 2700, basePlan: null, drawings: [], items: [] }
+  return {
+    id: envId,
+    name,
+    ceilingHeightMm: 2700,
+    basePlan: null,
+    drawings: [],
+    openings: [],
+    items: [],
+  }
 }
 
 export function newProject(envId: string): Project {

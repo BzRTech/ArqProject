@@ -50,74 +50,72 @@ async function freshEditor(page: Page) {
 
 const items = (page: Page) => page.getByTestId('items').locator('g[data-role="item"]')
 
-test('monta um quarto com blocos, cotas e texto; desfaz, persiste e gera PDF', async ({ page }) => {
-  test.setTimeout(90_000)
+test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfaz, persiste e gera PDF', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
   await freshEditor(page)
 
-  // Paredes: retângulo 4,40 × 3,80 m pelo eixo, fechado clicando no primeiro ponto
-  await page.getByTestId('tool-wall').click()
-  for (const [x, y] of [
-    [0, 0],
-    [4400, 0],
-    [4400, 3800],
-    [0, 3800],
-    [0, 0],
-  ] as const) {
-    await moveModel(page, x, y)
-    await clickModel(page, x, y)
-  }
-  await page.keyboard.press('Escape')
+  // Ambiente retangular pelas medidas INTERNAS (como na medição da obra): 4,40 × 3,80 m
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '440')
+  await setCm(page, 'room-d', '380')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
   await page.keyboard.press('f')
   await expect(page.getByTestId('drawings').locator('g[data-role="drawing-wall"]')).toHaveCount(1)
 
-  // Tapete (redimensionado), cama encostada na parede da direita, criados-mudos
+  // Porta na parede de baixo, abrindo para dentro (cursor do lado de dentro)
+  await page.getByTestId('tool-door').click()
+  await moveModel(page, 1300, 3820)
+  await clickModel(page, 1300, 3820)
+  await expect(page.getByTestId('opening-props')).toContainText('Porta')
+  // Arrasta a porta 20 cm ao longo da parede
+  const edgeBefore = await page.getByTestId('opening-edge').inputValue()
+  const from = await modelToPage(page, 1300, 3875)
+  const to = await modelToPage(page, 1100, 3875)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 5 })
+  await page.mouse.up()
+  await expect(page.getByTestId('opening-edge')).not.toHaveValue(edgeBefore)
+
+  // Janela de correr na parede de cima, alargada para 1,40 m
+  await page.getByTestId('tool-window').click()
+  await moveModel(page, 2400, -40)
+  await clickModel(page, 2400, -40)
+  await setCm(page, 'opening-w', '140')
+  await expect(page.getByTestId('opening-w')).toHaveValue('140')
+  await page.keyboard.press('Escape')
+
+  // Cotas automáticas da parede (face externa + vãos)
+  await clickModel(page, 4475, 1500)
+  await expect(page.getByTestId('wall-props')).toContainText('2 vão(s)')
+  await page.getByTestId('auto-dims').click()
+  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-chain"]')).toHaveCount(4)
+  await page.keyboard.press('Escape')
+
+  // Mobília
   await placeBlock(page, 'tapete', 3000, 1900)
   await setCm(page, 'item-w', '240')
   await setCm(page, 'item-d', '260')
-
-  await placeBlock(page, 'cama-casal', 3325, 1900)
+  await placeBlock(page, 'cama-casal', 3400, 1900)
   await page.keyboard.press('r') // cabeceira para a parede da direita
   await expect(page.getByTestId('item-rotation')).toHaveValue('90')
   for (const y of [870, 2930]) {
-    await placeBlock(page, 'criado-mudo', 4120, y)
+    await placeBlock(page, 'criado-mudo', 4200, y)
     await page.keyboard.press('r')
   }
-
-  // Rack do vídeo na parede da esquerda: 318 × 45 cm
-  await placeBlock(page, 'rack', 300, 1900)
+  await placeBlock(page, 'rack', 225, 1900)
   await page.keyboard.press('Shift+R')
   await setCm(page, 'item-w', '318')
-  await expect(page.getByTestId('item-w')).toHaveValue('318')
-
-  // Guarda-roupa na parede de cima e porta na parede de baixo
-  await placeBlock(page, 'guarda-roupa', 2000, 375)
-  await placeBlock(page, 'porta', 1400, 3325)
-  await page.getByTestId('rotate').click()
-  await page.getByTestId('rotate').click()
-
-  await expect(items(page)).toHaveCount(7)
-
-  // Cotas externas
-  await page.getByTestId('tool-dimension').click()
-  for (const [x, y] of [
-    [0, 0],
-    [4400, 0],
-    [2200, -700],
-    [0, 0],
-    [0, 3800],
-    [-700, 1900],
-  ] as const) {
-    await moveModel(page, x, y)
-    await clickModel(page, x, y)
-  }
-  await page.keyboard.press('Escape')
-  await expect(
-    page.getByTestId('drawings').locator('g[data-role="drawing-dimension"]'),
-  ).toHaveCount(2)
+  await placeBlock(page, 'guarda-roupa', 1900, 300)
+  await setCm(page, 'item-w', '150')
+  await expect(items(page)).toHaveCount(6)
 
   // Texto
   await page.getByTestId('tool-text').click()
-  await clickModel(page, 1300, 2450)
+  await clickModel(page, 1300, 2300)
   await setCm(page, 'text-value', 'QUARTO')
   await page.keyboard.press('Escape')
   await page.keyboard.press('f') // atalho não pode cair dentro do campo de texto
@@ -127,40 +125,59 @@ test('monta um quarto com blocos, cotas e texto; desfaz, persiste e gera PDF', a
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('10-editor-quarto') })
 
-  // Seleciona a cama e mostra o painel do item
-  await clickModel(page, 3100, 1900)
+  // Porta selecionada (painel da esquadria)
+  await clickModel(page, 1100, 3600)
+  await expect(page.getByTestId('opening-props')).toBeVisible()
+  await page.screenshot({ path: shot('14-editor-porta-selecionada') })
+
+  // Cama selecionada
+  await clickModel(page, 3200, 1900)
   await expect(page.getByTestId('item-props')).toContainText('Cama de casal')
   await page.screenshot({ path: shot('11-editor-cama-selecionada') })
 
   // Excluir + desfazer
   await page.keyboard.press('Delete')
-  await expect(items(page)).toHaveCount(6)
+  await expect(items(page)).toHaveCount(5)
   await page.getByTestId('undo').click()
-  await expect(items(page)).toHaveCount(7)
+  await expect(items(page)).toHaveCount(6)
 
   // Salvo no navegador: recarregar mantém tudo
   await expect(page.getByTestId('save-status')).toContainText('Salvo neste navegador')
   await page.reload()
-  await expect(items(page)).toHaveCount(7)
-  await expect(
-    page.getByTestId('drawings').locator('g[data-role="drawing-dimension"]'),
-  ).toHaveCount(2)
+  await expect(items(page)).toHaveCount(6)
+  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-chain"]')).toHaveCount(4)
 
-  // Segundo ambiente: sala
+  // Segundo ambiente: paredes DIGITANDO os comprimentos (5,00 × 4,00 m pelo eixo)
   await page.getByTestId('add-env').click()
   await page.getByTestId('tool-wall').click()
-  for (const [x, y] of [
-    [0, 0],
-    [5000, 0],
-    [5000, 4000],
-    [0, 4000],
-    [0, 0],
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  for (const [x, y, len] of [
+    [1500, 0, '500'],
+    [5000, 1500, '400'],
+    [3500, 4000, '500'],
   ] as const) {
     await moveModel(page, x, y)
-    await clickModel(page, x, y)
+    await page.keyboard.type(len)
+    await expect(page.getByTestId('typed-length')).toContainText(`${len} cm`)
+    await page.keyboard.press('Enter')
   }
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0) // fecha no primeiro ponto
   await page.keyboard.press('Escape')
   await page.keyboard.press('f')
+  await clickModel(page, 5000, 2000)
+  await expect(page.getByTestId('wall-props')).toContainText('eixo 18,00 m')
+  await expect(page.getByTestId('wall-props')).toContainText('fechada')
+  await page.keyboard.press('Escape')
+
+  await page.getByTestId('opening-janela-correr-4').click()
+  await moveModel(page, 2500, 60)
+  await clickModel(page, 2500, 60)
+  await page.getByTestId('opening-porta-correr').click()
+  await moveModel(page, 4940, 3000)
+  await clickModel(page, 4940, 3000)
+  await page.keyboard.press('Escape')
   await placeBlock(page, 'tapete', 2500, 2200)
   await setCm(page, 'item-w', '250')
   await setCm(page, 'item-d', '200')
@@ -173,6 +190,21 @@ test('monta um quarto com blocos, cotas e texto; desfaz, persiste e gera PDF', a
   await placeBlock(page, 'poltrona', 900, 2100)
   await page.keyboard.press('r')
   await placeBlock(page, 'vaso-planta', 4600, 3600)
+  await page.keyboard.press('Escape')
+  // Uma cota manual
+  await page.getByTestId('tool-dimension').click()
+  for (const [x, y] of [
+    [0, 0],
+    [0, 4000],
+    [-300, 2000],
+  ] as const) {
+    await moveModel(page, x, y)
+    await clickModel(page, x, y)
+  }
+  await page.keyboard.press('Escape')
+  await expect(
+    page.getByTestId('drawings').locator('g[data-role="drawing-dimension"]'),
+  ).toHaveCount(1)
   await page.keyboard.press('Escape')
   await page.keyboard.press('f')
   await page.mouse.move(0, 0)

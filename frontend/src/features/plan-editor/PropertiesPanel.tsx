@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { getBlock } from '@/core/blocks/catalog'
 import { distance } from '@/core/geometry/vec'
+import { wallChainDimensions } from '@/core/project/auto-dims'
 import { calibrateBasePlan } from '@/core/project/base-plan'
-import type { Drawing, Environment, Item } from '@/core/project/schema'
+import { OPENING_DEFS, openingDef, openingFrame } from '@/core/project/openings'
+import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatCm, formatDecimal, parseCm } from '@/core/units'
 import { CmField, TextField } from './fields'
 import { selectActiveEnv, useEditor } from './store'
@@ -89,23 +91,210 @@ function ItemProps({ item }: { item: Item }) {
   )
 }
 
+function WallProps({ wall }: { wall: Wall }) {
+  const s = useEditor.getState()
+  const env = useEditor(selectActiveEnv)
+  const n = wall.closed ? wall.points.length : wall.points.length - 1
+  let len = 0
+  for (let i = 0; i < n; i++)
+    len += distance(wall.points[i]!, wall.points[(i + 1) % wall.points.length]!)
+  const own = env.openings.filter((o) => o.wallId === wall.id)
+  return (
+    <section data-testid="wall-props">
+      <h2>Parede</h2>
+      <CmField
+        label="Espessura"
+        value={wall.thicknessMm}
+        onCommit={(thicknessMm) => s.updateDrawing(wall.id, { thicknessMm })}
+      />
+      <p className="muted">
+        {n} trecho(s) · eixo {formatDecimal(len / 1000, 2)} m{wall.closed ? ' · fechada' : ''}
+        {own.length ? ` · ${own.length} vão(s)` : ''}
+      </p>
+      <div className="button-row">
+        <button
+          type="button"
+          data-testid="auto-dims"
+          title="Uma cota em cadeia por trecho, pela face externa, com portas e janelas"
+          onClick={() => s.addChains(wallChainDimensions(wall, env.openings))}
+        >
+          Cotar parede
+        </button>
+        <button type="button" className="danger" onClick={() => s.deleteSelection()}>
+          Excluir
+        </button>
+      </div>
+      <p className="muted small">Excluir a parede remove as portas e janelas dela.</p>
+    </section>
+  )
+}
+
+function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment }) {
+  const s = useEditor.getState()
+  const def = openingDef(o.type)
+  const wall = env.drawings.find((d): d is Wall => d.kind === 'wall' && d.id === o.wallId)
+  const f = wall && openingFrame(wall, o)
+  const isDoor = def.kind === 'door'
+  return (
+    <section data-testid="opening-props">
+      <h2>{isDoor ? 'Porta' : 'Janela'}</h2>
+      <label className="field">
+        <span>Tipo</span>
+        <select
+          value={o.type}
+          data-testid="opening-type"
+          onChange={(e) => s.updateOpening(o.id, { type: e.target.value as OpeningType })}
+        >
+          {OPENING_DEFS.filter((x) => x.kind === def.kind).map((x) => (
+            <option key={x.type} value={x.type}>
+              {x.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="field-row">
+        <CmField
+          label="Largura"
+          value={o.widthMm}
+          onCommit={(widthMm) => s.updateOpening(o.id, { widthMm })}
+          testId="opening-w"
+        />
+        <CmField
+          label="Altura"
+          value={o.heightMm}
+          onCommit={(heightMm) => s.updateOpening(o.id, { heightMm })}
+        />
+      </div>
+      {!isDoor && (
+        <CmField
+          label="Peitoril"
+          value={o.sillMm}
+          allowZero
+          onCommit={(sillMm) => s.updateOpening(o.id, { sillMm })}
+        />
+      )}
+      {f && (
+        <CmField
+          label="Distância do início do trecho (eixo)"
+          value={Math.round(f.offset - f.width / 2)}
+          allowZero
+          onCommit={(edge) => s.updateOpening(o.id, { offsetMm: edge + f.width / 2 })}
+          testId="opening-edge"
+        />
+      )}
+      <div className="button-row">
+        <button
+          type="button"
+          onClick={() => s.rotateSelection(90)}
+          title="R"
+          data-testid="opening-flip-side"
+        >
+          {isDoor ? 'Abrir para o outro lado' : 'Trocar lado externo'}
+        </button>
+        {isDoor && (
+          <button
+            type="button"
+            onClick={() => s.mirrorSelection()}
+            title="M"
+            data-testid="opening-flip-hinge"
+          >
+            {o.type === 'porta-correr' ? 'Inverter sentido' : 'Inverter dobradiça'}
+          </button>
+        )}
+      </div>
+      <div className="button-row">
+        <button type="button" onClick={() => s.duplicateSelection()} title="Ctrl+D">
+          Duplicar
+        </button>
+        <button type="button" className="danger" onClick={() => s.deleteSelection()}>
+          Excluir
+        </button>
+      </div>
+      <p className="muted small">Arraste para deslizar pela parede.</p>
+    </section>
+  )
+}
+
+function ToolOptions() {
+  const tool = useEditor((s) => s.tool)
+  const roomSize = useEditor((s) => s.roomSize)
+  const thickness = useEditor((s) => s.wallThicknessMm)
+  const s = useEditor.getState()
+  if (tool === 'room') {
+    return (
+      <section data-testid="room-options">
+        <h2>Ambiente retangular</h2>
+        <p className="muted small">Medidas INTERNAS (de face a face), como na medição da obra.</p>
+        <div className="field-row">
+          <CmField
+            label="Largura"
+            value={roomSize.w}
+            onCommit={(w) => s.setRoomSize({ ...roomSize, w })}
+            testId="room-w"
+          />
+          <CmField
+            label="Profundidade"
+            value={roomSize.d}
+            onCommit={(d) => s.setRoomSize({ ...roomSize, d })}
+            testId="room-d"
+          />
+        </div>
+        <CmField
+          label="Espessura das paredes"
+          value={thickness}
+          onCommit={(mm) => s.setWallThickness(mm)}
+          testId="room-t"
+        />
+        <p className="note">Clique na planta para posicionar o canto interno superior esquerdo.</p>
+      </section>
+    )
+  }
+  if (tool === 'wall') {
+    return (
+      <section>
+        <h2>Parede</h2>
+        <p className="small">
+          Clique o primeiro ponto e <strong>digite o comprimento em cm</strong> (ex.: 350) + Enter;
+          a direção segue o mouse. Clique no primeiro ponto para fechar.
+        </p>
+      </section>
+    )
+  }
+  if (tool === 'opening') {
+    return (
+      <section>
+        <h2>Porta / janela</h2>
+        <p className="small">
+          Aproxime de uma parede e clique. O lado em que está o cursor define para onde abre.
+        </p>
+      </section>
+    )
+  }
+  return null
+}
+
 function DrawingProps({ d }: { d: Drawing }) {
   const s = useEditor.getState()
-  if (d.kind === 'wall') {
-    const n = d.closed ? d.points.length : d.points.length - 1
-    let len = 0
-    for (let i = 0; i < n; i++) len += distance(d.points[i]!, d.points[(i + 1) % d.points.length]!)
+  if (d.kind === 'wall') return <WallProps wall={d} />
+  if (d.kind === 'chain') {
     return (
-      <section data-testid="wall-props">
-        <h2>Parede</h2>
+      <section>
+        <h2>Cota em cadeia</h2>
+        <p className="muted">{d.points.length - 1} vão(s)</p>
         <CmField
-          label="Espessura"
-          value={d.thicknessMm}
-          onCommit={(thicknessMm) => s.updateDrawing(d.id, { thicknessMm })}
+          label="Afastamento"
+          value={d.offsetMm}
+          allowZero
+          onCommit={(offsetMm) => s.updateDrawing(d.id, { offsetMm })}
         />
-        <p className="muted">
-          {n} trecho(s) · eixo {formatDecimal(len / 1000, 2)} m{d.closed ? ' · fechada' : ''}
-        </p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={d.total}
+            onChange={(e) => s.updateDrawing(d.id, { total: e.target.checked })}
+          />
+          Linha de total
+        </label>
         <button type="button" className="danger" onClick={() => s.deleteSelection()}>
           Excluir
         </button>
@@ -292,13 +481,17 @@ export function PropertiesPanel() {
   const env = useEditor(selectActiveEnv)
   const selection = useEditor((s) => s.selection)
   const item = selection?.kind === 'item' ? env.items.find((i) => i.id === selection.id) : undefined
+  const opening =
+    selection?.kind === 'opening' ? env.openings.find((o) => o.id === selection.id) : undefined
   const drawing =
     selection?.kind === 'drawing' ? env.drawings.find((d) => d.id === selection.id) : undefined
   return (
     <aside className="panel panel--props" data-testid="properties">
+      <ToolOptions />
       {item && <ItemProps key={item.id} item={item} />}
+      {opening && <OpeningProps key={opening.id} opening={opening} env={env} />}
       {drawing && <DrawingProps key={drawing.id} d={drawing} />}
-      {!item && !drawing && <EnvironmentSummary env={env} />}
+      {!item && !drawing && !opening && <EnvironmentSummary env={env} />}
       <BasePlanProps env={env} />
     </aside>
   )

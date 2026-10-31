@@ -71,8 +71,17 @@ Em **http://localhost:5173/editor**:
 - **Blocos:** clique num bloco do catálogo e depois na planta, ou arraste o bloco. Mude L × P
   no painel da direita e o bloco se redesenha (travesseiros, portas, módulos e assentos
   acompanham a medida).
-- **Parede (W):** clique nos pontos e clique no primeiro para fechar o ambiente. Enter ou Esc
-  termina; Shift desliga o modo ortogonal.
+- **Ambiente (A):** informe largura e profundidade **internas** e clique para posicionar. As
+  paredes saem com a espessura escolhida.
+- **Parede (W):** clique no primeiro ponto e **digite o comprimento em cm** + Enter (a direção
+  segue o mouse), ou clique nos pontos. Clique no primeiro ponto para fechar. Shift desliga o
+  modo ortogonal.
+- **Porta (P) e Janela (J):** clique sobre uma parede, e o lado do cursor define para onde a
+  porta abre. A parede é recortada. Arraste para deslizar a peça, use R para abrir para o
+  outro lado e M para inverter a dobradiça. Há 3 tipos de porta e 5 de janela na seção
+  "Esquadrias" do catálogo.
+- **Cotar parede:** com a parede selecionada, gera as cotas em cadeia pela face externa, com
+  os vãos.
 - **Cota (C):** clique nos dois pontos e mova para afastar a cota.
 - **Texto (T).**
 - **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e

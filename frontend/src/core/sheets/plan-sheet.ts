@@ -5,7 +5,7 @@ import type { Primitive } from '../drawing/primitives'
 import { PEN } from '../drawing/styles'
 import { expand, height, isEmpty, width } from '../geometry/bbox'
 import { vec } from '../geometry/vec'
-import { chooseScale } from './fit'
+import { STANDARD_SCALES } from './fit'
 import { graphicScale } from './graphic-scale'
 import { nbrMargins, paperSize, type PaperFormat } from './paper'
 
@@ -41,8 +41,8 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     w: paper.widthMm - m.left - m.right,
     h: paper.heightMm - m.top - m.bottom,
   }
-  // Área útil do desenho (deixa espaço para título, cotas e carimbo)
-  const pad = 22
+  // Área útil do desenho. A caixa do desenho já inclui as cotas; a folga é só respiro.
+  const pad = 8
   const area = {
     x: frame.x + pad,
     y: frame.y + HEADER_H + pad,
@@ -50,9 +50,17 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     h: frame.h - HEADER_H - STAMP_H - 2 * pad,
   }
 
-  const bbox = entitiesBBox(input.build(50))
-  const scale = input.scale ?? chooseScale(bbox, { width: area.w, height: area.h })
+  // Testa cada escala com o desenho montado nela (afastamentos de cota dependem da escala).
+  const fits = (sc: number) => {
+    const b = entitiesBBox(input.build(sc), sc)
+    return isEmpty(b) || (width(b) / sc <= area.w && height(b) / sc <= area.h)
+  }
+  const scale =
+    input.scale ??
+    [...STANDARD_SCALES].sort((a, b) => a - b).find(fits) ??
+    Math.max(...STANDARD_SCALES)
   const entities = input.build(scale)
+  const bbox = entitiesBBox(entities, scale)
   const bb = isEmpty(bbox) ? { minX: 0, minY: 0, maxX: 0, maxY: 0 } : expand(bbox, 0)
   const origin = vec(
     area.x + (area.w - width(bb) / scale) / 2 - bb.minX / scale,

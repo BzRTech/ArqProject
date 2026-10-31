@@ -9,6 +9,7 @@ import { newId, redo, selectActiveEnv, undo, useEditor, type Tool } from './stor
 const TOOLS: { id: Tool; label: string; key: string }[] = [
   { id: 'select', label: 'Selecionar', key: 'V' },
   { id: 'wall', label: 'Parede', key: 'W' },
+  { id: 'room', label: 'Ambiente', key: 'A' },
   { id: 'dimension', label: 'Cota', key: 'C' },
   { id: 'text', label: 'Texto', key: 'T' },
 ]
@@ -16,6 +17,8 @@ const TOOLS: { id: Tool; label: string; key: string }[] = [
 export function Toolbar({ onFit }: { onFit: () => void }) {
   const tool = useEditor((s) => s.tool)
   const setTool = useEditor((s) => s.setTool)
+  const openingType = useEditor((s) => (s.tool === 'opening' ? s.placeOpeningType : null))
+  const startOpening = useEditor((s) => s.startOpening)
   const thickness = useEditor((s) => s.wallThicknessMm)
   const setThickness = useEditor((s) => s.setWallThickness)
   const canUndo = useStore(useEditor.temporal, (s) => s.pastStates.length > 0)
@@ -76,6 +79,26 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
             {t.label}
           </button>
         ))}
+      </div>
+      <div className="tool-group">
+        <button
+          type="button"
+          className={openingType?.startsWith('porta') ? 'is-active' : ''}
+          onClick={() => startOpening('porta-abrir')}
+          title="Porta (P) — clique sobre uma parede"
+          data-testid="tool-door"
+        >
+          Porta
+        </button>
+        <button
+          type="button"
+          className={openingType?.startsWith('janela') ? 'is-active' : ''}
+          onClick={() => startOpening('janela-correr-2')}
+          title="Janela (J) — clique sobre uma parede"
+          data-testid="tool-window"
+        >
+          Janela
+        </button>
       </div>
       {tool === 'wall' && (
         <label className="inline-field">

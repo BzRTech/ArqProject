@@ -51,8 +51,11 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
   - Estado: zustand + immer + zundo (desfazer/refazer; arrasto = 1 passo). Persistência local em IndexedDB (projeto + imagens), autosave.
   - Ferramentas: selecionar/arrastar, parede (snap em extremidade, ortogonal, grade; fecha no 1º ponto), cota (2 pontos + afastamento), texto, inserir bloco (clique ou arrastar do catálogo); item: L×P em cm, rotação, espelhar, duplicar, excluir; ambientes em abas; importar imagem da planta e calibrar; PDF com uma prancha A3 por ambiente.
   - Tela usa a mesma compilação do PDF na escala de exibição 1:50 (penas e textos como no papel).
+  - Esquadrias como VÃOS na parede (schema v2 + migração v1→v2): 3 portas e 5 janelas, recorte da parede, deslizar pela parede, inverter lado/dobradiça; "Cotar parede" (cadeia pela face externa com os vãos); comprimento DIGITADO ao desenhar parede; ferramenta "Ambiente" (retângulo pelas medidas internas). Adendo no ADR 004.
+  - A escala da prancha é escolhida montando o desenho em cada escala candidata (as cotas dependem dela).
   - Prints em `docs/prints/editor/`.
 - Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).
 - Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.
 - Pendências: material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ADR 002); `DimStyle` do `SheetTemplate` (Fase 6); itens pendentes das Fases 4–5 listados na nota da seção 5 do PLANO.
-- Dica de dev: depois de instalar dependências novas no front, reinicie o container `frontend` (o `npm ci` roda só na subida).
+- Dica de dev: depois de instalar dependências novas no front, reinicie o container `frontend` (o `npm ci` roda só na subida). Em dev, `window.__editor` expõe o store do editor (depuração).
+- Lição: substituições de texto em scripts devem falhar se não casarem (um `replace` silencioso deixou o PDF sem as esquadrias; há teste de regressão).

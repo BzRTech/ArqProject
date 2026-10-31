@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   cmToMm,
+  formatBRL,
+  formatQty,
+  parseBRL,
   formatAreaM2,
   formatCm,
   formatDecimal,
@@ -90,5 +93,34 @@ describe('escala', () => {
   it('1:50 — 4 m viram 80 mm de papel', () => {
     expect(modelToPaper(4000, 50)).toBe(80)
     expect(paperToModel(80, 50)).toBe(4000)
+  })
+})
+
+describe('dinheiro (centavos inteiros)', () => {
+  it.each([
+    [0, 'R$ 0,00'],
+    [5, 'R$ 0,05'],
+    [123456, 'R$ 1.234,56'],
+    [100000000, 'R$ 1.000.000,00'],
+    [-990, '-R$ 9,90'],
+  ])('%i → "%s"', (c, t) => expect(formatBRL(c)).toBe(t))
+
+  it.each([
+    ['1.234,56', 123456],
+    ['1234,5', 123450],
+    ['1234', 123400],
+    ['R$ 99,90', 9990],
+    ['1.500', 150000],
+    [' 0,1 ', 10],
+  ])('"%s" → %i centavos', (t, c) => expect(parseBRL(t)).toBe(c))
+
+  it.each(['', 'abc', '1,234,5', '-5', '1,999'])('"%s" é inválido', (t) =>
+    expect(parseBRL(t)).toBeNull(),
+  )
+
+  it('quantidade', () => {
+    expect(formatQty(2)).toBe('2')
+    expect(formatQty(2.5)).toBe('2,5')
+    expect(formatQty(1.25)).toBe('1,25')
   })
 })

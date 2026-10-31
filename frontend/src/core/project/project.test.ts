@@ -8,7 +8,7 @@ import { snapPoint } from '../editor/snap'
 import { calibrateBasePlan } from './base-plan'
 import { hitItem, itemCorners, itemEntities } from './items'
 import { environmentEntities } from './render'
-import { newProject, ProjectSchema, type Item } from './schema'
+import { ITEM_DEFAULTS, newProject, ProjectSchema, type Item } from './schema'
 import { hitWall, wallOutline } from './walls'
 
 const bed: Item = {
@@ -20,6 +20,7 @@ const bed: Item = {
   rotationDeg: 0,
   mirrored: false,
   sizeMm: { w: 1600, d: 2000 },
+  ...ITEM_DEFAULTS,
 }
 
 describe('schema do projeto', () => {

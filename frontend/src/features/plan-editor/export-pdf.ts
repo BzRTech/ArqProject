@@ -1,8 +1,10 @@
+import { computeLegend } from '@/core/project/markers'
 import { environmentEntities } from '@/core/project/render'
 import type { Project } from '@/core/project/schema'
 import { buildPlanSheet } from '@/core/sheets/plan-sheet'
 import { svgPagesToPdf } from '@/render/pdf/exportPdf'
 import { loadPdfFonts, registerWebFonts } from '@/render/pdf/fonts'
+import { formatQty } from '@/core/units'
 import { toMarkup } from '@/render/svg/markup'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { getAsset } from './persistence'
@@ -23,6 +25,11 @@ export async function exportProjectPdf(
       title: env.name,
       subtitle: project.name.toUpperCase(),
       dateText: date,
+      legend: computeLegend(env).rows.map((r) => ({
+        label: r.label,
+        text: r.existing ? `${r.name} (existente)` : r.name,
+        qty: `${formatQty(r.qty)} ${r.unit}`,
+      })),
       build: (scale) => environmentEntities(env, { scale, basePlanHref: href }),
     })
     scales.push(sheet.scale)

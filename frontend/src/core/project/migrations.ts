@@ -18,6 +18,23 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
       items: ((e.items as Raw[]) ?? []).filter((it) => it.blockId !== 'porta'),
     })),
   }),
+  // v2 → v3: legenda e orçamento nos itens (padrões neutros).
+  2: (p) => ({
+    ...p,
+    schemaVersion: 3,
+    environments: ((p.environments as Raw[]) ?? []).map((e) => ({
+      ...e,
+      items: ((e.items as Raw[]) ?? []).map((it) => ({
+        qty: 1,
+        unit: 'un',
+        showMarker: true,
+        inLegend: true,
+        existing: false,
+        approved: false,
+        ...it,
+      })),
+    })),
+  }),
 }
 
 export class MigrationError extends Error {}

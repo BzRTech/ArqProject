@@ -16,14 +16,31 @@ import {
   type Vec2,
 } from '@/core/geometry/vec'
 import { fit, pan, screenToWorld, zoomAt, type Viewport } from '@/core/geometry/viewport'
+import { areaM2Text } from '@/core/project/areas'
 import { itemCorners, itemEntities } from '@/core/project/items'
+import { environmentMarkers } from '@/core/project/markers'
 import { openingDef, openingEntities, openingFrame } from '@/core/project/openings'
 import { drawingEntities, environmentEntities } from '@/core/project/render'
-import type { Drawing, Environment, Item, Opening, OpeningType } from '@/core/project/schema'
+import {
+  ITEM_DEFAULTS,
+  type Drawing,
+  type Environment,
+  type Item,
+  type Opening,
+  type OpeningType,
+} from '@/core/project/schema'
 import { nearestWall, wallEntities, wallOutline } from '@/core/project/walls'
 import { formatCm, formatDecimal, parseCm } from '@/core/units'
 import { Compiled } from './Compiled'
-import { DISPLAY_SCALE, dimensionLine, hitTest, snapPoints, textBox, wallsOf } from './geometry'
+import {
+  DISPLAY_SCALE,
+  dimensionLine,
+  hitHandle,
+  hitTest,
+  snapPoints,
+  textBox,
+  wallsOf,
+} from './geometry'
 import { useAssetUrl } from './hooks'
 import { redo, selectActiveEnv, undo, useEditor, type Selection } from './store'
 
@@ -154,6 +171,17 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
       </g>
     )
   }
+  if (d.kind === 'area') {
+    return (
+      <g data-testid="selection">
+        <polygon
+          points={d.points.map((q) => `${q.x},${q.y}`).join(' ')}
+          {...common}
+          strokeWidth={2 * px}
+        />
+      </g>
+    )
+  }
   const b = textBox(d.at, d.text, d.sizeMm)
   return (
     <g data-testid="selection">
@@ -188,6 +216,7 @@ export function PlanCanvas({ fitSignal }: Props) {
   const [snapKind, setSnapKind] = useState<SnapKind>('free')
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
+  const [areaDraft, setAreaDraft] = useState<Vec2[]>([])
   /** Comprimento digitado durante o desenho de parede (cm, pt-BR). */
   const [typed, setTyped] = useState('')
   const cursorRef = useRef<Vec2 | null>(null)
@@ -198,10 +227,11 @@ export function PlanCanvas({ fitSignal }: Props) {
     setPrevDraftKey(draftKey)
     setWallDraft([])
     setDimDraft([])
+    setAreaDraft([])
     setTyped('')
   }
   const drag = useRef<{
-    mode: 'pan' | 'move' | 'opening'
+    mode: 'pan' | 'move' | 'opening' | 'handle'
     last: Vec2
     start: Vec2
     applied: Vec2
@@ -213,10 +243,16 @@ export function PlanCanvas({ fitSignal }: Props) {
       grabAlong: number
       startScreen: Vec2
     }
+    /** Arrasto de balão/rótulo: o que é e o deslocamento inicial. */
+    handle?: { kind: 'marker' | 'area-label'; id: string; from: Vec2 }
   } | null>(null)
 
   const px = 1 / view.scale // 1 px de tela em mm do modelo
   const endpoints = useMemo(() => snapPoints(env), [env])
+  const markers = useMemo(
+    () => environmentMarkers({ items: env.items }, DISPLAY_SCALE),
+    [env.items],
+  )
   const walls = useMemo(() => wallsOf(env), [env])
   const openingsByWall = useMemo(() => {
     const m = new Map<string, Opening[]>()
@@ -302,17 +338,23 @@ export function PlanCanvas({ fitSignal }: Props) {
     (p: Vec2, opts: { ortho?: Vec2; free?: boolean; grid?: number } = {}) =>
       snapPoint(p, {
         grid: opts.free ? 0 : (opts.grid ?? GRID_DRAW),
-        endpoints: opts.free ? [] : [...endpoints, ...wallDraft, ...dimDraft],
+        endpoints: opts.free ? [] : [...endpoints, ...wallDraft, ...dimDraft, ...areaDraft],
         tolerance: 10 * px,
         orthoFrom: opts.free ? undefined : opts.ortho,
       }),
-    [endpoints, wallDraft, dimDraft, px],
+    [endpoints, wallDraft, dimDraft, areaDraft, px],
   )
 
   const commitWall = useCallback((pts: Vec2[], closed: boolean) => {
     const clean = pts.filter((p, i) => i === 0 || distance(p, pts[i - 1]!) > 0.5)
     if (clean.length >= 2) useEditor.getState().addWall(clean, closed && clean.length >= 3)
     setWallDraft([])
+  }, [])
+
+  const commitArea = useCallback((pts: Vec2[]) => {
+    const clean = pts.filter((p, i) => i === 0 || distance(p, pts[i - 1]!) > 0.5)
+    if (clean.length >= 3) useEditor.getState().addArea(clean)
+    setAreaDraft([])
   }, [])
 
   // --- Teclado -------------------------------------------------------------
@@ -377,6 +419,22 @@ export function PlanCanvas({ fitSignal }: Props) {
           return
         }
       }
+      if (s.tool === 'area' && areaDraft.length) {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          commitArea(areaDraft)
+          return
+        }
+        if (e.key === 'Escape') {
+          setAreaDraft([])
+          return
+        }
+        if (e.key === 'Backspace') {
+          e.preventDefault()
+          setAreaDraft((d) => d.slice(0, -1))
+          return
+        }
+      }
       if (s.tool === 'dimension' && dimDraft.length && e.key === 'Escape') {
         setDimDraft([])
         return
@@ -404,6 +462,9 @@ export function PlanCanvas({ fitSignal }: Props) {
             case 'a':
               s.setTool('room')
               break
+            case 'q':
+              s.setTool('area')
+              break
             case 'p':
               s.startOpening('porta-abrir')
               break
@@ -430,7 +491,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [wallDraft, dimDraft, commitWall, fitToContent, typed, typedPoint])
+  }, [wallDraft, dimDraft, areaDraft, commitWall, commitArea, fitToContent, typed, typedPoint])
 
   // --- Ponteiro --------------------------------------------------------------
   const screenPt = (e: React.PointerEvent) => {
@@ -449,6 +510,28 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     switch (s.tool) {
       case 'select': {
+        // Balões e rótulos de área têm prioridade: arrastá-los não mexe no item/área.
+        const handle = hitHandle(env, p, 4 * px)
+        if (handle) {
+          const id = handle.kind === 'marker' ? handle.itemId : handle.areaId
+          s.select({ kind: handle.kind === 'marker' ? 'item' : 'drawing', id })
+          const from =
+            handle.kind === 'marker'
+              ? (env.items.find((i) => i.id === id)?.markerOffset ?? { x: 0, y: 0 })
+              : ((
+                  env.drawings.find((d) => d.id === id && d.kind === 'area') as
+                    { labelOffset?: Vec2 } | undefined
+                )?.labelOffset ?? { x: 0, y: 0 })
+          s.beginInteraction()
+          drag.current = {
+            mode: 'handle',
+            last: sp,
+            start: p,
+            applied: { x: 0, y: 0 },
+            handle: { kind: handle.kind, id, from },
+          }
+          break
+        }
         const hit = hitTest(env, p, 6 * px)
         s.select(hit)
         if (hit) {
@@ -517,6 +600,13 @@ export function PlanCanvas({ fitSignal }: Props) {
       case 'text':
         s.addText(snap(p, { grid: GRID_MOVE }).point)
         break
+      case 'area': {
+        const q = snap(p, { ortho: e.shiftKey ? undefined : areaDraft[areaDraft.length - 1] }).point
+        const first = areaDraft[0]
+        if (first && areaDraft.length >= 3 && distance(q, first) < 0.5) commitArea(areaDraft)
+        else setAreaDraft((d) => [...d, q])
+        break
+      }
       case 'calibrate':
         s.setCalibration(calibration.length >= 2 ? [p] : [...calibration, p])
         break
@@ -531,6 +621,14 @@ export function PlanCanvas({ fitSignal }: Props) {
     if (d?.mode === 'pan') {
       setView((v) => pan(v, sp.x - d.last.x, sp.y - d.last.y))
       d.last = sp
+    } else if (d?.mode === 'handle' && d.handle) {
+      const h = d.handle
+      const off = {
+        x: Math.round((h.from.x + p.x - d.start.x) / GRID_MOVE) * GRID_MOVE,
+        y: Math.round((h.from.y + p.y - d.start.y) / GRID_MOVE) * GRID_MOVE,
+      }
+      if (h.kind === 'marker') s.updateItem(h.id, { markerOffset: off })
+      else s.updateDrawing(h.id, { labelOffset: off })
     } else if (d?.mode === 'move') {
       const want = {
         x: Math.round((p.x - d.start.x) / GRID_MOVE) * GRID_MOVE,
@@ -556,6 +654,10 @@ export function PlanCanvas({ fitSignal }: Props) {
       const r = snap(p, { ortho: e.shiftKey ? undefined : wallDraft[wallDraft.length - 1] })
       setCursor(r.point)
       setSnapKind(r.kind)
+    } else if (s.tool === 'area') {
+      const r = snap(p, { ortho: e.shiftKey ? undefined : areaDraft[areaDraft.length - 1] })
+      setCursor(r.point)
+      setSnapKind(r.kind)
     } else if (s.tool === 'dimension' && dimDraft.length < 2) {
       const r = snap(p, { ortho: e.shiftKey ? undefined : dimDraft[0] })
       setCursor(r.point)
@@ -570,7 +672,11 @@ export function PlanCanvas({ fitSignal }: Props) {
   }
 
   const onPointerUp = () => {
-    if (drag.current?.mode === 'move' || drag.current?.mode === 'opening') {
+    if (
+      drag.current?.mode === 'move' ||
+      drag.current?.mode === 'opening' ||
+      drag.current?.mode === 'handle'
+    ) {
       useEditor.getState().endInteraction()
     }
     drag.current = null
@@ -623,6 +729,34 @@ export function PlanCanvas({ fitSignal }: Props) {
           style: { color: DRAFT },
         },
       ]
+    }
+    if (tool === 'area' && areaDraft.length) {
+      const pts = [...areaDraft, cursor]
+      const out: Entity[] = [
+        {
+          kind: 'polyline',
+          points: pts,
+          closed: pts.length >= 3,
+          style: { color: DRAFT, lineType: 'dashed' },
+        },
+      ]
+      if (pts.length >= 3) {
+        const c = {
+          x: pts.reduce((a, q) => a + q.x, 0) / pts.length,
+          y: pts.reduce((a, q) => a + q.y, 0) / pts.length,
+        }
+        out.push({
+          kind: 'text',
+          at: c,
+          text: areaM2Text({ points: pts }),
+          size: 2.6,
+          anchor: 'middle',
+          vAlign: 'middle',
+          color: DRAFT,
+          weight: 'bold',
+        })
+      }
+      return out
     }
     if (tool === 'room') {
       const h = wallThickness / 2
@@ -704,6 +838,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         rotationDeg: 0,
         mirrored: false,
         sizeMm: b.defaultSize,
+        ...ITEM_DEFAULTS,
       })
     }
     return []
@@ -712,6 +847,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     cursor,
     wallDraft,
     dimDraft,
+    areaDraft,
     placeBlockId,
     wallThickness,
     typedPoint,
@@ -735,6 +871,9 @@ export function PlanCanvas({ fitSignal }: Props) {
         dimDraft.length
       ] ?? '',
     text: 'Clique para inserir um texto',
+    area: areaDraft.length
+      ? `Clique nos cantos · clique no 1º ponto ou Enter fecha · ${areaDraft.length >= 2 && cursor ? areaM2Text({ points: [...areaDraft, cursor] }) : ''}`
+      : 'Clique nos cantos da área (snap nas faces das paredes) · Q',
     place: 'Clique para inserir o bloco · Esc cancela',
     calibrate: 'Clique em dois pontos de medida conhecida da planta base',
   }[tool]
@@ -752,6 +891,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         onPointerLeave={() => setCursor(null)}
         onDoubleClick={() => {
           if (tool === 'wall' && wallDraft.length >= 2) commitWall(wallDraft, false)
+          if (tool === 'area' && areaDraft.length >= 3) commitArea(areaDraft)
         }}
         onContextMenu={(e) => e.preventDefault()}
         onDragOver={(e) => {
@@ -806,8 +946,12 @@ export function PlanCanvas({ fitSignal }: Props) {
                 <DrawingView key={d.id} d={d} openings={NO_OPENINGS} />
               ))}
           </g>
+          <Compiled entities={markers} role="marcadores" />
           <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />
           <SelectionOverlay env={env} sel={selection} px={px} />
+          {areaDraft.map((p, i) => (
+            <circle key={`a${i}`} cx={p.x} cy={p.y} r={3 * px} fill={DRAFT} />
+          ))}
           {wallDraft.map((p, i) => (
             <circle key={i} cx={p.x} cy={p.y} r={3 * px} fill={DRAFT} />
           ))}
@@ -846,7 +990,7 @@ export function PlanCanvas({ fitSignal }: Props) {
               {typed ? `${typed} cm ↵` : 'digite o comprimento'}
             </text>
           )}
-          {cursor && (tool === 'wall' || tool === 'dimension') && (
+          {cursor && (tool === 'wall' || tool === 'dimension' || tool === 'area') && (
             <rect
               x={cursor.x - 4 * px}
               y={cursor.y - 4 * px}

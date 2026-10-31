@@ -187,3 +187,44 @@ describe('editor — ambiente retangular, esquadrias e cotas', () => {
     })
   })
 })
+
+describe('editor — legenda, orçamento e área', () => {
+  it('item novo nasce com padrões de legenda; preço e quantidade são saneados', () => {
+    const id = S().addItem('cadeira', { x: 0, y: 0 })
+    expect(env().items[0]).toMatchObject({
+      qty: 1,
+      unit: 'un',
+      showMarker: true,
+      inLegend: true,
+      existing: false,
+      approved: false,
+    })
+    S().updateItem(id, { qty: 2.555, unitPriceCents: 45990.4 })
+    expect(env().items[0]).toMatchObject({ qty: 2.56, unitPriceCents: 45990 })
+    S().updateItem(id, { qty: -3 })
+    expect(env().items[0]!.qty).toBe(1)
+  })
+
+  it('área entra selecionada e se move com o arrasto', () => {
+    const id = S().addArea(
+      [
+        { x: 0, y: 0 },
+        { x: 1000, y: 0 },
+        { x: 1000, y: 1000 },
+      ],
+      'Sala',
+    )
+    expect(S().selection).toEqual({ kind: 'drawing', id })
+    S().moveSelection(10, 0)
+    expect(env().drawings[0]).toMatchObject({
+      kind: 'area',
+      name: 'Sala',
+      points: [
+        { x: 10, y: 0 },
+        { x: 1010, y: 0 },
+        { x: 1010, y: 1000 },
+      ],
+    })
+    expect(ProjectSchema.safeParse(S().project).success).toBe(true)
+  })
+})

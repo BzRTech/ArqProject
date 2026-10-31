@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v2 — v1 é migrado em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v3 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -43,6 +43,16 @@ export const ChainSchema = z.object({
   total: z.boolean(),
 })
 
+/** Área (polígono) com nome; o m² é calculado, nunca guardado. */
+export const AreaSchema = z.object({
+  id,
+  kind: z.literal('area'),
+  points: z.array(Vec2Schema).min(3),
+  name: z.string(),
+  /** Deslocamento do rótulo em relação ao centroide (o usuário arrasta). */
+  labelOffset: Vec2Schema.optional(),
+})
+
 export const TextSchema = z.object({
   id,
   kind: z.literal('text'),
@@ -57,6 +67,7 @@ export const DrawingSchema = z.discriminatedUnion('kind', [
   DimensionSchema,
   ChainSchema,
   TextSchema,
+  AreaSchema,
 ])
 
 export const DOOR_TYPES = ['porta-abrir', 'porta-correr', 'porta-pivotante'] as const
@@ -88,6 +99,9 @@ export const OpeningSchema = z.object({
   side: z.enum(['left', 'right']),
 })
 
+export const ITEM_UNITS = ['un', 'pç', 'cj', 'm', 'm²'] as const
+export type ItemUnit = (typeof ITEM_UNITS)[number]
+
 export const ItemSchema = z.object({
   id,
   /** Referência ao bloco do catálogo (vira libraryRef {kind,id,version} na Fase 3). */
@@ -100,6 +114,22 @@ export const ItemSchema = z.object({
   mirrored: z.boolean(),
   sizeMm: z.object({ w: positiveMm, d: positiveMm, h: positiveMm.optional() }),
   notes: z.string().optional(),
+  // --- Legenda e orçamento (v3)
+  qty: z.number().positive(),
+  unit: z.enum(ITEM_UNITS),
+  /** Desenha o balão com o número na planta. */
+  showMarker: z.boolean(),
+  /** Deslocamento do balão em relação ao centro do item (o usuário arrasta). */
+  markerOffset: Vec2Schema.optional(),
+  /** Entra na legenda (e na numeração). */
+  inLegend: z.boolean(),
+  /** Item que já existe no local (não entra no orçamento). */
+  existing: z.boolean(),
+  approved: z.boolean(),
+  /** Preço unitário em CENTAVOS inteiros. */
+  unitPriceCents: z.number().int().nonnegative().optional(),
+  brandModel: z.string().optional(),
+  supplier: z.string().optional(),
 })
 
 export const BasePlanSchema = z.object({
@@ -136,12 +166,23 @@ export type Wall = z.infer<typeof WallSchema>
 export type DimensionDrawing = z.infer<typeof DimensionSchema>
 export type TextDrawing = z.infer<typeof TextSchema>
 export type ChainDrawing = z.infer<typeof ChainSchema>
+export type AreaDrawing = z.infer<typeof AreaSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>
 export type Item = z.infer<typeof ItemSchema>
 export type BasePlan = z.infer<typeof BasePlanSchema>
 export type Environment = z.infer<typeof EnvironmentSchema>
 export type Project = z.infer<typeof ProjectSchema>
+
+/** Valores padrão dos campos de legenda/orçamento de um item novo. */
+export const ITEM_DEFAULTS = {
+  qty: 1,
+  unit: 'un',
+  showMarker: true,
+  inLegend: true,
+  existing: false,
+  approved: false,
+} as const satisfies Partial<Item>
 
 export function newEnvironment(envId: string, name: string): Environment {
   return {

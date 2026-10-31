@@ -53,9 +53,11 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
   - Tela usa a mesma compilação do PDF na escala de exibição 1:50 (penas e textos como no papel).
   - Esquadrias como VÃOS na parede (schema v2 + migração v1→v2): 3 portas e 5 janelas, recorte da parede, deslizar pela parede, inverter lado/dobradiça; "Cotar parede" (cadeia pela face externa com os vãos); comprimento DIGITADO ao desenhar parede; ferramenta "Ambiente" (retângulo pelas medidas internas). Adendo no ADR 004.
   - A escala da prancha é escolhida montando o desenho em cada escala candidata (as cotas dependem dela).
+  - Legenda e orçamento (schema v3 + migração v2→v3): `core/project/markers.ts` (numeração por grupo de itens iguais; marcenaria M01…; balão arrastável via `markerOffset`), legenda na prancha (`plan-sheet` reserva coluna), dinheiro em CENTAVOS inteiros (`formatBRL`/`parseBRL`), totais do ambiente/projeto, aprovados, planilha CSV pt-BR; áreas (`core/project/areas.ts`, ferramenta Q, "Criar área do ambiente", rótulo arrastável).
   - Prints em `docs/prints/editor/`.
 - Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).
 - Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.
+- Testar sem Docker: `cd frontend && npm install && npm run dev` → `/editor` (Node ≥ 22.12; ver README).
 - Pendências: material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ADR 002); `DimStyle` do `SheetTemplate` (Fase 6); itens pendentes das Fases 4–5 listados na nota da seção 5 do PLANO.
 - Dica de dev: depois de instalar dependências novas no front, reinicie o container `frontend` (o `npm ci` roda só na subida). Em dev, `window.__editor` expõe o store do editor (depuração).
 - Lição: substituições de texto em scripts devem falhar se não casarem (um `replace` silencioso deixou o PDF sem as esquadrias; há teste de regressão).

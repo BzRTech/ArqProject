@@ -3,9 +3,11 @@ import { dimensionDirection } from '@/core/dimensions/layout'
 import { textWidth } from '@/core/drawing/text-metrics'
 import { add, dot, leftNormal, scale, sub, type Vec2 } from '@/core/geometry/vec'
 import { hitItem, itemCorners } from '@/core/project/items'
+import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
+import { computeLegend, markerPosition } from '@/core/project/markers'
 import { hitOpening, openingJambs } from '@/core/project/openings'
 import type { ChainDrawing, DimensionDrawing, Environment, Wall } from '@/core/project/schema'
-import { distanceToSegment, hitWall } from '@/core/project/walls'
+import { distanceToSegment, hitWall, wallOutline } from '@/core/project/walls'
 import type { Selection } from './store'
 
 export const DISPLAY_SCALE = 50
@@ -68,6 +70,47 @@ export function hitTest(env: Environment, p: Vec2, tol: number): Selection {
     const d = env.drawings[i]!
     if (d.kind === 'wall' && hitWall(d, p, tol)) return { kind: 'drawing', id: d.id }
   }
+  // Área: só pelo rótulo ou pela borda (o miolo fica livre para mover a vista).
+  for (let i = env.drawings.length - 1; i >= 0; i--) {
+    const d = env.drawings[i]!
+    if (d.kind !== 'area') continue
+    const c = areaLabelCenter(d)
+    const w = Math.max(textBox(c, areaM2Text(d), 2.2).w, textBox(c, d.name.toUpperCase(), 2.6).w)
+    const h = 6 * DISPLAY_SCALE
+    if (Math.abs(p.x - c.x) <= w / 2 + tol && Math.abs(p.y - c.y) <= h / 2 + tol) {
+      return { kind: 'drawing', id: d.id }
+    }
+    const n = d.points.length
+    for (let k = 0; k < n; k++) {
+      if (distanceToSegment(p, d.points[k]!, d.points[(k + 1) % n]!) <= tol)
+        return { kind: 'drawing', id: d.id }
+    }
+  }
+  return null
+}
+
+/** Parte "pegável" que tem prioridade: balão de marcador ou rótulo de área. */
+export type Handle = { kind: 'marker'; itemId: string } | { kind: 'area-label'; areaId: string }
+
+export function hitHandle(env: Environment, p: Vec2, tol: number): Handle | null {
+  const { labelOf } = computeLegend(env)
+  for (let i = env.items.length - 1; i >= 0; i--) {
+    const it = env.items[i]!
+    if (!it.showMarker || !labelOf.has(it.id)) continue
+    const c = markerPosition(it)
+    const r = (labelOf.get(it.id)!.startsWith('M') ? 4 : 2.6) * DISPLAY_SCALE
+    if (Math.abs(p.x - c.x) <= r + tol && Math.abs(p.y - c.y) <= r + tol)
+      return { kind: 'marker', itemId: it.id }
+  }
+  for (let i = env.drawings.length - 1; i >= 0; i--) {
+    const d = env.drawings[i]!
+    if (d.kind !== 'area') continue
+    const c = areaLabelCenter(d)
+    const w = Math.max(textBox(c, areaM2Text(d), 2.2).w, textBox(c, d.name.toUpperCase(), 2.6).w)
+    if (Math.abs(p.x - c.x) <= w / 2 + tol && Math.abs(p.y - c.y) <= 3 * DISPLAY_SCALE + tol) {
+      return { kind: 'area-label', areaId: d.id }
+    }
+  }
   return null
 }
 
@@ -76,8 +119,13 @@ export function snapPoints(env: Environment): Vec2[] {
   const pts: Vec2[] = []
   const walls = new Map(wallsOf(env).map((w) => [w.id, w]))
   for (const d of env.drawings) {
-    if (d.kind === 'wall') pts.push(...d.points)
-    else if (d.kind === 'dimension') pts.push(d.p1, d.p2)
+    if (d.kind === 'wall') {
+      pts.push(...d.points)
+      // Cantos das faces (para cotar e desenhar áreas pelas faces internas).
+      const o = wallOutline(d.points, d.thicknessMm, d.closed)
+      if (o) pts.push(...o.rings.flat())
+    } else if (d.kind === 'dimension') pts.push(d.p1, d.p2)
+    else if (d.kind === 'area') pts.push(...d.points)
   }
   for (const o of env.openings) {
     const w = walls.get(o.wallId)

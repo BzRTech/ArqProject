@@ -73,3 +73,38 @@ export function modelToPaper(mm: number, scale: number): number {
 export function paperToModel(paperMm: number, scale: number): number {
   return paperMm * scale
 }
+
+// --- Dinheiro -------------------------------------------------------------------
+// Mesma regra dos milímetros: guardamos CENTAVOS inteiros, nunca float de reais.
+
+/** Centavos → "R$ 1.234,56". */
+export function formatBRL(cents: number): string {
+  const c = Math.round(cents)
+  const neg = c < 0
+  const abs = Math.abs(c)
+  const reais = Math.floor(abs / 100)
+  const frac = String(abs % 100).padStart(2, '0')
+  const grouped = String(reais).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${neg ? '-' : ''}R$ ${grouped},${frac}`
+}
+
+/**
+ * Lê valor digitado em reais (pt-BR) e devolve centavos inteiros.
+ * Aceita "1.234,56", "1234,5", "1234", "R$ 99,90", "1.500" (= mil e quinhentos).
+ */
+export function parseBRL(input: string): number | null {
+  let s = input
+    .trim()
+    .replace(/^R\$\s*/i, '')
+    .replace(/\s/g, '')
+  if (s === '') return null
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.')
+  else s = s.replace(/\./g, '')
+  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null
+  return Math.round(Number(s) * 100)
+}
+
+/** Quantidade pt-BR: inteiro sem casas, fração com até 2 ("2", "2,5"). */
+export function formatQty(q: number): string {
+  return Number.isInteger(q) ? String(q) : formatDecimal(q, Math.round(q * 10) === q * 10 ? 1 : 2)
+}

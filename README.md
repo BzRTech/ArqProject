@@ -8,7 +8,28 @@ memorial em PDF.
 - Regras para quem desenvolve (inclusive o Claude Code): [`CLAUDE.md`](CLAUDE.md)
 - Decisões de arquitetura: [`docs/adr/`](docs/adr/)
 
-## Subir o ambiente
+## Testar na sua máquina (só o editor, sem Docker)
+
+O editor roda inteiro no navegador e salva no próprio navegador. Para testar basta o
+**Node.js 22.12 ou mais novo** ([nodejs.org](https://nodejs.org), versão LTS) e o **Git**.
+
+```bash
+git clone https://github.com/BzRTech/ArqProject.git
+cd ArqProject
+git checkout fase-editor-blocos      # (ou main, depois que os PRs forem mesclados)
+cd frontend
+npm install
+npm run dev
+```
+
+Abra **http://localhost:5173/editor**. A tela inicial vai mostrar "API: indisponível", o que é
+esperado sem o backend; o editor funciona normalmente. Para parar, use Ctrl+C no terminal.
+Para atualizar depois: `git pull` e `npm install` de novo.
+
+Sem Git: no GitHub, escolha a branch `fase-editor-blocos` → **Code → Download ZIP**, descompacte
+e rode os mesmos comandos a partir da pasta `frontend`.
+
+## Subir o ambiente completo
 
 Requer Docker com Compose v2.
 
@@ -82,6 +103,14 @@ Em **http://localhost:5173/editor**:
   "Esquadrias" do catálogo.
 - **Cotar parede:** com a parede selecionada, gera as cotas em cadeia pela face externa, com
   os vãos.
+- **Marcadores e legenda:** cada item ganha um balão numerado (marcenaria usa M01, M02…).
+  Itens iguais dividem o número e somam a quantidade. Arraste o balão para tirá-lo de cima do
+  desenho. A legenda sai na prancha do PDF.
+- **Orçamento:** no painel do item há quantidade, unidade, preço, marca/modelo, fornecedor,
+  observação, "existente" e "aprovado". O painel do ambiente mostra a legenda com os totais do
+  ambiente e do projeto, e **Exportar planilha (CSV)** abre direto no Excel.
+- **Área (Q):** clique nos cantos (com snap nas faces das paredes). Numa parede fechada, o botão
+  "Criar área do ambiente" faz isso sozinho. O rótulo com o m² também se arrasta.
 - **Cota (C):** clique nos dois pontos e mova para afastar a cota.
 - **Texto (T).**
 - **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e

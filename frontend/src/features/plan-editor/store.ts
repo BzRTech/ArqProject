@@ -6,6 +6,7 @@ import { getBlock } from '@/core/blocks/catalog'
 import type { Vec2 } from '@/core/geometry/vec'
 import { openingDef } from '@/core/project/openings'
 import {
+  ITEM_DEFAULTS,
   newEnvironment,
   newProject,
   type BasePlan,
@@ -20,7 +21,7 @@ import {
 import { roundMm } from '@/core/units'
 
 export type Tool =
-  'select' | 'wall' | 'room' | 'dimension' | 'text' | 'place' | 'opening' | 'calibrate'
+  'select' | 'wall' | 'room' | 'area' | 'dimension' | 'text' | 'place' | 'opening' | 'calibrate'
 export type Selection = { kind: 'item' | 'drawing' | 'opening'; id: string } | null
 
 export const newId = (): string => crypto.randomUUID()
@@ -60,6 +61,7 @@ export interface EditorState {
   addWall: (points: Vec2[], closed: boolean) => string
   addDimension: (d: Omit<Extract<Drawing, { kind: 'dimension' }>, 'id' | 'kind'>) => string
   addText: (at: Vec2, text?: string) => string
+  addArea: (points: Vec2[], name?: string) => string
   addChains: (chains: Omit<ChainDrawing, 'id' | 'kind'>[]) => void
   /** Ambiente retangular pelas medidas INTERNAS; `corner` = canto interno superior esquerdo. */
   addRoom: (corner: Vec2) => string
@@ -179,6 +181,7 @@ export const useEditor = create<EditorState>()(
               rotationDeg: 0,
               mirrored: false,
               sizeMm: h ? { w, d, h } : { w, d },
+              ...ITEM_DEFAULTS,
             })
             s.selection = { kind: 'item', id }
             s.tool = 'select'
@@ -196,6 +199,10 @@ export const useEditor = create<EditorState>()(
             it.sizeMm.w = Math.max(min.w, roundMm(it.sizeMm.w))
             it.sizeMm.d = Math.max(min.d, roundMm(it.sizeMm.d))
             it.rotationDeg = ((it.rotationDeg % 360) + 360) % 360
+            if (!(it.qty > 0)) it.qty = 1
+            it.qty = Math.round(it.qty * 100) / 100
+            if (it.unitPriceCents !== undefined)
+              it.unitPriceCents = Math.max(0, Math.round(it.unitPriceCents))
           }),
         addWall: (points, closed) => {
           const id = newId()
@@ -229,6 +236,15 @@ export const useEditor = create<EditorState>()(
           const id = newId()
           set((s) => {
             env(s).drawings.push({ id, kind: 'text', at: rp(at), text, sizeMm: 3 })
+            s.selection = { kind: 'drawing', id }
+            s.tool = 'select'
+          })
+          return id
+        },
+        addArea: (points, name = '') => {
+          const id = newId()
+          set((s) => {
+            env(s).drawings.push({ id, kind: 'area', points: points.map(rp), name })
             s.selection = { kind: 'drawing', id }
             s.tool = 'select'
           })
@@ -321,7 +337,8 @@ export const useEditor = create<EditorState>()(
             }
             const d = env(s).drawings.find((x) => x.id === sel.id)
             if (!d) return
-            if (d.kind === 'wall' || d.kind === 'chain') d.points = d.points.map(mv)
+            if (d.kind === 'wall' || d.kind === 'chain' || d.kind === 'area')
+              d.points = d.points.map(mv)
             else if (d.kind === 'dimension') {
               d.p1 = mv(d.p1)
               d.p2 = mv(d.p2)
@@ -379,7 +396,7 @@ export const useEditor = create<EditorState>()(
               const d = env(s).drawings.find((x) => x.id === sel.id)
               if (!d) return
               const copy = { ...structuredClone(current(d)), id }
-              if (copy.kind === 'wall' || copy.kind === 'chain')
+              if (copy.kind === 'wall' || copy.kind === 'chain' || copy.kind === 'area')
                 copy.points = copy.points.map(offset)
               else if (copy.kind === 'dimension') {
                 copy.p1 = offset(copy.p1)

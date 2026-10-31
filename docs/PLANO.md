@@ -273,7 +273,9 @@ São pontos de partida: valide com um marceneiro.
 > de bloco (ADR 004). Pendente das Fases 4–5: PDF como planta base (pdf.js), marcadores
 > numerados e legenda, disciplinas como filtro, área (m²), guia, modo humanizada, preço,
 > fornecedor e aprovação no painel de itens. (Esquadrias como vãos na parede, comprimento digitado e
-> ambiente retangular já entraram.) Próximas entradas de planta: PDF como base e importação de DXF.
+> ambiente retangular já entraram; depois, marcadores, legenda, áreas e orçamento no painel.)
+> Próximas entradas de planta: PDF como base e importação de DXF. Falta das Fases 4–5:
+> disciplinas como filtro, guia e modo humanizada.
 
 
 Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fases.

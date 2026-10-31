@@ -48,6 +48,14 @@ async function freshEditor(page: Page) {
   await expect(page.getByTestId('save-status')).toContainText('Salvo')
 }
 
+/** Acesso ao store do editor exposto em dev (`window.__editor`). */
+type P = { x: number; y: number }
+type EditorWindow = {
+  __editor: {
+    getState: () => { project: { environments: { items: { position: P; markerOffset?: P }[] }[] } }
+  }
+}
+
 const items = (page: Page) => page.getByTestId('items').locator('g[data-role="item"]')
 
 test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfaz, persiste e gera PDF', async ({
@@ -268,4 +276,133 @@ test('planta base: importar imagem e calibrar com medida conhecida', async ({ pa
   await page.keyboard.press('f')
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('13-editor-planta-base') })
+})
+
+test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async ({ page }) => {
+  test.setTimeout(120_000)
+  await freshEditor(page)
+
+  // Quarto 4,40 × 3,80 m internos + área do ambiente pelas faces internas
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '440')
+  await setCm(page, 'room-d', '380')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.getByTestId('wall-area').click()
+  await expect(page.getByTestId('area-value')).toHaveText('16,72 m²')
+  await setCm(page, 'area-name', 'Quarto')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+
+  // Itens: cama (1), dois criados iguais (2, qtd 2), rack (M01), tapete existente (3)
+  await placeBlock(page, 'tapete', 3000, 1900)
+  await page.getByTestId('item-existing').check()
+  await placeBlock(page, 'cama-casal', 3400, 1900)
+  await page.keyboard.press('r')
+  await setCm(page, 'item-price', '3.500,00')
+  await expect(page.getByTestId('item-total')).toContainText('R$ 3.500,00')
+  await page.getByTestId('item-approved').check()
+  await setCm(page, 'item-supplier', 'Loja do Centro')
+  for (const y of [870, 2930]) {
+    await placeBlock(page, 'criado-mudo', 4200, y)
+    await page.keyboard.press('r')
+    await setCm(page, 'item-price', '890')
+  }
+  await expect(page.getByTestId('item-marker')).toHaveText('3')
+  await placeBlock(page, 'rack', 225, 1900)
+  await page.keyboard.press('Shift+R')
+  await setCm(page, 'item-w', '318')
+  await setCm(page, 'item-price', '12500')
+  await expect(page.getByTestId('item-marker')).toHaveText('M01')
+  await page.keyboard.press('Escape')
+
+  // Marcadores na planta: criados iguais compartilham o número
+  const markers = page.getByTestId('plan-canvas').locator('g[data-role="marcadores"] text')
+  await expect(markers).toHaveText(['1', '2', '3', '3', 'M01'])
+
+  // Balão do tapete (1) estava colado no da cama: arrasta para um lugar livre.
+  // O tapete em si não pode sair do lugar.
+  const rugBefore = await page.evaluate(() => {
+    const st = (window as unknown as EditorWindow).__editor.getState()
+    return st.project.environments[0].items[0].position
+  })
+  const m1 = await modelToPage(page, 3000, 1900)
+  const m1to = await modelToPage(page, 3000, 2650)
+  await page.mouse.move(m1.x, m1.y)
+  await page.mouse.down()
+  await page.mouse.move(m1to.x, m1to.y, { steps: 6 })
+  await page.mouse.up()
+  const rugAfter = await page.evaluate(() => {
+    const st = (window as unknown as EditorWindow).__editor.getState()
+    const it = st.project.environments[0].items[0]
+    return { position: it.position, markerOffset: it.markerOffset }
+  })
+  expect(rugAfter.position).toEqual(rugBefore)
+  expect(rugAfter.markerOffset).toEqual({ x: 0, y: 750 })
+  // Rótulo QUARTO para o canto livre
+  const lab = await modelToPage(page, 2200, 1900)
+  const labTo = await modelToPage(page, 1300, 900)
+  await page.mouse.move(lab.x, lab.y)
+  await page.mouse.down()
+  await page.mouse.move(labTo.x, labTo.y, { steps: 6 })
+  await page.mouse.up()
+  await expect(page.getByTestId('area-props')).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  // Resumo do ambiente: legenda agrupada e totais
+  const rows = page.getByTestId('legend-row')
+  await expect(rows).toHaveCount(4)
+  await expect(rows.nth(2)).toContainText('2 un')
+  await expect(rows.nth(2)).toContainText('R$ 1.780,00')
+  await expect(rows.nth(0)).toContainText('(existente)')
+  await expect(page.getByTestId('env-total')).toHaveText('R$ 17.780,00')
+  await expect(page.getByTestId('env-approved')).toHaveText('1/5')
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('15-editor-legenda-orcamento') })
+
+  // Item selecionado com o painel de orçamento
+  await clickModel(page, 3200, 1900)
+  await expect(page.getByTestId('budget-fields')).toBeVisible()
+  await page.screenshot({ path: shot('16-editor-item-orcamento') })
+  await page.keyboard.press('Escape')
+
+  // Ferramenta Área: um "closet" de 1,50 × 1,00 m no canto
+  await page.getByTestId('tool-area').click()
+  for (const [x, y] of [
+    [600, 2800],
+    [2100, 2800],
+    [2100, 3800],
+    [600, 3800],
+    [600, 2800],
+  ] as const) {
+    await moveModel(page, x, y)
+    await clickModel(page, x, y)
+  }
+  await expect(page.getByTestId('area-value')).toHaveText('1,50 m²')
+  await setCm(page, 'area-name', 'Circulação')
+  await page.keyboard.press('Escape')
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('17-editor-areas') })
+
+  // Planilha (CSV) com todos os itens
+  const [csvDl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('export-csv').click(),
+  ])
+  await csvDl.saveAs('test-results/itens.csv')
+  const csv = await readFile('test-results/itens.csv', 'utf8')
+  expect(csv).toContain(
+    'Ambiente 1;2;Cama de casal;1;un;158;200;;Loja do Centro;3500,00;3500,00;não;sim;',
+  )
+  expect(csv).toContain(';M01;Rack / painel de TV;1;un;318;45;')
+  expect(csv).toContain('TOTAL;;;;;;;;17780,00')
+
+  // PDF com legenda
+  const [pdfDl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('export-pdf').click(),
+  ])
+  await pdfDl.saveAs('test-results/editor-legenda.pdf')
+  const pdf = await readFile('test-results/editor-legenda.pdf')
+  expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
 })

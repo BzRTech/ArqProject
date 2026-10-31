@@ -19,6 +19,79 @@ export interface PlanSheetInput {
   scale?: number
   /** Texto de data já formatado (o núcleo não lê relógio). */
   dateText?: string
+  /** Linhas da legenda (marcador, descrição, quantidade já formatada). */
+  legend?: LegendLine[]
+}
+
+export interface LegendLine {
+  label: string
+  text: string
+  qty: string
+}
+
+const LEGEND_W = 82
+const LEGEND_ROW = 5.6
+
+/** Coluna da legenda: título, balões (círculo ou etiqueta de marcenaria), descrição e qtd. */
+function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number): Entity[] {
+  const out: Entity[] = [
+    { kind: 'text', at: vec(x, y + 3), text: 'LEGENDA', size: 2.6, weight: 'bold' },
+    {
+      kind: 'line',
+      a: vec(x, y + 4.6),
+      b: vec(x + LEGEND_W, y + 4.6),
+      style: { weight: PEN.fine },
+    },
+  ]
+  const capacity = Math.max(1, Math.floor((maxH - 8) / LEGEND_ROW))
+  const shown = lines.length > capacity ? lines.slice(0, capacity - 1) : lines
+  shown.forEach((l, i) => {
+    const cy = y + 9 + i * LEGEND_ROW
+    const cx = x + 4
+    if (l.label.startsWith('M')) {
+      out.push({
+        kind: 'rect',
+        x: cx - 4,
+        y: cy - 2.1,
+        width: 8,
+        height: 4.2,
+        style: { weight: PEN.fine },
+      })
+    } else {
+      out.push({ kind: 'circle', center: vec(cx, cy), radius: 2.4, style: { weight: PEN.fine } })
+    }
+    out.push(
+      {
+        kind: 'text',
+        at: vec(cx, cy),
+        text: l.label,
+        size: 1.9,
+        anchor: 'middle',
+        vAlign: 'middle',
+        weight: 'bold',
+      },
+      { kind: 'text', at: vec(x + 10, cy), text: l.text, size: 2.2, vAlign: 'middle' },
+      {
+        kind: 'text',
+        at: vec(x + LEGEND_W, cy),
+        text: l.qty,
+        size: 2.2,
+        anchor: 'end',
+        vAlign: 'middle',
+      },
+    )
+  })
+  if (shown.length < lines.length) {
+    out.push({
+      kind: 'text',
+      at: vec(x + 10, y + 9 + shown.length * LEGEND_ROW),
+      text: `… e mais ${lines.length - shown.length} item(ns) — ver memorial`,
+      size: 2,
+      vAlign: 'middle',
+      color: '#59626d',
+    })
+  }
+  return out
 }
 
 export interface PlanSheet {
@@ -43,10 +116,11 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
   }
   // Área útil do desenho. A caixa do desenho já inclui as cotas; a folga é só respiro.
   const pad = 8
+  const hasLegend = !!input.legend?.length
   const area = {
     x: frame.x + pad,
     y: frame.y + HEADER_H + pad,
-    w: frame.w - 2 * pad,
+    w: frame.w - 2 * pad - (hasLegend ? LEGEND_W + 10 : 0),
     h: frame.h - HEADER_H - STAMP_H - 2 * pad,
   }
 
@@ -118,6 +192,23 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
       ...compileView(paperEntities, PAPER_VIEW),
       { kind: 'group', role: 'vista', children: compileView(entities, { scale, origin }) },
       graphicScale({ at: vec(frame.x + 7, sy + 14), scale, meters }),
+      ...(hasLegend
+        ? [
+            {
+              kind: 'group' as const,
+              role: 'legenda',
+              children: compileView(
+                legendEntities(
+                  input.legend!,
+                  frame.x + frame.w - 7 - LEGEND_W,
+                  frame.y + HEADER_H + 4,
+                  sy - (frame.y + HEADER_H + 4) - 6,
+                ),
+                PAPER_VIEW,
+              ),
+            },
+          ]
+        : []),
     ],
   }
 }

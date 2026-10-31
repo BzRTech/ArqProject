@@ -10,6 +10,7 @@ const TOOLS: { id: Tool; label: string; key: string }[] = [
   { id: 'select', label: 'Selecionar', key: 'V' },
   { id: 'wall', label: 'Parede', key: 'W' },
   { id: 'room', label: 'Ambiente', key: 'A' },
+  { id: 'area', label: 'Área', key: 'Q' },
   { id: 'dimension', label: 'Cota', key: 'C' },
   { id: 'text', label: 'Texto', key: 'T' },
 ]

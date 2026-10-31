@@ -1,5 +1,7 @@
 import type { Entity } from '../drawing/entities'
 import { itemEntities } from './items'
+import { areaEntities } from './areas'
+import { environmentMarkers } from './markers'
 import { openingEntities, openingGaps } from './openings'
 import type { Drawing, Environment, Opening } from './schema'
 import { wallEntities } from './walls'
@@ -21,6 +23,8 @@ export function drawingEntities(
         ...own.flatMap((o) => openingEntities(d, o)),
       ]
     }
+    case 'area':
+      return areaEntities(d, scale)
     case 'chain':
       return [
         {
@@ -86,5 +90,6 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
     role: 'anotacoes',
     children: notes.flatMap((d) => drawingEntities(d, o.scale)),
   })
+  out.push({ kind: 'group', role: 'marcadores', children: environmentMarkers(env, o.scale) })
   return out
 }

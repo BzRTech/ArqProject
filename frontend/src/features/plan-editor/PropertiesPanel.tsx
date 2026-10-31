@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { getBlock } from '@/core/blocks/catalog'
 import { distance } from '@/core/geometry/vec'
+import { areaM2Text, areaPerimeterMm, innerFacePolygon } from '@/core/project/areas'
 import { wallChainDimensions } from '@/core/project/auto-dims'
+import { computeLegend } from '@/core/project/markers'
 import { calibrateBasePlan } from '@/core/project/base-plan'
 import { OPENING_DEFS, openingDef, openingFrame } from '@/core/project/openings'
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatCm, formatDecimal, parseCm } from '@/core/units'
+import { BudgetFields } from './BudgetFields'
 import { CmField, TextField } from './fields'
+import { ItemsSummary } from './ItemsSummary'
 import { selectActiveEnv, useEditor } from './store'
 
 function ItemProps({ item }: { item: Item }) {
@@ -91,6 +95,16 @@ function ItemProps({ item }: { item: Item }) {
   )
 }
 
+function ItemWithBudget({ item, env }: { item: Item; env: Environment }) {
+  const marker = computeLegend(env).labelOf.get(item.id)
+  return (
+    <>
+      <ItemProps item={item} />
+      <BudgetFields item={item} marker={marker} />
+    </>
+  )
+}
+
 function WallProps({ wall }: { wall: Wall }) {
   const s = useEditor.getState()
   const env = useEditor(selectActiveEnv)
@@ -120,6 +134,19 @@ function WallProps({ wall }: { wall: Wall }) {
         >
           Cotar parede
         </button>
+        {wall.closed && (
+          <button
+            type="button"
+            data-testid="wall-area"
+            title="Área pelas faces internas, com o nome do ambiente"
+            onClick={() => {
+              const poly = innerFacePolygon(wall)
+              if (poly) s.addArea(poly, env.name)
+            }}
+          >
+            Criar área do ambiente
+          </button>
+        )}
         <button type="button" className="danger" onClick={() => s.deleteSelection()}>
           Excluir
         </button>
@@ -321,6 +348,26 @@ function DrawingProps({ d }: { d: Drawing }) {
       </section>
     )
   }
+  if (d.kind === 'area') {
+    return (
+      <section data-testid="area-props">
+        <h2>Área</h2>
+        <p className="area-value" data-testid="area-value">
+          {areaM2Text(d)}
+        </p>
+        <p className="muted small">Perímetro {formatDecimal(areaPerimeterMm(d) / 1000, 2)} m</p>
+        <TextField
+          label="Nome"
+          value={d.name}
+          onCommit={(name) => s.updateDrawing(d.id, { name })}
+          testId="area-name"
+        />
+        <button type="button" className="danger" onClick={() => s.deleteSelection()}>
+          Excluir
+        </button>
+      </section>
+    )
+  }
   return (
     <section>
       <h2>Texto</h2>
@@ -452,31 +499,6 @@ function BasePlanProps({ env }: { env: Environment }) {
   )
 }
 
-function EnvironmentSummary({ env }: { env: Environment }) {
-  const s = useEditor.getState()
-  return (
-    <section data-testid="env-summary">
-      <h2>Itens do ambiente</h2>
-      {env.items.length === 0 ? (
-        <p className="muted small">Clique num bloco à esquerda e depois na planta (ou arraste).</p>
-      ) : (
-        <ol className="item-list">
-          {env.items.map((it) => (
-            <li key={it.id}>
-              <button type="button" onClick={() => s.select({ kind: 'item', id: it.id })}>
-                <span>{it.name}</span>
-                <small>
-                  {formatCm(it.sizeMm.w)} × {formatCm(it.sizeMm.d)}
-                </small>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  )
-}
-
 export function PropertiesPanel() {
   const env = useEditor(selectActiveEnv)
   const selection = useEditor((s) => s.selection)
@@ -488,10 +510,10 @@ export function PropertiesPanel() {
   return (
     <aside className="panel panel--props" data-testid="properties">
       <ToolOptions />
-      {item && <ItemProps key={item.id} item={item} />}
+      {item && <ItemWithBudget key={item.id} item={item} env={env} />}
       {opening && <OpeningProps key={opening.id} opening={opening} env={env} />}
       {drawing && <DrawingProps key={drawing.id} d={drawing} />}
-      {!item && !drawing && !opening && <EnvironmentSummary env={env} />}
+      {!item && !drawing && !opening && <ItemsSummary env={env} />}
       <BasePlanProps env={env} />
     </aside>
   )

@@ -185,13 +185,22 @@ describe('migração v1 → v2', () => {
       ],
     }
     const p = migrateProject(v1)
-    expect(p.schemaVersion).toBe(2)
+    expect(p.schemaVersion).toBe(3)
     expect(p.environments[0]!.openings).toEqual([])
     expect(p.environments[0]!.items.map((i) => i.blockId)).toEqual(['sofa'])
+    // v2 → v3: campos de legenda/orçamento com padrões neutros
+    expect(p.environments[0]!.items[0]).toMatchObject({
+      qty: 1,
+      unit: 'un',
+      showMarker: true,
+      inLegend: true,
+      existing: false,
+      approved: false,
+    })
   })
 
   it('documento atual passa direto; futuro é recusado', () => {
-    expect(migrateProject(newProject('e')).schemaVersion).toBe(2)
+    expect(migrateProject(newProject('e')).schemaVersion).toBe(3)
     expect(() => migrateProject({ ...newProject('e'), schemaVersion: 99 })).toThrow(MigrationError)
     expect(ProjectSchema.safeParse(newProject('e')).success).toBe(true)
   })

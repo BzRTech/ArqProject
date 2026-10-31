@@ -7,8 +7,10 @@ export default function HomePage() {
 
   return (
     <section className="home">
-      <h1>Prancheta — Fase 0</h1>
-      <p>Fundação do monorepo: API Django, front React e os três spikes técnicos.</p>
+      <h1>Prancheta</h1>
+      <p>
+        Fase 1: núcleo de geometria (unidades, primitivas, cotas, hachuras) com saída em tela e PDF.
+      </p>
 
       <div className={`health health--${state}`} data-testid="health">
         <strong>API:</strong> {health.isPending && 'verificando…'}
@@ -18,15 +20,9 @@ export default function HomePage() {
 
       <ul className="cards">
         <li>
-          <Link to="/spikes/svg">
-            <strong>SVG com pan/zoom</strong>
-            <span>2 000 linhas, zoom no cursor, contador de fps.</span>
-          </Link>
-        </li>
-        <li>
-          <Link to="/spikes/pdf">
-            <strong>PDF vetorial A3 1:50</strong>
-            <span>Parede de 4 m cotada, fonte embutida, escala conferível.</span>
+          <Link to="/dev/primitivas">
+            <strong>Catálogo de primitivas</strong>
+            <span>Prancha A3 com planta 1:50, vista 1:20, cotas em cadeia — na tela e em PDF.</span>
           </Link>
         </li>
         <li>

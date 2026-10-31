@@ -2,9 +2,8 @@ import { NavLink, Outlet } from 'react-router'
 
 const links = [
   { to: '/', label: 'Início', end: true },
-  { to: '/spikes/svg', label: 'Pan/zoom SVG' },
-  { to: '/spikes/pdf', label: 'PDF A3' },
-  { to: '/spikes/3d', label: '3D' },
+  { to: '/dev/primitivas', label: 'Primitivas' },
+  { to: '/spikes/3d', label: '3D (spike)' },
 ]
 
 export default function Layout() {

@@ -1,7 +1,9 @@
+import type { Vec2 } from './vec'
+
 /**
- * Transformação mundo (mm) → tela (px) do spike de pan/zoom:
+ * Transformação mundo → tela (px) para pan/zoom:
  *   tela = mundo × scale + (tx, ty)
- * Na Fase 1 isso migra para core/geometry.
+ * O "mundo" pode ser o modelo (mm) ou uma folha (mm de papel).
  */
 export interface Viewport {
   scale: number // px por mm
@@ -12,10 +14,7 @@ export interface Viewport {
 export const MIN_SCALE = 0.005
 export const MAX_SCALE = 20
 
-export interface Point {
-  x: number
-  y: number
-}
+type Point = Vec2
 
 export function screenToWorld(v: Viewport, p: Point): Point {
   return { x: (p.x - v.tx) / v.scale, y: (p.y - v.ty) / v.scale }

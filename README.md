@@ -64,12 +64,20 @@ npm run test:e2e        # precisa do backend rodando
 npm run gen:api         # regenera src/api/schema.d.ts a partir do OpenAPI
 ```
 
-## Spikes da Fase 0
+## Núcleo de geometria (Fase 1)
 
-Em `frontend/src/spikes/`, acessíveis pelo menu do app:
+`frontend/src/core` é TypeScript puro: unidades, geometria, primitivas de desenho, cotas e
+folhas. As convenções estão em [`frontend/src/core/README.md`](frontend/src/core/README.md) e
+no ADR 003. A página **Primitivas** (`/dev/primitivas`) mostra uma prancha A3 de catálogo na
+tela e gera o PDF.
 
-- **Pan/zoom SVG**: 2 000 linhas, zoom no cursor, contador de fps.
-- **PDF A3 1:50**: parede de 4 m cotada, fonte embutida. Como conferir a escala: imprimir em A3
-  a 100% ("tamanho real") e medir a parede, que deve ter **80 mm**; a escala gráfica de 5 m deve
-  ter **100 mm**. O teste `pdfScale.test.ts` e o e2e fazem essa medição automaticamente no PDF.
-- **3D**: 10 caixas com texturas procedurais de MDF (three.js + @react-three/fiber).
+Para conferir a escala, imprima o PDF em A3 a 100% ("tamanho real") e meça com régua:
+- a parede de cima, trecho esquerdo, tem **34 mm** (1:50);
+- o topo do rack na vista frontal tem **159 mm** (1:20);
+- o tampo no corte tem **45 mm** (1:10);
+- cada escala gráfica tem **100 mm**.
+
+Os testes fazem essa medição automaticamente dentro do PDF. Há prints em
+[`docs/prints/fase-1/`](docs/prints/fase-1/).
+
+O spike de **3D** (10 caixas com texturas procedurais) fica até a Fase 9.

@@ -93,7 +93,7 @@ Modelagem 3D livre da casa, render fotorrealista, BIM/IFC.
 | Banco de dados | **PostgreSQL 16** (JSONB) | Projeto como documento JSONB + tabelas relacionais para os bancos e para os relatórios |
 | API / contrato | **drf-spectacular** (OpenAPI) → **openapi-typescript** no front | Tipos do front gerados a partir da API, sem duplicar à mão |
 | Auth | Sessão do Django + CSRF (SPA servida no mesmo domínio) | Mais simples e seguro para um app só web. Trocar por `djangorestframework-simplejwt` se surgir app mobile |
-| Arquivos | **django-storages + S3** (MinIO em dev) | Plantas base, logos, texturas, miniaturas |
+| Arquivos | **django-storages + S3** (SeaweedFS em dev — ver ADR 002) | Plantas base, logos, texturas, miniaturas |
 | PDF do memorial | **WeasyPrint** (template Django → PDF) | Documento tabular, combina com o servidor |
 | PDF das pranchas | **jsPDF + svg2pdf.js** no cliente | Usa o mesmo núcleo de geometria da tela (que é TypeScript) |
 | Tarefas assíncronas | **Celery + Redis** (só quando precisar) | Miniaturas, import de catálogos grandes, PDF pesado |
@@ -104,7 +104,7 @@ Modelagem 3D livre da casa, render fotorrealista, BIM/IFC.
 | 3D | **three.js** via **@react-three/fiber** + drei | |
 | Testes | **pytest-django + factory_boy** (back), **Vitest** (núcleo), **Playwright** (e2e) | |
 | Qualidade | **ruff** (Python), ESLint + Prettier (TS) | |
-| Infra local | **Docker Compose**: postgres, minio, redis, backend, frontend | |
+| Infra local | **Docker Compose**: postgres, s3 (SeaweedFS), redis, backend, frontend | |
 
 **Unidades:** todo o modelo em **milímetros inteiros**, tanto no JSON quanto nas tabelas. Exibição em cm com 1 casa decimal ("45,2"). Nenhum float em cm é persistido.
 
@@ -268,7 +268,7 @@ São pontos de partida: valide com um marceneiro.
 Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fases.
 
 ### Fase 0 — Monorepo, Docker e spikes (2 dias)
-- `docker-compose.yml` com postgres, minio, redis, backend (Django), frontend (Vite com proxy `/api` → Django).
+- `docker-compose.yml` com postgres, S3 local (SeaweedFS — ADR 002), redis, backend (Django), frontend (Vite com proxy `/api` → Django).
 - Django: settings divididos, custom `User` **antes da primeira migration**, DRF, drf-spectacular, django-storages, ruff, pytest. `/api/health/`.
 - Front: Vite + React + TS, ESLint, Vitest, Playwright, script `gen:api` (openapi-typescript).
 - Spikes: SVG com pan/zoom e 2 000 linhas; PDF A3 vetorial 1:50 com cota e fonte embutida (jsPDF + svg2pdf); three.js com 10 caixas texturizadas.
@@ -283,7 +283,7 @@ Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fase
 ### Fase 2 — Contas, organizações e projetos (backend + front) (3–4 dias)
 - `accounts`: login por e-mail, `Organization`, `Membership`, organização ativa na sessão.
 - `projects`: `Project`, `ProjectVersion`, `ProjectItemIndex`; save com `If-Match`; validação por JSON Schema; restaurar versão; duplicar.
-- `assets`: upload pré-assinado para MinIO/S3.
+- `assets`: upload pré-assinado para S3 (SeaweedFS em dev).
 - Front: login, lista de projetos, criar projeto/ambiente, autosave, aviso de conflito.
 - Schema zod v1 do documento + `export-json-schema` que grava em `backend/apps/projects/schema/`.
 - Testes: pytest de permissão entre organizações (um escritório não vê projeto do outro), conflito 409, validação inválida.

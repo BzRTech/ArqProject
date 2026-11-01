@@ -10,14 +10,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage },
       {
-        path: 'spikes/svg',
+        path: 'dev/primitivas',
         lazy: async () => ({
-          Component: (await import('@/spikes/svg-panzoom/SvgPanZoomSpike')).default,
+          Component: (await import('@/features/dev-primitives/PrimitivesPage')).default,
         }),
-      },
-      {
-        path: 'spikes/pdf',
-        lazy: async () => ({ Component: (await import('@/spikes/pdf/PdfSpike')).default }),
       },
       {
         path: 'spikes/3d',

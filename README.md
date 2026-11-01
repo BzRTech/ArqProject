@@ -146,6 +146,15 @@ Em **http://localhost:5173/editor**:
   "Criar área do ambiente" faz isso sozinho. O rótulo com o m² também se arrasta.
 - **Cota (C):** clique nos dois pontos e mova para afastar a cota.
 - **Texto (T).**
+- **Selecionar vários:** arraste num espaço vazio. **Da esquerda para a direita** (retângulo azul)
+  pega só o que ficar inteiro dentro; **da direita para a esquerda** (verde, tracejado) pega tudo o
+  que o retângulo tocar. Shift + clique ou Shift + arrastar soma à seleção; **Ctrl+A** seleciona
+  tudo; Esc limpa. O painel mostra quantos de cada tipo e tem "Manter só: Cotas (n)" para filtrar
+  antes de apagar com **Del**. Arrastar qualquer objeto do grupo move todos. Para mover a vista:
+  botão do meio ou direito do mouse, ou **Espaço** + arrastar.
+- **Medidas ao arrastar canto/parede:** aparecem cotas provisórias (em cm, pelo eixo) dos trechos
+  que estão mudando, e o rodapé mostra o deslocamento (Δx/Δy). Para um valor exato, digite no
+  painel "Trechos".
 - **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e
   refaz, F enquadra.
 - **Importar planta:** carregue uma imagem, clique em dois pontos de medida conhecida e

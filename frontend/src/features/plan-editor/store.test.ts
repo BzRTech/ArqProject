@@ -228,3 +228,57 @@ describe('editor — legenda, orçamento e área', () => {
     expect(ProjectSchema.safeParse(S().project).success).toBe(true)
   })
 })
+
+describe('editor — seleção múltipla', () => {
+  it('selectMany, Shift alterna e exclusão em grupo num único passo de desfazer', () => {
+    const a = S().addItem('sofa', { x: 0, y: 0 })
+    const b = S().addItem('sofa', { x: 3000, y: 0 })
+    const t = S().addText({ x: 500, y: 500 }, 'nota')
+    S().selectMany([{ kind: 'item', id: a }])
+    expect(S().selection).toEqual({ kind: 'item', id: a })
+    S().selectMany(
+      [
+        { kind: 'item', id: b },
+        { kind: 'item', id: a },
+      ],
+      true,
+    )
+    expect(S().selected).toHaveLength(2) // sem duplicar
+    expect(S().selection).toBeNull()
+    S().toggleSelect({ kind: 'drawing', id: t })
+    expect(S().selected).toHaveLength(3)
+    S().toggleSelect({ kind: 'item', id: a })
+    expect(S().selected.map((r) => r.id)).toEqual([b, t])
+    S().deleteSelection()
+    expect(env().items.map((i) => i.id)).toEqual([a])
+    expect(env().drawings).toHaveLength(0)
+    expect(S().selected).toEqual([])
+    undo()
+    expect(env().items).toHaveLength(2)
+    expect(env().drawings).toHaveLength(1)
+  })
+
+  it('excluir uma parede leva as esquadrias dela; mover o grupo desloca todos', () => {
+    const w = S().addWall(
+      [
+        { x: 0, y: 0 },
+        { x: 4000, y: 0 },
+      ],
+      false,
+    )
+    S().addOpening({ wallId: w, type: 'janela-correr-2', segment: 0, offsetMm: 1000, side: 'left' })
+    const i = S().addItem('sofa', { x: 1000, y: 1000 })
+    S().selectMany([
+      { kind: 'drawing', id: w },
+      { kind: 'item', id: i },
+    ])
+    S().moveSelection(100, -50)
+    expect(env().items[0]!.position).toEqual({ x: 1100, y: 950 })
+    const wall = env().drawings[0] as { points: { x: number; y: number }[] }
+    expect(wall.points[0]).toEqual({ x: 100, y: -50 })
+    S().deleteSelection()
+    expect(env().drawings).toHaveLength(0)
+    expect(env().openings).toHaveLength(0)
+    expect(env().items).toHaveLength(0)
+  })
+})

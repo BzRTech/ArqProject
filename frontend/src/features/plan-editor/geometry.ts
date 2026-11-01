@@ -1,7 +1,9 @@
 /** Consultas geométricas do editor sobre o documento (acerto por clique, pontos de snap). */
 import { dimensionDirection } from '@/core/dimensions/layout'
 import { textWidth } from '@/core/drawing/text-metrics'
-import { add, distance, dot, leftNormal, scale, sub, type Vec2 } from '@/core/geometry/vec'
+import { add, distance, dot, leftNormal, scale, sub, vec, type Vec2 } from '@/core/geometry/vec'
+import { shapeInRect, type BBox, type PickShape } from '@/core/geometry/bbox'
+import { signedArea } from '@/core/geometry/polygon'
 import { hitItem, itemCorners } from '@/core/project/items'
 import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
 import { computeLegend, markerPosition } from '@/core/project/markers'
@@ -21,7 +23,7 @@ import {
   wallSegments,
 } from '@/core/project/walls'
 import type { Entity } from '@/core/drawing/entities'
-import type { Selection } from './store'
+import type { SelRef, Selection } from './store'
 
 export const DISPLAY_SCALE = 50
 
@@ -227,4 +229,123 @@ export function openingGuides(
       style,
     })
   return out
+}
+
+// --- Seleção por janela -----------------------------------------------------------
+
+/** Contorno usado pela seleção por janela/cruzamento, por tipo de objeto. */
+export function pickShape(env: Environment, ref: SelRef): PickShape | null {
+  if (ref.kind === 'item') {
+    const it = env.items.find((i) => i.id === ref.id)
+    return it ? { points: itemCorners(it), closed: true } : null
+  }
+  if (ref.kind === 'opening') {
+    const o = env.openings.find((x) => x.id === ref.id)
+    const w = o && wallsOf(env).find((x) => x.id === o.wallId)
+    const f = o && w && openingFrame(w, o)
+    if (!f) return null
+    const h = f.halfThickness
+    return {
+      points: [
+        add(f.a, scale(f.n, h)),
+        add(f.b, scale(f.n, h)),
+        add(f.b, scale(f.n, -h)),
+        add(f.a, scale(f.n, -h)),
+      ],
+      closed: true,
+    }
+  }
+  const d = env.drawings.find((x) => x.id === ref.id)
+  if (!d) return null
+  switch (d.kind) {
+    case 'wall': {
+      const o = wallOutline(d.points, d.thicknessMm, d.closed)
+      return o ? { points: o.rings[0]!, closed: true } : null
+    }
+    case 'area':
+      return { points: d.points, closed: true }
+    case 'dimension':
+    case 'chain': {
+      const [a, b] = dimensionLine(d)
+      const pts = d.kind === 'dimension' ? [d.p1, d.p2] : d.points
+      return { points: [...pts, a, b], closed: false }
+    }
+    case 'text': {
+      const b = textBox(d.at, d.text, d.sizeMm)
+      return {
+        points: [
+          vec(b.x, b.y),
+          vec(b.x + b.w, b.y),
+          vec(b.x + b.w, b.y + b.h),
+          vec(b.x, b.y + b.h),
+        ],
+        closed: true,
+      }
+    }
+  }
+}
+
+export function allRefs(env: Environment): SelRef[] {
+  return [
+    ...env.items.map((i): SelRef => ({ kind: 'item', id: i.id })),
+    ...env.openings.map((o): SelRef => ({ kind: 'opening', id: o.id })),
+    ...env.drawings.map((d): SelRef => ({ kind: 'drawing', id: d.id })),
+  ]
+}
+
+/** Objetos dentro (janela) ou tocados (cruzamento) pelo retângulo. */
+export function refsInRect(env: Environment, r: BBox, mode: 'window' | 'crossing'): SelRef[] {
+  return allRefs(env).filter((ref) => {
+    const sh = pickShape(env, ref)
+    return !!sh && shapeInRect(r, sh, mode)
+  })
+}
+
+/** Rótulo do tipo, para o painel de seleção múltipla. */
+export function refKindLabel(env: Environment, ref: SelRef): string {
+  if (ref.kind === 'item') return 'Móveis'
+  if (ref.kind === 'opening') return 'Portas e janelas'
+  const d = env.drawings.find((x) => x.id === ref.id)
+  if (!d) return 'Outros'
+  return { wall: 'Paredes', dimension: 'Cotas', chain: 'Cotas', text: 'Textos', area: 'Áreas' }[
+    d.kind
+  ]
+}
+
+// --- Medidas ao editar parede -------------------------------------------------------
+
+/**
+ * Cotas provisórias enquanto um canto é arrastado (trechos que chegam e saem dele) ou um
+ * trecho é empurrado (ele e os vizinhos). Pelo eixo, como na lista de trechos do painel,
+ * do lado de FORA do cômodo.
+ */
+export function wallEditGuides(
+  w: Wall,
+  focus: { vertex?: number; segment?: number },
+  color: string,
+): Entity[] {
+  const segs = wallSegments(w)
+  const n = wallPoints(w).length
+  const want = new Set<number>()
+  if (focus.vertex !== undefined) {
+    want.add((focus.vertex - 1 + n) % n)
+    want.add(focus.vertex)
+  }
+  if (focus.segment !== undefined) {
+    want.add((focus.segment - 1 + n) % n)
+    want.add(focus.segment)
+    want.add((focus.segment + 1) % n)
+  }
+  // Parede fechada no sentido horário visual: a esquerda aponta para fora.
+  const outSign = w.closed && signedArea(wallPoints(w)) < 0 ? -1 : 1
+  return segs
+    .filter((s) => want.has(s.index))
+    .map((s): Entity => ({
+      kind: 'dimension',
+      p1: s.a,
+      p2: s.b,
+      orientation: 'aligned',
+      offset: outSign * (w.thicknessMm / 2 / DISPLAY_SCALE + 5),
+      style: { color },
+    }))
 }

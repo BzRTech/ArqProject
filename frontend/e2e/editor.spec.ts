@@ -654,3 +654,100 @@ test('janela gruda no centro, cursor CAD com snap de ponto médio e cantos arras
   await page.mouse.move(10, 10)
   await page.screenshot({ path: shot('26-canto-arrastado') })
 })
+
+test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medidas ao arrastar canto', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await clickModel(page, 2200, -75)
+  await page.getByRole('button', { name: 'Cotar parede' }).click()
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+  const drawings = () =>
+    page.evaluate(() => {
+      const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+        project: { environments: { drawings: { kind: string }[] }[] }
+      }
+      return st.project.environments[0]!.drawings.map((d) => d.kind)
+    })
+  const before = await drawings()
+  const chains = before.filter((k) => k === 'chain').length
+  expect(chains).toBeGreaterThan(1)
+
+  // Cruzamento (da direita para a esquerda) sobre a parede de cima: pega parede + cota de cima
+  const a = await modelToPage(page, 3000, -900)
+  const b = await modelToPage(page, 1500, 100)
+  await page.mouse.move(a.x, a.y)
+  await page.mouse.down()
+  await page.mouse.move(b.x, b.y, { steps: 8 })
+  await expect(page.getByTestId('selection-band')).toBeVisible()
+  await page.screenshot({ path: shot('27-selecao-cruzamento') })
+  await page.mouse.up()
+  const multi = page.getByTestId('multi-selection')
+  await expect(multi).toContainText('Paredes: 1')
+  await expect(multi).toContainText('Cotas: 1')
+  await page.screenshot({ path: shot('28-varios-selecionados') })
+  await multi.getByRole('button', { name: 'Cotas (1)' }).click()
+  await page.keyboard.press('Delete')
+  let after = await drawings()
+  expect(after.filter((k) => k === 'wall')).toHaveLength(1) // a parede ficou
+  expect(after.filter((k) => k === 'chain')).toHaveLength(chains - 1)
+
+  // Janela (da esquerda para a direita) que corta a parede: só pega o que está inteiro dentro
+  const c = await modelToPage(page, -900, -300)
+  const d = await modelToPage(page, 2000, 4100)
+  await page.mouse.move(c.x, c.y)
+  await page.mouse.down()
+  await page.mouse.move(d.x, d.y, { steps: 8 })
+  await page.mouse.up()
+  // A cota da esquerda cabe inteira; a parede (que vai até x = 4475) não
+  const sel = await page.evaluate(() => {
+    const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+      selected: { kind: string; id: string }[]
+      project: { environments: { drawings: { id: string; kind: string }[] }[] }
+    }
+    const ds = st.project.environments[0]!.drawings
+    return st.selected.map((r) => ds.find((x) => x.id === r.id)?.kind)
+  })
+  expect(sel).toEqual(['chain'])
+
+  // Ctrl+A seleciona tudo; Shift + clique tira a parede; Delete apaga só as cotas
+  await page.mouse.click(10, 10)
+  await page.keyboard.press('Control+a')
+  await expect(multi).toContainText(`${after.length} objetos selecionados`)
+  const w = await modelToPage(page, 2200, 3875)
+  await page.keyboard.down('Shift')
+  await page.mouse.click(w.x, w.y)
+  await page.keyboard.up('Shift')
+  await expect(multi).toContainText(`${after.length - 1} objetos selecionados`)
+  await page.keyboard.press('Delete')
+  after = await drawings()
+  expect(after).toEqual(['wall'])
+  // Desfazer devolve tudo de uma vez
+  await page.keyboard.press('Control+z')
+  expect((await drawings()).length).toBe(chains)
+
+  // Arrastar um canto mostra as cotas dos trechos que mudam e o deslocamento
+  await moveModel(page, -75, -75)
+  await expect(page.getByTestId('hover-grip')).toBeVisible()
+  await page.mouse.down()
+  const e = await modelToPage(page, -575, -75)
+  await page.mouse.move(e.x, e.y, { steps: 6 })
+  await expect(page.getByTestId('drag-delta')).toContainText('Δx -0,50')
+  const guides = page.getByTestId('edit-guides')
+  await expect(guides.locator('text')).toHaveCount(2)
+  // Pelo eixo, em cm como as cotas da prancha: de cima 455 + 50; o da esquerda ficou inclinado
+  await expect(guides.locator('text').nth(0)).toHaveText('505')
+  await expect(guides.locator('text').nth(1)).toHaveText('398,2')
+  await page.screenshot({ path: shot('29-medidas-ao-arrastar-canto') })
+  await page.mouse.up()
+  await expect(page.getByTestId('edit-guides')).toHaveCount(0)
+  await expect(page.getByTestId('drag-delta')).toHaveCount(0)
+})

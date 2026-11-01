@@ -25,6 +25,7 @@ import { roundMm } from '@/core/units'
 export type Tool =
   'select' | 'wall' | 'room' | 'area' | 'dimension' | 'text' | 'place' | 'opening' | 'calibrate'
 export type Selection = { kind: 'item' | 'drawing' | 'opening'; id: string } | null
+export type SelRef = NonNullable<Selection>
 
 export const newId = (): string => crypto.randomUUID()
 const rp = (p: Vec2): Vec2 => ({ x: roundMm(p.x), y: roundMm(p.y) })
@@ -32,7 +33,10 @@ const rp = (p: Vec2): Vec2 => ({ x: roundMm(p.x), y: roundMm(p.y) })
 export interface EditorState {
   project: Project
   activeEnvId: string
+  /** Objeto principal (alimenta o painel); null quando há vários selecionados. */
   selection: Selection
+  /** Tudo o que está selecionado (1 ou vários). */
+  selected: SelRef[]
   tool: Tool
   placeBlockId: string | null
   placeOpeningType: OpeningType | null
@@ -48,6 +52,10 @@ export interface EditorState {
   startOpening: (type: OpeningType) => void
   setRoomSize: (size: { w: number; d: number }) => void
   select: (sel: Selection) => void
+  /** Seleção múltipla (janela, Ctrl+A); `add` soma à atual (Shift). */
+  selectMany: (refs: SelRef[], add?: boolean) => void
+  /** Shift+clique: põe ou tira um objeto da seleção. */
+  toggleSelect: (ref: SelRef) => void
   setWallThickness: (mm: number) => void
   setCalibration: (pts: Vec2[]) => void
   setActiveEnv: (id: string) => void
@@ -94,6 +102,12 @@ function initialState() {
 
 let interactionSnapshot: Project | null = null
 
+/** Única forma de mudar a seleção simples: mantém `selection` e `selected` em sincronia. */
+function setSel(s: { selection: Selection; selected: SelRef[] }, sel: Selection) {
+  s.selection = sel
+  s.selected = sel ? [sel] : []
+}
+
 export const useEditor = create<EditorState>()(
   temporal(
     immer((set, get) => {
@@ -103,6 +117,7 @@ export const useEditor = create<EditorState>()(
       return {
         ...initialState(),
         selection: null,
+        selected: [],
         tool: 'select',
         placeBlockId: null,
         placeOpeningType: null,
@@ -121,32 +136,49 @@ export const useEditor = create<EditorState>()(
           set((s) => {
             s.tool = 'place'
             s.placeBlockId = blockId
-            s.selection = null
+            setSel(s, null)
           }),
         startOpening: (type) =>
           set((s) => {
             s.tool = 'opening'
             s.placeOpeningType = type
-            s.selection = null
+            setSel(s, null)
           }),
         setRoomSize: (size) =>
           set((s) => {
             s.roomSize = { w: Math.max(300, roundMm(size.w)), d: Math.max(300, roundMm(size.d)) }
           }),
-        select: (sel) => set((s) => void (s.selection = sel)),
+        select: (sel) => set((s) => void setSel(s, sel)),
+        selectMany: (refs, add) =>
+          set((s) => {
+            const key = (r: SelRef) => `${r.kind}:${r.id}`
+            const all = add ? [...s.selected, ...refs] : refs
+            const uniq = [...new Map(all.map((r) => [key(r), r])).values()]
+            s.selected = uniq
+            s.selection = uniq.length === 1 ? uniq[0]! : null
+          }),
+        toggleSelect: (ref) =>
+          set((s) => {
+            const has = s.selected.some((r) => r.kind === ref.kind && r.id === ref.id)
+            const next = has
+              ? s.selected.filter((r) => !(r.kind === ref.kind && r.id === ref.id))
+              : [...s.selected, ref]
+            s.selected = next
+            s.selection = next.length === 1 ? next[0]! : null
+          }),
         setWallThickness: (mm) => set((s) => void (s.wallThicknessMm = Math.max(10, roundMm(mm)))),
         setCalibration: (pts) => set((s) => void (s.calibration = pts.map(rp))),
         setActiveEnv: (id) =>
           set((s) => {
             s.activeEnvId = id
-            s.selection = null
+            setSel(s, null)
           }),
 
         loadProject: (p) =>
           set((s) => {
             s.project = p
             s.activeEnvId = p.environments[0]!.id
-            s.selection = null
+            setSel(s, null)
           }),
         renameProject: (name) => set((s) => void (s.project.name = name.trim() || s.project.name)),
         addEnvironment: (name) => {
@@ -156,7 +188,7 @@ export const useEditor = create<EditorState>()(
               newEnvironment(id, name ?? `Ambiente ${s.project.environments.length + 1}`),
             )
             s.activeEnvId = id
-            s.selection = null
+            setSel(s, null)
           })
           return id
         },
@@ -170,7 +202,7 @@ export const useEditor = create<EditorState>()(
             if (s.project.environments.length <= 1) return
             s.project.environments = s.project.environments.filter((e) => e.id !== id)
             if (s.activeEnvId === id) s.activeEnvId = s.project.environments[0]!.id
-            s.selection = null
+            setSel(s, null)
           }),
 
         addItem: (blockId, position) => {
@@ -189,7 +221,7 @@ export const useEditor = create<EditorState>()(
               sizeMm: h ? { w, d, h } : { w, d },
               ...ITEM_DEFAULTS,
             })
-            s.selection = { kind: 'item', id }
+            setSel(s, { kind: 'item', id })
             s.tool = 'select'
             s.placeBlockId = null
           })
@@ -242,7 +274,7 @@ export const useEditor = create<EditorState>()(
           const id = newId()
           set((s) => {
             env(s).drawings.push({ id, kind: 'text', at: rp(at), text, sizeMm: 3 })
-            s.selection = { kind: 'drawing', id }
+            setSel(s, { kind: 'drawing', id })
             s.tool = 'select'
           })
           return id
@@ -251,7 +283,7 @@ export const useEditor = create<EditorState>()(
           const id = newId()
           set((s) => {
             env(s).drawings.push({ id, kind: 'area', points: points.map(rp), name })
-            s.selection = { kind: 'drawing', id }
+            setSel(s, { kind: 'drawing', id })
             s.tool = 'select'
           })
           return id
@@ -291,7 +323,7 @@ export const useEditor = create<EditorState>()(
               closed: true,
               thicknessMm: s.wallThicknessMm,
             })
-            s.selection = { kind: 'drawing', id }
+            setSel(s, { kind: 'drawing', id })
             s.tool = 'select'
           })
           return id
@@ -309,7 +341,7 @@ export const useEditor = create<EditorState>()(
               sillMm: def.sillMm,
               hinge: 'start',
             })
-            s.selection = { kind: 'opening', id }
+            setSel(s, { kind: 'opening', id })
             s.tool = 'select'
             s.placeOpeningType = null
           })
@@ -363,22 +395,25 @@ export const useEditor = create<EditorState>()(
 
         moveSelection: (dx, dy) =>
           set((s) => {
-            const sel = s.selection
-            if (!sel || (dx === 0 && dy === 0)) return
+            if (dx === 0 && dy === 0) return
             const mv = (p: Vec2) => rp({ x: p.x + dx, y: p.y + dy })
-            if (sel.kind === 'item') {
-              const it = env(s).items.find((i) => i.id === sel.id)
-              if (it) it.position = mv(it.position)
-              return
+            const e = env(s)
+            for (const sel of s.selected) {
+              if (sel.kind === 'item') {
+                const it = e.items.find((i) => i.id === sel.id)
+                if (it) it.position = mv(it.position)
+                continue
+              }
+              if (sel.kind === 'opening') continue // portas/janelas andam com a parede
+              const d = e.drawings.find((x) => x.id === sel.id)
+              if (!d) continue
+              if (d.kind === 'wall' || d.kind === 'chain' || d.kind === 'area')
+                d.points = d.points.map(mv)
+              else if (d.kind === 'dimension') {
+                d.p1 = mv(d.p1)
+                d.p2 = mv(d.p2)
+              } else d.at = mv(d.at)
             }
-            const d = env(s).drawings.find((x) => x.id === sel.id)
-            if (!d) return
-            if (d.kind === 'wall' || d.kind === 'chain' || d.kind === 'area')
-              d.points = d.points.map(mv)
-            else if (d.kind === 'dimension') {
-              d.p1 = mv(d.p1)
-              d.p2 = mv(d.p2)
-            } else d.at = mv(d.at)
           }),
         rotateSelection: (deg) => {
           const sel = get().selection
@@ -417,7 +452,7 @@ export const useEditor = create<EditorState>()(
                 id,
                 offsetMm: o.offsetMm + o.widthMm + 200,
               })
-              s.selection = { kind: 'opening', id }
+              setSel(s, { kind: 'opening', id })
               return
             }
             if (sel.kind === 'item') {
@@ -440,21 +475,22 @@ export const useEditor = create<EditorState>()(
               } else copy.at = offset(copy.at)
               env(s).drawings.push(copy)
             }
-            s.selection = { kind: sel.kind, id }
+            setSel(s, { kind: sel.kind, id })
           }),
         deleteSelection: () =>
           set((s) => {
-            const sel = s.selection
-            if (!sel) return
+            if (!s.selected.length) return
             const e = env(s)
-            if (sel.kind === 'item') e.items = e.items.filter((i) => i.id !== sel.id)
-            else if (sel.kind === 'opening') e.openings = e.openings.filter((o) => o.id !== sel.id)
-            else {
-              e.drawings = e.drawings.filter((d) => d.id !== sel.id)
-              // Portas e janelas vão junto com a parede.
-              e.openings = e.openings.filter((o) => o.wallId !== sel.id)
-            }
-            s.selection = null
+            const ids = (k: SelRef['kind']) =>
+              new Set(s.selected.filter((r) => r.kind === k).map((r) => r.id))
+            const items = ids('item')
+            const drawings = ids('drawing')
+            const openings = ids('opening')
+            e.items = e.items.filter((i) => !items.has(i.id))
+            e.drawings = e.drawings.filter((d) => !drawings.has(d.id))
+            // Portas e janelas vão junto com a parede.
+            e.openings = e.openings.filter((o) => !openings.has(o.id) && !drawings.has(o.wallId))
+            setSel(s, null)
           }),
         setBasePlan: (bp) => set((s) => void (env(s).basePlan = bp)),
         updateBasePlan: (patch) =>

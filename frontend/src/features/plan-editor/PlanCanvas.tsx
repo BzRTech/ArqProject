@@ -4,7 +4,7 @@ import { dimensionDirection } from '@/core/dimensions/layout'
 import { entitiesBBox } from '@/core/drawing/bounds'
 import type { Entity } from '@/core/drawing/entities'
 import { snapPoint, type SnapKind } from '@/core/editor/snap'
-import { expand, isEmpty } from '@/core/geometry/bbox'
+import { expand, isEmpty, rectFromCorners } from '@/core/geometry/bbox'
 import {
   add,
   distance,
@@ -62,8 +62,11 @@ import {
 import { formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { Compiled } from './Compiled'
 import {
+  allRefs,
   DISPLAY_SCALE,
   dimensionLine,
+  refsInRect,
+  wallEditGuides,
   hitHandle,
   hitTest,
   nearestWallVertex,
@@ -400,6 +403,17 @@ export function PlanCanvas({ fitSignal }: Props) {
   const [cursorScreen, setCursorScreen] = useState<Vec2 | null>(null)
   const [hoverGrip, setHoverGrip] = useState<Vec2 | null>(null)
   const cadCursor = useUnits((s) => s.cadCursor)
+  /** Área de seleção em px de tela (início e ponto atual). */
+  const [band, setBand] = useState<{ a: Vec2; b: Vec2 } | null>(null)
+  /** Parede em edição (para as cotas provisórias) e o deslocamento atual, já formatado. */
+  const [editGuide, setEditGuide] = useState<{
+    wallId: string
+    vertex?: number
+    segment?: number
+  } | null>(null)
+  const [dragDelta, setDragDelta] = useState<string | null>(null)
+  const spaceDown = useRef(false)
+  const selected = useEditor((s) => s.selected)
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
   const [areaDraft, setAreaDraft] = useState<Vec2[]>([])
@@ -417,7 +431,9 @@ export function PlanCanvas({ fitSignal }: Props) {
     setTyped('')
   }
   const drag = useRef<{
-    mode: 'pan' | 'move' | 'opening' | 'handle' | 'vertex' | 'segment'
+    mode: 'pan' | 'move' | 'opening' | 'handle' | 'vertex' | 'segment' | 'band'
+    /** Seleção por área: Shift soma à seleção atual. */
+    additive?: boolean
     last: Vec2
     start: Vec2
     applied: Vec2
@@ -590,6 +606,11 @@ export function PlanCanvas({ fitSignal }: Props) {
         redo()
         return
       }
+      if (mod && key === 'a') {
+        e.preventDefault()
+        s.selectMany(allRefs(selectActiveEnv(s)))
+        return
+      }
       if (mod && key === 'd') {
         e.preventDefault()
         s.duplicateSelection()
@@ -653,7 +674,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           break
         case 'Delete':
         case 'Backspace':
-          if (s.selection) {
+          if (s.selected.length) {
             e.preventDefault()
             s.deleteSelection()
           }
@@ -696,8 +717,21 @@ export function PlanCanvas({ fitSignal }: Props) {
           }
       }
     }
+    // Espaço segurado = mover a vista arrastando (como em programas de desenho).
+    const onSpace = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (e.code !== 'Space' || (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA'))) return
+      e.preventDefault()
+      spaceDown.current = e.type === 'keydown'
+    }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.addEventListener('keydown', onSpace)
+    window.addEventListener('keyup', onSpace)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onSpace)
+      window.removeEventListener('keyup', onSpace)
+    }
   }, [wallDraft, dimDraft, areaDraft, commitWall, commitArea, fitToContent, typed, typedPoint])
 
   // --- Ponteiro --------------------------------------------------------------
@@ -711,7 +745,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     const p = toModel(e)
     const sp = screenPt(e)
     e.currentTarget.setPointerCapture(e.pointerId)
-    if (e.button === 1 || e.button === 2) {
+    if (e.button === 1 || e.button === 2 || spaceDown.current) {
       drag.current = { mode: 'pan', last: sp, start: p, applied: { x: 0, y: 0 } }
       return
     }
@@ -726,6 +760,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         )
         if (grip) {
           s.select({ kind: 'drawing', id: grip.wallId })
+          setEditGuide({ wallId: grip.wallId, vertex: grip.index })
           s.beginInteraction()
           drag.current = {
             mode: 'vertex',
@@ -748,6 +783,11 @@ export function PlanCanvas({ fitSignal }: Props) {
           const vi = hh.vertices.findIndex((v) => distance(v, p) <= 8 * px)
           const mi = vi < 0 ? hh.mids.find((m) => distance(m.at, p) <= 8 * px) : undefined
           if (vi >= 0 || mi) {
+            setEditGuide(
+              vi >= 0
+                ? { wallId: selWall.id, vertex: vi }
+                : { wallId: selWall.id, segment: mi!.seg },
+            )
             s.beginInteraction()
             drag.current = {
               mode: vi >= 0 ? 'vertex' : 'segment',
@@ -786,13 +826,21 @@ export function PlanCanvas({ fitSignal }: Props) {
           break
         }
         const hit = hitTest(env, p, 6 * px)
-        s.select(hit)
+        if (hit && e.shiftKey) {
+          s.toggleSelect(hit)
+          break
+        }
+        const inGroup =
+          !!hit &&
+          s.selected.length > 1 &&
+          s.selected.some((r) => r.kind === hit.kind && r.id === hit.id)
+        if (!inGroup) s.select(hit)
         if (hit) {
           s.beginInteraction()
           const o = hit.kind === 'opening' ? env.openings.find((x) => x.id === hit.id) : undefined
           const grab = o && openingTarget(p, o.type, 1500)
           drag.current = {
-            mode: hit.kind === 'opening' ? 'opening' : 'move',
+            mode: hit.kind === 'opening' && !inGroup ? 'opening' : 'move',
             last: sp,
             start: p,
             applied: { x: 0, y: 0 },
@@ -808,7 +856,15 @@ export function PlanCanvas({ fitSignal }: Props) {
                 : undefined,
           }
         } else {
-          drag.current = { mode: 'pan', last: sp, start: p, applied: { x: 0, y: 0 } }
+          // Vazio: área de seleção (esq.→dir. = janela; dir.→esq. = cruzamento).
+          drag.current = {
+            mode: 'band',
+            last: sp,
+            start: p,
+            applied: { x: 0, y: 0 },
+            additive: e.shiftKey,
+          }
+          setBand({ a: sp, b: sp })
         }
         break
       }
@@ -877,6 +933,10 @@ export function PlanCanvas({ fitSignal }: Props) {
     } else if (hoverGrip) {
       setHoverGrip(null)
     }
+    if (d?.mode === 'band') {
+      setBand((b) => (b ? { a: b.a, b: sp } : b))
+      return
+    }
     if (d?.mode === 'pan') {
       setView((v) => pan(v, sp.x - d.last.x, sp.y - d.last.y))
       d.last = sp
@@ -900,6 +960,11 @@ export function PlanCanvas({ fitSignal }: Props) {
       setCursor(r.point)
       setSnapKind(r.kind)
       s.editWalls((ws) => moveVertexLinked(ws, we.wallId, we.index, r.point))
+      const dx = r.point.x - vs.from.x
+      const dy = r.point.y - vs.from.y
+      setDragDelta(
+        `Δx ${formatLength(dx, wallUnit)} · Δy ${formatLength(dy, wallUnit)} ${UNIT_LABEL[wallUnit]}`,
+      )
     } else if (d?.mode === 'segment' && d.wallEdit?.n) {
       const we = d.wallEdit
       const want = Math.round(dot(sub(p, d.start), we.n!) / GRID_MOVE) * GRID_MOVE
@@ -907,6 +972,7 @@ export function PlanCanvas({ fitSignal }: Props) {
       if (delta !== 0) {
         s.editWalls((ws) => pushSegmentLinked(ws, we.wallId, we.index, delta))
         d.applied = { x: want, y: 0 }
+        setDragDelta(`parede empurrada ${formatLength(want, wallUnit)} ${UNIT_LABEL[wallUnit]}`)
       }
     } else if (d?.mode === 'handle' && d.handle) {
       const h = d.handle
@@ -965,6 +1031,23 @@ export function PlanCanvas({ fitSignal }: Props) {
   }
 
   const onPointerUp = () => {
+    const dd = drag.current
+    if (dd?.mode === 'band' && band) {
+      const tiny = Math.abs(band.b.x - band.a.x) < 4 && Math.abs(band.b.y - band.a.y) < 4
+      const st = useEditor.getState()
+      if (tiny) {
+        if (!dd.additive) st.select(null)
+      } else {
+        const r = rectFromCorners(screenToWorld(view, band.a), screenToWorld(view, band.b))
+        const mode = band.b.x >= band.a.x ? 'window' : 'crossing'
+        st.selectMany(refsInRect(env, r, mode), dd.additive)
+      }
+      setBand(null)
+      drag.current = null
+      return
+    }
+    setEditGuide(null)
+    setDragDelta(null)
     if (
       drag.current?.mode === 'move' ||
       drag.current?.mode === 'opening' ||
@@ -983,6 +1066,10 @@ export function PlanCanvas({ fitSignal }: Props) {
 
   // --- Pré-visualizações -----------------------------------------------------
   const draftEntities = useMemo((): Entity[] => {
+    if (editGuide) {
+      const w = walls.find((x) => x.id === editGuide.wallId)
+      if (w) return wallEditGuides(w, editGuide, DRAFT)
+    }
     if (tool === 'select' && selection?.kind === 'opening') {
       const o = env.openings.find((x) => x.id === selection.id)
       const w = o && walls.find((x) => x.id === o.wallId)
@@ -1158,12 +1245,14 @@ export function PlanCanvas({ fitSignal }: Props) {
     walls,
     selection,
     env.openings,
+    editGuide,
   ])
 
   const gridMinorVisible = view.scale * 100 >= 6
 
   const hint = {
-    select: 'Clique para selecionar · arraste para mover · R gira · M espelha · Del exclui',
+    select:
+      'Arraste no vazio para selecionar (→ janela, ← cruzamento) · Shift soma · Ctrl+A tudo · Del exclui · Espaço+arrastar move a vista',
     wall: wallDraft.length
       ? 'Clique ou DIGITE o comprimento (cm) + Enter · clique no 1º ponto fecha · Esc termina · Shift livre'
       : 'Clique para começar a parede (eixo) · Shift desliga o ortogonal',
@@ -1266,8 +1355,16 @@ export function PlanCanvas({ fitSignal }: Props) {
               ))}
           </g>
           <Compiled entities={markers} role="marcadores" />
-          <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />
-          <SelectionOverlay env={env} sel={selection} px={px} />
+          <g data-testid={editGuide ? 'edit-guides' : 'draft'}>
+            <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />
+          </g>
+          {selected.length > 1 ? (
+            selected.map((r) => (
+              <SelectionOverlay key={`${r.kind}:${r.id}`} env={env} sel={r} px={px} />
+            ))
+          ) : (
+            <SelectionOverlay env={env} sel={selection} px={px} />
+          )}
           {areaDraft.map((p, i) => (
             <circle key={`a${i}`} cx={p.x} cy={p.y} r={3 * px} fill={DRAFT} />
           ))}
@@ -1324,6 +1421,19 @@ export function PlanCanvas({ fitSignal }: Props) {
             />
           )}
         </g>
+        {band && (
+          <rect
+            x={Math.min(band.a.x, band.b.x)}
+            y={Math.min(band.a.y, band.b.y)}
+            width={Math.abs(band.b.x - band.a.x)}
+            height={Math.abs(band.b.y - band.a.y)}
+            fill={band.b.x >= band.a.x ? 'rgba(31,111,235,0.08)' : 'rgba(47,125,79,0.08)'}
+            stroke={band.b.x >= band.a.x ? '#1f6feb' : '#2f7d4f'}
+            strokeDasharray={band.b.x >= band.a.x ? undefined : '6 4'}
+            pointerEvents="none"
+            data-testid="selection-band"
+          />
+        )}
         <CadCursor
           screen={cadCursor ? cursorScreen : null}
           snapAt={
@@ -1352,6 +1462,7 @@ export function PlanCanvas({ fitSignal }: Props) {
               ? 'snap: ortogonal'
               : ''}
         </span>
+        {dragDelta && <span data-testid="drag-delta">{dragDelta}</span>}
         <span className="statusbar__hint">{hint}</span>
       </footer>
     </div>

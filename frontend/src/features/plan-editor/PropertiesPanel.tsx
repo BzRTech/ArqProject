@@ -21,6 +21,7 @@ import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
 import { FloorFields } from './FloorFields'
 import { ItemsSummary } from './ItemsSummary'
+import { MultiSelectionProps } from './MultiSelectionProps'
 import { selectActiveEnv, useEditor } from './store'
 
 function ItemProps({ item }: { item: Item }) {
@@ -579,6 +580,7 @@ function BasePlanProps({ env }: { env: Environment }) {
 export function PropertiesPanel() {
   const env = useEditor(selectActiveEnv)
   const selection = useEditor((s) => s.selection)
+  const many = useEditor((s) => s.selected.length > 1)
   const item = selection?.kind === 'item' ? env.items.find((i) => i.id === selection.id) : undefined
   const opening =
     selection?.kind === 'opening' ? env.openings.find((o) => o.id === selection.id) : undefined
@@ -587,10 +589,11 @@ export function PropertiesPanel() {
   return (
     <aside className="panel panel--props" data-testid="properties">
       <ToolOptions />
+      {many && <MultiSelectionProps env={env} />}
       {item && <ItemWithBudget key={item.id} item={item} env={env} />}
       {opening && <OpeningProps key={opening.id} opening={opening} env={env} />}
       {drawing && <DrawingProps key={drawing.id} d={drawing} />}
-      {!item && !drawing && !opening && <ItemsSummary env={env} />}
+      {!many && !item && !drawing && !opening && <ItemsSummary env={env} />}
       <BasePlanProps env={env} />
     </aside>
   )

@@ -7,7 +7,13 @@ import { computeLegend } from '@/core/project/markers'
 import { calibrateBasePlan } from '@/core/project/base-plan'
 import { setSegmentLengthLinked } from '@/core/project/wall-edit'
 import { wallSegments } from '@/core/project/walls'
-import { OPENING_DEFS, openingDef, openingFrame } from '@/core/project/openings'
+import {
+  OPENING_DEFS,
+  openingClearances,
+  openingDef,
+  openingFrame,
+  segmentCenterOffset,
+} from '@/core/project/openings'
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { BudgetFields } from './BudgetFields'
@@ -197,6 +203,7 @@ function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment 
   const wall = env.drawings.find((d): d is Wall => d.kind === 'wall' && d.id === o.wallId)
   const f = wall && openingFrame(wall, o)
   const isDoor = def.kind === 'door'
+  const clear = wall ? openingClearances(wall, o) : null
   return (
     <section data-testid="opening-props">
       <h2>{isDoor ? 'Porta' : 'Janela'}</h2>
@@ -247,6 +254,24 @@ function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment 
           onCommit={(edge) => s.updateOpening(o.id, { offsetMm: edge + f.width / 2 })}
           testId="opening-edge"
         />
+      )}
+      {wall && clear && (
+        <p className="small" data-testid="opening-clearances">
+          Livre até as paredes: <strong>{formatLength(clear.start, u.wall)}</strong> |{' '}
+          <strong>{formatLength(clear.end, u.wall)}</strong> {UNIT_LABEL[u.wall]}
+        </p>
+      )}
+      {wall && (
+        <button
+          type="button"
+          data-testid="opening-center"
+          onClick={() => {
+            const c = segmentCenterOffset(wall, o.segment)
+            if (c !== null) s.updateOpening(o.id, { offsetMm: Math.round(c) })
+          }}
+        >
+          Centralizar no trecho
+        </button>
       )}
       <div className="button-row">
         <button
@@ -324,8 +349,9 @@ function ToolOptions() {
       <section>
         <h2>Parede</h2>
         <p className="small">
-          Clique o primeiro ponto e <strong>digite o comprimento em cm</strong> (ex.: 350) + Enter;
-          a direção segue o mouse. Clique no primeiro ponto para fechar.
+          Clique o primeiro ponto e <strong>digite o comprimento em {UNIT_LABEL[u.wall]}</strong>{' '}
+          (ex.: {u.wall === 'm' ? '3,5' : '350'}) + Enter; a direção segue o mouse. Clique no
+          primeiro ponto para fechar. Os cantos de qualquer parede podem ser arrastados direto.
         </p>
       </section>
     )

@@ -92,6 +92,13 @@ describe('snap', () => {
   it('extremidade tem prioridade', () => {
     expect(snapPoint(vec(1030, 990), base)).toEqual({ point: vec(1000, 1000), kind: 'endpoint' })
   })
+  it('ponto médio quando não há extremidade por perto; extremidade vence', () => {
+    const mid = { ...base, midpoints: [vec(2000, 1000)] }
+    expect(snapPoint(vec(2020, 990), mid)).toEqual({ point: vec(2000, 1000), kind: 'midpoint' })
+    expect(snapPoint(vec(1010, 1000), { ...mid, midpoints: [vec(1020, 1000)] }).kind).toBe(
+      'endpoint',
+    )
+  })
   it('grade', () => {
     expect(snapPoint(vec(1234, 2278), base)).toEqual({ point: vec(1250, 2300), kind: 'grid' })
   })

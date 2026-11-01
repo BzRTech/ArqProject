@@ -187,6 +187,15 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
           />
           Humanizado
         </label>
+        <label className="inline-field" title="Cruz em tela cheia, como no LibreCAD/AutoCAD">
+          <input
+            type="checkbox"
+            checked={units.cadCursor}
+            onChange={(e) => units.setCadCursor(e.target.checked)}
+            data-testid="cad-cursor-toggle"
+          />
+          Cursor CAD
+        </label>
         <label className="inline-field">
           Paredes
           <select

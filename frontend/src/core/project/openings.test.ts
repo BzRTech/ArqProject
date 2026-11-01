@@ -231,3 +231,19 @@ describe('ambiente completo (o que vai para o PDF)', () => {
     expect(prims0.some((x) => x.kind === 'arc')).toBe(false)
   })
 })
+
+describe('ajuda para posicionar esquadrias', () => {
+  it('centro do trecho e folgas até as faces internas', async () => {
+    const { segmentCenterOffset, openingClearances } = await import('./openings')
+    // trecho de cima do quarto: 4400 pelo eixo; janela de 120 centralizada
+    const win = door({
+      type: 'janela-correr-2',
+      segment: 0,
+      offsetMm: segmentCenterOffset(room, 0)!,
+      widthMm: 1200,
+    })
+    expect(win.offsetMm).toBe(2200)
+    // (4400 − 1200)/2 − 75 = 1525 de cada lado, medido nas faces internas
+    expect(openingClearances(room, win)).toEqual({ start: 1525, end: 1525 })
+  })
+})

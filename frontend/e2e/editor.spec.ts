@@ -597,3 +597,60 @@ test('piso: revestimento com paginação, perda, rodapé sem a porta, orçamento
   const pdf = await readFile('test-results/piso.pdf')
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
 })
+
+test('janela gruda no centro, cursor CAD com snap de ponto médio e cantos arrastáveis direto', async ({
+  page,
+}) => {
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+
+  // Janela de 1,20 perto do meio da parede de cima: gruda no centro
+  await page.getByTestId('tool-window').click()
+  await moveModel(page, 2240, -30)
+  await clickModel(page, 2240, -30)
+  // (4,55 − 1,20)/2 − 0,075 = 1,60 m livres de cada lado
+  await expect(page.getByTestId('opening-clearances')).toContainText('1,60 | 1,60')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('24-janela-centralizada') })
+  // Botão "Centralizar" depois de mover para o lado
+  await setCm(page, 'opening-edge', '0,5')
+  await expect(page.getByTestId('opening-clearances')).not.toContainText('1,60 | 1,60')
+  await page.getByTestId('opening-center').click()
+  await expect(page.getByTestId('opening-clearances')).toContainText('1,60 | 1,60')
+  await page.keyboard.press('Escape')
+
+  // Cursor CAD: cruz e marcador de ponto médio ao desenhar parede
+  await expect(page.getByTestId('cad-cursor-toggle')).toBeChecked()
+  await page.getByTestId('tool-wall').click()
+  await moveModel(page, 2200 + 20, 3875 + 15) // meio da parede de baixo
+  await expect(page.getByTestId('snap-midpoint')).toBeVisible()
+  await expect(page.getByTestId('cad-cursor').locator('line')).toHaveCount(2)
+  await page.screenshot({ path: shot('25-cursor-cad-ponto-medio') })
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+
+  // Canto arrastável sem selecionar a parede antes
+  await moveModel(page, -75, -75)
+  await expect(page.getByTestId('hover-grip')).toBeVisible()
+  const a = await modelToPage(page, -75, -75)
+  const b = await modelToPage(page, -75, -575)
+  await page.mouse.down()
+  await page.mouse.move(b.x, b.y, { steps: 6 })
+  await page.mouse.up()
+  const first = await page.evaluate(() => {
+    const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+      project: { environments: { drawings: { kind: string; points?: P[] }[] }[] }
+    }
+    return st.project.environments[0]!.drawings.find((d) => d.kind === 'wall')!.points![0]
+  })
+  expect(first).toEqual({ x: -75, y: -575 }) // x preservado: move pelo deslocamento, sem pular para a grade
+  void a
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('26-canto-arrastado') })
+})

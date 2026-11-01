@@ -662,3 +662,7 @@ button.link:hover:not(:disabled) {
   padding-top: 0.5rem;
   cursor: default;
 }
+.canvas.canvas--cad,
+.canvas.canvas--cad:active {
+  cursor: none;
+}

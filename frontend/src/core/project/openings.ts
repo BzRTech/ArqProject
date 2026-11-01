@@ -292,3 +292,28 @@ export function openingJambs(wall: Wall, o: Opening): Vec2[] {
     add(f.b, scale(f.n, -h)),
   ]
 }
+
+/** Centro do trecho (ao longo do eixo), para centralizar portas e janelas. */
+export function segmentCenterOffset(wall: Wall, segment: number): number | null {
+  const s = wallSegments(wall).find((x) => x.index === segment)
+  return s ? s.length / 2 : null
+}
+
+/**
+ * Distâncias LIVRES do vão até as faces internas das paredes vizinhas (o que se mede na
+ * obra), dos dois lados. Nos cantos desconta meia espessura; ponta solta não desconta.
+ */
+export function openingClearances(wall: Wall, o: Opening): { start: number; end: number } | null {
+  const f = openingFrame(wall, o)
+  const segs = wallSegments(wall)
+  const k = segs.findIndex((x) => x.index === o.segment)
+  if (!f || k < 0) return null
+  const s = segs[k]!
+  const h = f.halfThickness
+  const cornerStart = wall.closed || k > 0
+  const cornerEnd = wall.closed || k < segs.length - 1
+  return {
+    start: f.offset - f.width / 2 - (cornerStart ? h : 0),
+    end: s.length - (f.offset + f.width / 2) - (cornerEnd ? h : 0),
+  }
+}

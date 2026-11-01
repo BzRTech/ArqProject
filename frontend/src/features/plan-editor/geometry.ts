@@ -1,13 +1,26 @@
 /** Consultas geométricas do editor sobre o documento (acerto por clique, pontos de snap). */
 import { dimensionDirection } from '@/core/dimensions/layout'
 import { textWidth } from '@/core/drawing/text-metrics'
-import { add, dot, leftNormal, scale, sub, type Vec2 } from '@/core/geometry/vec'
+import { add, distance, dot, leftNormal, scale, sub, type Vec2 } from '@/core/geometry/vec'
 import { hitItem, itemCorners } from '@/core/project/items'
 import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
 import { computeLegend, markerPosition } from '@/core/project/markers'
-import { hitOpening, openingJambs } from '@/core/project/openings'
-import type { ChainDrawing, DimensionDrawing, Environment, Wall } from '@/core/project/schema'
-import { distanceToSegment, hitWall, wallOutline } from '@/core/project/walls'
+import { hitOpening, openingClearances, openingFrame, openingJambs } from '@/core/project/openings'
+import type {
+  ChainDrawing,
+  DimensionDrawing,
+  Environment,
+  Opening,
+  Wall,
+} from '@/core/project/schema'
+import {
+  distanceToSegment,
+  hitWall,
+  wallOutline,
+  wallPoints,
+  wallSegments,
+} from '@/core/project/walls'
+import type { Entity } from '@/core/drawing/entities'
 import type { Selection } from './store'
 
 export const DISPLAY_SCALE = 50
@@ -133,4 +146,85 @@ export function snapPoints(env: Environment): Vec2[] {
   }
   for (const it of env.items) pts.push(...itemCorners(it))
   return pts
+}
+
+/** Meio dos trechos de parede (eixo e as duas faces), para o snap de ponto médio. */
+export function snapMidpoints(env: Environment): Vec2[] {
+  const out: Vec2[] = []
+  for (const w of wallsOf(env)) {
+    const h = w.thicknessMm / 2
+    for (const s of wallSegments(w)) {
+      const m = add(s.a, scale(s.dir, s.length / 2))
+      const n = leftNormal(s.dir)
+      out.push(m, add(m, scale(n, h)), add(m, scale(n, -h)))
+    }
+  }
+  return out
+}
+
+/** Canto de parede mais próximo (de qualquer parede), dentro da tolerância. */
+export function nearestWallVertex(env: Environment, p: Vec2, tol: number, prefer?: string) {
+  let best: { wallId: string; index: number; at: Vec2; d: number } | null = null
+  for (const w of wallsOf(env)) {
+    wallPoints(w).forEach((v, index) => {
+      const d = distance(v, p) - (w.id === prefer ? 0.001 : 0)
+      if (d <= tol && (!best || d < best.d)) best = { wallId: w.id, index, at: v, d }
+    })
+  }
+  return best as { wallId: string; index: number; at: Vec2; d: number } | null
+}
+
+/**
+ * Guias ao posicionar uma porta/janela: marca no CENTRO do trecho (laranja quando a peça está
+ * centralizada) e cotas provisórias das folgas até as faces internas, do lado `side`.
+ */
+export function openingGuides(
+  w: Wall,
+  o: Opening,
+  side: 'left' | 'right',
+  color: string,
+): Entity[] {
+  const f = openingFrame(w, o)
+  const seg = wallSegments(w).find((x) => x.index === o.segment)
+  const c = openingClearances(w, o)
+  if (!f || !seg || !c) return []
+  const h = f.halfThickness
+  const nn = side === 'left' ? f.n : scale(f.n, -1)
+  const center = add(seg.a, scale(seg.dir, seg.length / 2))
+  const centered = Math.abs(f.offset - seg.length / 2) < 1
+  const tick = h + 3 * DISPLAY_SCALE
+  const markColor = centered ? '#e0a43a' : color
+  const out: Entity[] = [
+    {
+      kind: 'line',
+      a: add(center, scale(f.n, tick)),
+      b: add(center, scale(f.n, -tick)),
+      style: { color: markColor, weight: centered ? 0.35 : 0.18, lineType: 'dashdot' },
+    },
+  ]
+  // Pontos na face interna (lado do cursor): do canto até o batente, e do batente ao outro canto.
+  const onFace = (p: Vec2) => add(p, scale(nn, h))
+  const startFace = onFace(add(f.a, scale(f.dir, -c.start)))
+  const endFace = onFace(add(f.b, scale(f.dir, c.end)))
+  const off = side === 'left' ? 4 : -4
+  const style = { color }
+  if (c.start > 1)
+    out.push({
+      kind: 'dimension',
+      p1: startFace,
+      p2: onFace(f.a),
+      orientation: 'aligned',
+      offset: off,
+      style,
+    })
+  if (c.end > 1)
+    out.push({
+      kind: 'dimension',
+      p1: onFace(f.b),
+      p2: endFace,
+      orientation: 'aligned',
+      offset: off,
+      style,
+    })
+  return out
 }

@@ -15,12 +15,24 @@ import {
   sub,
   type Vec2,
 } from '@/core/geometry/vec'
-import { fit, pan, screenToWorld, zoomAt, type Viewport } from '@/core/geometry/viewport'
+import {
+  fit,
+  pan,
+  screenToWorld,
+  worldToScreen,
+  zoomAt,
+  type Viewport,
+} from '@/core/geometry/viewport'
 import { areaM2Text } from '@/core/project/areas'
 import { itemCorners, itemEntities } from '@/core/project/items'
 import { floorEntities } from '@/core/finishes/layout'
 import { environmentMarkers } from '@/core/project/markers'
-import { openingDef, openingEntities, openingFrame } from '@/core/project/openings'
+import {
+  openingDef,
+  openingEntities,
+  openingFrame,
+  segmentCenterOffset,
+} from '@/core/project/openings'
 import { drawingEntities, environmentEntities } from '@/core/project/render'
 import {
   ITEM_DEFAULTS,
@@ -54,6 +66,9 @@ import {
   dimensionLine,
   hitHandle,
   hitTest,
+  nearestWallVertex,
+  openingGuides,
+  snapMidpoints,
   snapPoints,
   textBox,
   wallsOf,
@@ -74,6 +89,8 @@ const ItemView = memo(function ItemView({ item }: { item: Item }) {
 const NO_OPENINGS: Opening[] = []
 /** Distância máxima (px de tela) para uma porta/janela "grudar" numa parede. */
 const OPENING_REACH_PX = 40
+/** Distância (px) do meio do trecho em que a porta/janela gruda no centro. */
+const CENTER_SNAP_PX = 14
 
 const DrawingView = memo(function DrawingView({
   d,
@@ -277,6 +294,89 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
   )
 }
 
+/**
+ * Cursor estilo CAD: cruz em tela cheia + caixa de seleção (modo seleção) e marcador do snap
+ * (quadrado = extremidade, triângulo = ponto médio, x = grade). Em px de tela.
+ */
+function CadCursor({
+  screen,
+  snapAt,
+  snapKind,
+  pickbox,
+}: {
+  screen: Vec2 | null
+  snapAt: Vec2 | null
+  snapKind: SnapKind
+  pickbox: boolean
+}) {
+  const snapColor = snapKind === 'endpoint' || snapKind === 'midpoint' ? '#e0a43a' : DRAFT
+  const r = 6
+  return (
+    <g pointerEvents="none" data-testid="cad-cursor">
+      {screen && (
+        <>
+          <line
+            x1={0}
+            x2="100%"
+            y1={screen.y}
+            y2={screen.y}
+            stroke="#5b6b7d"
+            strokeOpacity={0.55}
+            strokeWidth={1}
+          />
+          <line
+            y1={0}
+            y2="100%"
+            x1={screen.x}
+            x2={screen.x}
+            stroke="#5b6b7d"
+            strokeOpacity={0.55}
+            strokeWidth={1}
+          />
+          {pickbox && (
+            <rect
+              x={screen.x - 5}
+              y={screen.y - 5}
+              width={10}
+              height={10}
+              fill="none"
+              stroke="#1d2733"
+              strokeWidth={1}
+            />
+          )}
+        </>
+      )}
+      {snapAt &&
+        (snapKind === 'midpoint' ? (
+          <polygon
+            points={`${snapAt.x},${snapAt.y - r} ${snapAt.x + r},${snapAt.y + r * 0.7} ${snapAt.x - r},${snapAt.y + r * 0.7}`}
+            fill="none"
+            stroke={snapColor}
+            strokeWidth={1.8}
+            data-testid="snap-midpoint"
+          />
+        ) : snapKind === 'grid' || snapKind === 'free' || snapKind === 'ortho' ? (
+          <path
+            d={`M ${snapAt.x - 4} ${snapAt.y - 4} L ${snapAt.x + 4} ${snapAt.y + 4} M ${snapAt.x + 4} ${snapAt.y - 4} L ${snapAt.x - 4} ${snapAt.y + 4}`}
+            stroke={snapColor}
+            strokeWidth={1.5}
+          />
+        ) : (
+          <rect
+            x={snapAt.x - r}
+            y={snapAt.y - r}
+            width={2 * r}
+            height={2 * r}
+            fill="none"
+            stroke={snapColor}
+            strokeWidth={1.8}
+            data-testid="snap-endpoint"
+          />
+        ))}
+    </g>
+  )
+}
+
 interface Props {
   fitSignal: number
 }
@@ -296,6 +396,10 @@ export function PlanCanvas({ fitSignal }: Props) {
   const [view, setView] = useState<Viewport>({ scale: 0.15, tx: 40, ty: 40 })
   const [cursor, setCursor] = useState<Vec2 | null>(null)
   const [snapKind, setSnapKind] = useState<SnapKind>('free')
+  /** Cursor em px de tela (cruz estilo CAD) e canto de parede sob o mouse. */
+  const [cursorScreen, setCursorScreen] = useState<Vec2 | null>(null)
+  const [hoverGrip, setHoverGrip] = useState<Vec2 | null>(null)
+  const cadCursor = useUnits((s) => s.cadCursor)
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
   const [areaDraft, setAreaDraft] = useState<Vec2[]>([])
@@ -329,6 +433,8 @@ export function PlanCanvas({ fitSignal }: Props) {
     handle?: { kind: 'marker' | 'area-label'; id: string; from: Vec2 }
     /** Edição de parede: canto (índice) ou trecho (índice + normal). */
     wallEdit?: { wallId: string; index: number; n?: Vec2 }
+    /** Arrasto de canto: posição inicial e pontos de snap congelados (sem a própria parede). */
+    vertexSnap?: { from: Vec2; endpoints: Vec2[]; midpoints: Vec2[] }
   } | null>(null)
 
   const px = 1 / view.scale // 1 px de tela em mm do modelo
@@ -338,6 +444,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     [env.items],
   )
   const walls = useMemo(() => wallsOf(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
+  const midpoints = useMemo(() => snapMidpoints(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
   const humanized = useUnits((s) => s.humanized)
   /** Pisos (por baixo dos móveis); só muda quando as áreas mudam. */
   const floors = useMemo(
@@ -365,13 +472,14 @@ export function PlanCanvas({ fitSignal }: Props) {
     (p: Vec2, type: OpeningType, reach = OPENING_REACH_PX * px) => {
       const hit = nearestWall(walls, p, reach)
       if (!hit) return null
-      return {
-        wallId: hit.wallId,
-        segment: hit.segment,
-        offsetMm: Math.round(hit.along / GRID_MOVE) * GRID_MOVE,
-        side: hit.side,
-        type,
-      }
+      const w = walls.find((x) => x.id === hit.wallId)
+      const center = w ? segmentCenterOffset(w, hit.segment) : null
+      // Perto do meio do trecho, gruda no CENTRO exato; senão, passo de 1 cm.
+      const offsetMm =
+        center !== null && Math.abs(hit.along - center) <= CENTER_SNAP_PX * px
+          ? Math.round(center)
+          : Math.round(hit.along / GRID_MOVE) * GRID_MOVE
+      return { wallId: hit.wallId, segment: hit.segment, offsetMm, side: hit.side, type }
     },
     [walls, px],
   )
@@ -426,10 +534,11 @@ export function PlanCanvas({ fitSignal }: Props) {
       snapPoint(p, {
         grid: opts.free ? 0 : (opts.grid ?? GRID_DRAW),
         endpoints: opts.free ? [] : [...endpoints, ...wallDraft, ...dimDraft, ...areaDraft],
+        midpoints: opts.free ? [] : midpoints,
         tolerance: 10 * px,
         orthoFrom: opts.free ? undefined : opts.ortho,
       }),
-    [endpoints, wallDraft, dimDraft, areaDraft, px],
+    [endpoints, midpoints, wallDraft, dimDraft, areaDraft, px],
   )
 
   const commitWall = useCallback((pts: Vec2[], closed: boolean) => {
@@ -443,6 +552,17 @@ export function PlanCanvas({ fitSignal }: Props) {
     if (clean.length >= 3) useEditor.getState().addArea(clean)
     setAreaDraft([])
   }, [])
+
+  /** Pontos de snap para arrastar um canto: tudo menos a própria parede e o que está no canto. */
+  const vertexSnapFor = (wallId: string, from: Vec2) => {
+    const rest = { ...env, drawings: env.drawings.filter((x) => x.id !== wallId) }
+    const away = (q: Vec2) => distance(q, from) > 1
+    return {
+      from,
+      endpoints: snapPoints(rest).filter(away),
+      midpoints: snapMidpoints(rest).filter(away),
+    }
+  }
 
   // --- Teclado -------------------------------------------------------------
   useEffect(() => {
@@ -597,6 +717,26 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     switch (s.tool) {
       case 'select': {
+        // Canto de QUALQUER parede sob o mouse: arrasta direto (como os grips do CAD).
+        const grip = nearestWallVertex(
+          env,
+          p,
+          8 * px,
+          s.selection?.kind === 'drawing' ? s.selection.id : undefined,
+        )
+        if (grip) {
+          s.select({ kind: 'drawing', id: grip.wallId })
+          s.beginInteraction()
+          drag.current = {
+            mode: 'vertex',
+            last: sp,
+            start: p,
+            applied: { x: 0, y: 0 },
+            wallEdit: { wallId: grip.wallId, index: grip.index },
+            vertexSnap: vertexSnapFor(grip.wallId, grip.at),
+          }
+          break
+        }
         // Alças da parede selecionada (cantos e meio dos trechos) vêm primeiro.
         const selWall =
           s.selection?.kind === 'drawing'
@@ -618,6 +758,7 @@ export function PlanCanvas({ fitSignal }: Props) {
                 vi >= 0
                   ? { wallId: selWall.id, index: vi }
                   : { wallId: selWall.id, index: mi!.seg, n: mi!.n },
+              vertexSnap: vi >= 0 ? vertexSnapFor(selWall.id, hh.vertices[vi]!) : undefined,
             }
             break
           }
@@ -730,21 +871,34 @@ export function PlanCanvas({ fitSignal }: Props) {
     const sp = screenPt(e)
     const s = useEditor.getState()
     const d = drag.current
+    setCursorScreen(sp)
+    if (s.tool === 'select' && !d) {
+      setHoverGrip(nearestWallVertex(env, p, 8 * px)?.at ?? null)
+    } else if (hoverGrip) {
+      setHoverGrip(null)
+    }
     if (d?.mode === 'pan') {
       setView((v) => pan(v, sp.x - d.last.x, sp.y - d.last.y))
       d.last = sp
-    } else if (d?.mode === 'vertex' && d.wallEdit) {
+    } else if (d?.mode === 'vertex' && d.wallEdit && d.vertexSnap) {
       const we = d.wallEdit
-      // Snap na grade e nos pontos de OUTRAS paredes/itens (os da própria parede "grudariam").
-      const own = new Set(
-        (
-          selectActiveEnv(s).drawings.find((x) => x.id === we.wallId) as Wall | undefined
-        )?.points.map((q) => `${q.x},${q.y}`) ?? [],
-      )
-      const others = endpoints.filter((q) => !own.has(`${q.x},${q.y}`))
+      const vs = d.vertexSnap
+      // Move pelo DESLOCAMENTO (passo de 1 cm a partir de onde o canto estava); gruda em
+      // cantos/meios de outras paredes quando passa perto. Shift = livre.
+      const moved = {
+        x: vs.from.x + Math.round((p.x - d.start.x) / GRID_MOVE) * GRID_MOVE,
+        y: vs.from.y + Math.round((p.y - d.start.y) / GRID_MOVE) * GRID_MOVE,
+      }
       const r = e.shiftKey
-        ? { point: { x: Math.round(p.x), y: Math.round(p.y) } }
-        : snapPoint(p, { grid: GRID_DRAW, endpoints: others, tolerance: 10 * px })
+        ? { point: { x: Math.round(p.x), y: Math.round(p.y) }, kind: 'free' as const }
+        : snapPoint(moved, {
+            grid: 0,
+            endpoints: vs.endpoints,
+            midpoints: vs.midpoints,
+            tolerance: 10 * px,
+          })
+      setCursor(r.point)
+      setSnapKind(r.kind)
       s.editWalls((ws) => moveVertexLinked(ws, we.wallId, we.index, r.point))
     } else if (d?.mode === 'segment' && d.wallEdit?.n) {
       const we = d.wallEdit
@@ -778,10 +932,16 @@ export function PlanCanvas({ fitSignal }: Props) {
       const t = distance(sp, g.startScreen) > 4 && o ? openingTarget(p, o.type, 1500) : null
       if (o && t) {
         const sameSegment = t.wallId === g.wallId && t.segment === g.segment
-        const offsetMm = sameSegment ? g.offsetMm + (t.offsetMm - g.grabAlong) : t.offsetMm
+        let offsetMm = sameSegment ? g.offsetMm + (t.offsetMm - g.grabAlong) : t.offsetMm
+        const host = walls.find((x) => x.id === t.wallId)
+        const center = host ? segmentCenterOffset(host, t.segment) : null
+        if (center !== null && Math.abs(offsetMm - center) <= CENTER_SNAP_PX * px)
+          offsetMm = Math.round(center)
         s.updateOpening(o.id, { wallId: t.wallId, segment: t.segment, offsetMm })
       }
     }
+    // Arrastando canto: o cursor/snap já foi definido acima.
+    if (d?.mode === 'vertex') return
     // Cursor "efetivo" para pré-visualizações
     if (s.tool === 'wall') {
       const r = snap(p, { ortho: e.shiftKey ? undefined : wallDraft[wallDraft.length - 1] })
@@ -823,6 +983,11 @@ export function PlanCanvas({ fitSignal }: Props) {
 
   // --- Pré-visualizações -----------------------------------------------------
   const draftEntities = useMemo((): Entity[] => {
+    if (tool === 'select' && selection?.kind === 'opening') {
+      const o = env.openings.find((x) => x.id === selection.id)
+      const w = o && walls.find((x) => x.id === o.wallId)
+      if (o && w) return openingGuides(w, o, o.side, DRAFT)
+    }
     if (!cursor) return []
     if (tool === 'wall' && wallDraft.length) {
       const last = wallDraft[wallDraft.length - 1]!
@@ -960,6 +1125,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           fill: { color: '#ffffff' },
         },
         ...openingEntities(w, ghost),
+        ...openingGuides(w, ghost, t.side, DRAFT),
       ]
     }
     if (tool === 'place' && placeBlockId) {
@@ -990,6 +1156,8 @@ export function PlanCanvas({ fitSignal }: Props) {
     placeOpeningType,
     openingTarget,
     walls,
+    selection,
+    env.openings,
   ])
 
   const gridMinorVisible = view.scale * 100 >= 6
@@ -1017,13 +1185,17 @@ export function PlanCanvas({ fitSignal }: Props) {
     <div className="plan-canvas">
       <svg
         ref={ref}
-        className={`canvas canvas--${tool}`}
+        className={`canvas canvas--${tool} ${cadCursor ? 'canvas--cad' : ''}`}
         data-testid="plan-canvas"
         data-view={`${view.scale} ${view.tx} ${view.ty}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={() => setCursor(null)}
+        onPointerLeave={() => {
+          setCursor(null)
+          setCursorScreen(null)
+          setHoverGrip(null)
+        }}
         onDoubleClick={(e) => {
           if (tool === 'wall' && wallDraft.length >= 2) commitWall(wallDraft, false)
           if (tool === 'area' && areaDraft.length >= 3) commitArea(areaDraft)
@@ -1139,18 +1311,33 @@ export function PlanCanvas({ fitSignal }: Props) {
                 : `digite o comprimento (${UNIT_LABEL[wallUnit]})`}
             </text>
           )}
-          {cursor && (tool === 'wall' || tool === 'dimension' || tool === 'area') && (
+          {hoverGrip && (
             <rect
-              x={cursor.x - 4 * px}
-              y={cursor.y - 4 * px}
-              width={8 * px}
-              height={8 * px}
-              fill="none"
-              stroke={snapKind === 'endpoint' ? '#e0a43a' : DRAFT}
-              strokeWidth={1.5 * px}
+              x={hoverGrip.x - 6 * px}
+              y={hoverGrip.y - 6 * px}
+              width={12 * px}
+              height={12 * px}
+              fill="#e0a43a"
+              stroke="#fff"
+              strokeWidth={px}
+              data-testid="hover-grip"
             />
           )}
         </g>
+        <CadCursor
+          screen={cadCursor ? cursorScreen : null}
+          snapAt={
+            cursor &&
+            (tool === 'wall' ||
+              tool === 'dimension' ||
+              tool === 'area' ||
+              (tool === 'select' && (snapKind === 'endpoint' || snapKind === 'midpoint')))
+              ? worldToScreen(view, cursor)
+              : null
+          }
+          snapKind={snapKind}
+          pickbox={tool === 'select'}
+        />
       </svg>
       <footer className="statusbar" data-testid="editor-status">
         <span>

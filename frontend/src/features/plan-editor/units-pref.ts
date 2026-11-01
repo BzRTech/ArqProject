@@ -14,6 +14,9 @@ export interface UnitsPref {
   /** Modo humanizado (pisos com cor), na tela e no PDF. */
   humanized: boolean
   setHumanized: (v: boolean) => void
+  /** Cursor estilo CAD (cruz em tela cheia). */
+  cadCursor: boolean
+  setCadCursor: (v: boolean) => void
 }
 
 export const useUnits = create<UnitsPref>()(
@@ -25,6 +28,8 @@ export const useUnits = create<UnitsPref>()(
       setItem: (item) => set({ item }),
       humanized: true,
       setHumanized: (humanized) => set({ humanized }),
+      cadCursor: true,
+      setCadCursor: (cadCursor) => set({ cadCursor }),
     }),
     { name: 'prancheta.unidades' },
   ),

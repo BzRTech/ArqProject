@@ -3,7 +3,8 @@ import { itemEntities } from './items'
 import { areaEntities } from './areas'
 import { environmentMarkers } from './markers'
 import { openingEntities, openingGaps } from './openings'
-import type { Drawing, Environment, Opening } from './schema'
+import type { Drawing, Environment, Opening, Wall } from './schema'
+import { wallsShape, wallsShapeEntities } from './wall-union'
 import { wallEntities } from './walls'
 
 /**
@@ -80,10 +81,19 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
   out.push({ kind: 'group', role: 'itens', children: env.items.flatMap(itemEntities) })
   const walls = env.drawings.filter((d) => d.kind === 'wall')
   const notes = env.drawings.filter((d) => d.kind !== 'wall')
+  // Paredes como UMA figura (união menos vãos) + símbolos das esquadrias.
+  const wallList = walls.filter((d): d is Wall => d.kind === 'wall')
+  const byId = new Map(wallList.map((w) => [w.id, w]))
   out.push({
     kind: 'group',
     role: 'paredes',
-    children: walls.flatMap((d) => drawingEntities(d, o.scale, env.openings)),
+    children: [
+      ...wallsShapeEntities(wallsShape(wallList, env.openings)),
+      ...env.openings.flatMap((op) => {
+        const w = byId.get(op.wallId)
+        return w ? openingEntities(w, op) : []
+      }),
+    ],
   })
   out.push({
     kind: 'group',

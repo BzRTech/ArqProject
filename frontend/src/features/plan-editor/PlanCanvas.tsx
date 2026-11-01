@@ -28,8 +28,24 @@ import {
   type Item,
   type Opening,
   type OpeningType,
+  type Wall,
 } from '@/core/project/schema'
-import { nearestWall, wallEntities, wallOutline } from '@/core/project/walls'
+import {
+  insertVertex,
+  moveVertexLinked,
+  pushSegmentLinked,
+  removeVertex,
+  vertexAt,
+} from '@/core/project/wall-edit'
+import { wallsShape, wallsShapeEntities } from '@/core/project/wall-union'
+import {
+  hitWall,
+  nearestWall,
+  wallEntities,
+  wallOutline,
+  wallPoints,
+  wallSegments,
+} from '@/core/project/walls'
 import { formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { Compiled } from './Compiled'
 import {
@@ -68,6 +84,43 @@ const DrawingView = memo(function DrawingView({
   const entities = useMemo(() => drawingEntities(d, DISPLAY_SCALE, openings), [d, openings])
   return <Compiled entities={entities} role={`drawing-${d.kind}`} />
 })
+
+/** Todas as paredes do ambiente como UMA figura (paredes encostadas se fundem). */
+const WallsView = memo(function WallsView({
+  walls,
+  openings,
+}: {
+  walls: Wall[]
+  openings: Opening[]
+}) {
+  const entities = useMemo(() => {
+    const byId = new Map(walls.map((w) => [w.id, w]))
+    return [
+      ...wallsShapeEntities(wallsShape(walls, openings)),
+      ...openings.flatMap((o) => {
+        const w = byId.get(o.wallId)
+        return w ? openingEntities(w, o) : []
+      }),
+    ]
+  }, [walls, openings])
+  return (
+    <g data-testid="walls-layer" data-count={walls.length}>
+      <Compiled entities={entities} role="paredes" />
+    </g>
+  )
+})
+
+/** Alças de edição da parede selecionada: cantos (quadrados) e meio dos trechos (círculos). */
+function wallHandles(w: Wall) {
+  return {
+    vertices: wallPoints(w),
+    mids: wallSegments(w).map((s) => ({
+      seg: s.index,
+      at: add(s.a, scale(s.dir, s.length / 2)),
+      n: leftNormal(s.dir),
+    })),
+  }
+}
 
 function BasePlanView({ env }: { env: Environment }) {
   const bp = env.basePlan
@@ -148,10 +201,36 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
   if (!d) return null
   if (d.kind === 'wall') {
     const o = wallOutline(d.points, d.thicknessMm, d.closed)
+    const h = wallHandles(d)
     return (
       <g data-testid="selection">
         {o?.rings.map((r, i) => (
           <polygon key={i} points={r.map((p) => `${p.x},${p.y}`).join(' ')} {...common} />
+        ))}
+        {h.mids.map((m) => (
+          <circle
+            key={`m${m.seg}`}
+            cx={m.at.x}
+            cy={m.at.y}
+            r={5 * px}
+            fill="#fff"
+            stroke={DRAFT}
+            strokeWidth={1.5 * px}
+            data-testid="wall-mid-handle"
+          />
+        ))}
+        {h.vertices.map((v, i) => (
+          <rect
+            key={`v${i}`}
+            x={v.x - 5 * px}
+            y={v.y - 5 * px}
+            width={10 * px}
+            height={10 * px}
+            fill={DRAFT}
+            stroke="#fff"
+            strokeWidth={px}
+            data-testid="wall-vertex-handle"
+          />
         ))}
       </g>
     )
@@ -233,7 +312,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     setTyped('')
   }
   const drag = useRef<{
-    mode: 'pan' | 'move' | 'opening' | 'handle'
+    mode: 'pan' | 'move' | 'opening' | 'handle' | 'vertex' | 'segment'
     last: Vec2
     start: Vec2
     applied: Vec2
@@ -247,6 +326,8 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     /** Arrasto de balão/rótulo: o que é e o deslocamento inicial. */
     handle?: { kind: 'marker' | 'area-label'; id: string; from: Vec2 }
+    /** Edição de parede: canto (índice) ou trecho (índice + normal). */
+    wallEdit?: { wallId: string; index: number; n?: Vec2 }
   } | null>(null)
 
   const px = 1 / view.scale // 1 px de tela em mm do modelo
@@ -255,13 +336,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     () => environmentMarkers({ items: env.items }, DISPLAY_SCALE),
     [env.items],
   )
-  const walls = useMemo(() => wallsOf(env), [env])
-  const openingsByWall = useMemo(() => {
-    const m = new Map<string, Opening[]>()
-    for (const o of env.openings) m.set(o.wallId, [...(m.get(o.wallId) ?? []), o])
-    return m
-  }, [env.openings])
-
+  const walls = useMemo(() => wallsOf(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
   /** Ponto do próximo vértice quando o usuário digitou um comprimento. */
   const typedPoint = useCallback(
     (from: Vec2, toward: Vec2 | null): Vec2 | null => {
@@ -512,6 +587,31 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     switch (s.tool) {
       case 'select': {
+        // Alças da parede selecionada (cantos e meio dos trechos) vêm primeiro.
+        const selWall =
+          s.selection?.kind === 'drawing'
+            ? (env.drawings.find((x) => x.id === s.selection!.id && x.kind === 'wall') as
+                Wall | undefined)
+            : undefined
+        if (selWall) {
+          const hh = wallHandles(selWall)
+          const vi = hh.vertices.findIndex((v) => distance(v, p) <= 8 * px)
+          const mi = vi < 0 ? hh.mids.find((m) => distance(m.at, p) <= 8 * px) : undefined
+          if (vi >= 0 || mi) {
+            s.beginInteraction()
+            drag.current = {
+              mode: vi >= 0 ? 'vertex' : 'segment',
+              last: sp,
+              start: p,
+              applied: { x: 0, y: 0 },
+              wallEdit:
+                vi >= 0
+                  ? { wallId: selWall.id, index: vi }
+                  : { wallId: selWall.id, index: mi!.seg, n: mi!.n },
+            }
+            break
+          }
+        }
         // Balões e rótulos de área têm prioridade: arrastá-los não mexe no item/área.
         const handle = hitHandle(env, p, 4 * px)
         if (handle) {
@@ -623,6 +723,27 @@ export function PlanCanvas({ fitSignal }: Props) {
     if (d?.mode === 'pan') {
       setView((v) => pan(v, sp.x - d.last.x, sp.y - d.last.y))
       d.last = sp
+    } else if (d?.mode === 'vertex' && d.wallEdit) {
+      const we = d.wallEdit
+      // Snap na grade e nos pontos de OUTRAS paredes/itens (os da própria parede "grudariam").
+      const own = new Set(
+        (
+          selectActiveEnv(s).drawings.find((x) => x.id === we.wallId) as Wall | undefined
+        )?.points.map((q) => `${q.x},${q.y}`) ?? [],
+      )
+      const others = endpoints.filter((q) => !own.has(`${q.x},${q.y}`))
+      const r = e.shiftKey
+        ? { point: { x: Math.round(p.x), y: Math.round(p.y) } }
+        : snapPoint(p, { grid: GRID_DRAW, endpoints: others, tolerance: 10 * px })
+      s.editWalls((ws) => moveVertexLinked(ws, we.wallId, we.index, r.point))
+    } else if (d?.mode === 'segment' && d.wallEdit?.n) {
+      const we = d.wallEdit
+      const want = Math.round(dot(sub(p, d.start), we.n!) / GRID_MOVE) * GRID_MOVE
+      const delta = want - d.applied.x
+      if (delta !== 0) {
+        s.editWalls((ws) => pushSegmentLinked(ws, we.wallId, we.index, delta))
+        d.applied = { x: want, y: 0 }
+      }
     } else if (d?.mode === 'handle' && d.handle) {
       const h = d.handle
       const off = {
@@ -677,7 +798,9 @@ export function PlanCanvas({ fitSignal }: Props) {
     if (
       drag.current?.mode === 'move' ||
       drag.current?.mode === 'opening' ||
-      drag.current?.mode === 'handle'
+      drag.current?.mode === 'handle' ||
+      drag.current?.mode === 'vertex' ||
+      drag.current?.mode === 'segment'
     ) {
       useEditor.getState().endInteraction()
     }
@@ -891,9 +1014,22 @@ export function PlanCanvas({ fitSignal }: Props) {
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerLeave={() => setCursor(null)}
-        onDoubleClick={() => {
+        onDoubleClick={(e) => {
           if (tool === 'wall' && wallDraft.length >= 2) commitWall(wallDraft, false)
           if (tool === 'area' && areaDraft.length >= 3) commitArea(areaDraft)
+          if (tool === 'select' && selection?.kind === 'drawing') {
+            const w = env.drawings.find((x) => x.id === selection.id && x.kind === 'wall') as
+              Wall | undefined
+            if (!w) return
+            const p = toModel(e)
+            const vi = vertexAt(w, p, 8 * px)
+            if (vi >= 0) {
+              useEditor.getState().editWall(w.id, (x) => removeVertex(x, vi))
+            } else if (hitWall(w, p, 4 * px)) {
+              const near = nearestWall([w], p, w.thicknessMm)
+              if (near) useEditor.getState().editWall(w.id, (x) => insertVertex(x, near.segment, p))
+            }
+          }
         }}
         onContextMenu={(e) => e.preventDefault()}
         onDragOver={(e) => {
@@ -937,11 +1073,7 @@ export function PlanCanvas({ fitSignal }: Props) {
             ))}
           </g>
           <g data-testid="drawings">
-            {env.drawings
-              .filter((d) => d.kind === 'wall')
-              .map((d) => (
-                <DrawingView key={d.id} d={d} openings={openingsByWall.get(d.id) ?? NO_OPENINGS} />
-              ))}
+            <WallsView walls={walls} openings={env.openings} />
             {env.drawings
               .filter((d) => d.kind !== 'wall')
               .map((d) => (

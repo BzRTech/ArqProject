@@ -5,6 +5,8 @@ import { areaM2Text, areaPerimeterMm, innerFacePolygon } from '@/core/project/ar
 import { wallChainDimensions } from '@/core/project/auto-dims'
 import { computeLegend } from '@/core/project/markers'
 import { calibrateBasePlan } from '@/core/project/base-plan'
+import { setSegmentLengthLinked } from '@/core/project/wall-edit'
+import { wallSegments } from '@/core/project/walls'
 import { OPENING_DEFS, openingDef, openingFrame } from '@/core/project/openings'
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
@@ -111,6 +113,7 @@ function ItemWithBudget({ item, env }: { item: Item; env: Environment }) {
 }
 
 function WallProps({ wall }: { wall: Wall }) {
+  const u = useUnits()
   const s = useEditor.getState()
   const env = useEditor(selectActiveEnv)
   const n = wall.closed ? wall.points.length : wall.points.length - 1
@@ -157,6 +160,30 @@ function WallProps({ wall }: { wall: Wall }) {
           Excluir
         </button>
       </div>
+      <h3>Trechos (eixo)</h3>
+      <ol className="segment-list" data-testid="wall-segments">
+        {wallSegments(wall).map((sg) => (
+          <li key={sg.index}>
+            <LengthField
+              label={`Trecho ${sg.index + 1}`}
+              value={Math.round(sg.length)}
+              unit={u.wall}
+              onCommit={(len) =>
+                s.editWalls((ws) => setSegmentLengthLinked(ws, wall.id, sg.index, len))
+              }
+              testId={`wall-seg-${sg.index}`}
+            />
+          </li>
+        ))}
+      </ol>
+      <p className="muted small">
+        Arraste os <strong>quadrados</strong> (cantos) ou os <strong>círculos</strong> (meio da
+        parede, empurra o trecho). Duplo clique na parede cria um canto; duplo clique num canto o
+        remove.
+        {wall.closed
+          ? ' Mudar um trecho empurra o trecho seguinte (o retângulo continua retângulo). Paredes encostadas em outro cômodo acompanham.'
+          : ''}
+      </p>
       <p className="muted small">Excluir a parede remove as portas e janelas dela.</p>
     </section>
   )

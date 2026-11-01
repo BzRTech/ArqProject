@@ -639,3 +639,14 @@ button.link:hover:not(:disabled) {
   border: 1px solid var(--line);
   border-radius: 4px;
 }
+.segment-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.2rem 0 0.4rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 0.5rem;
+}
+.segment-list .field {
+  margin-bottom: 0.3rem;
+}

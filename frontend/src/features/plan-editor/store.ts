@@ -5,6 +5,7 @@ import { immer } from 'zustand/middleware/immer'
 import { getBlock } from '@/core/blocks/catalog'
 import type { Vec2 } from '@/core/geometry/vec'
 import { openingDef } from '@/core/project/openings'
+import { reattachOpenings } from '@/core/project/wall-edit'
 import {
   ITEM_DEFAULTS,
   newEnvironment,
@@ -17,6 +18,7 @@ import {
   type Opening,
   type OpeningType,
   type Project,
+  type Wall,
 } from '@/core/project/schema'
 import { roundMm } from '@/core/units'
 
@@ -68,6 +70,10 @@ export interface EditorState {
   addOpening: (o: Omit<Opening, 'id' | 'widthMm' | 'heightMm' | 'sillMm' | 'hinge'>) => string
   updateOpening: (id: string, patch: Partial<Omit<Opening, 'id'>>) => void
   updateDrawing: (id: string, patch: Partial<Drawing>) => void
+  /** Aplica uma edição de geometria à parede e reencaixa as portas/janelas dela. */
+  editWall: (wallId: string, fn: (w: Wall) => Wall) => void
+  /** Edição que pode mexer em várias paredes (paredes encostadas acompanham). */
+  editWalls: (fn: (walls: Wall[]) => Wall[]) => void
   moveSelection: (dx: number, dy: number) => void
   rotateSelection: (deg: number) => void
   mirrorSelection: () => void
@@ -318,6 +324,36 @@ export const useEditor = create<EditorState>()(
             o.widthMm = Math.max(300, roundMm(o.widthMm))
             o.heightMm = Math.max(100, roundMm(o.heightMm))
             o.sillMm = Math.max(0, roundMm(o.sillMm))
+          }),
+        editWall: (wallId, fn) =>
+          set((s) => {
+            const e = env(s)
+            const i = e.drawings.findIndex((d) => d.id === wallId && d.kind === 'wall')
+            if (i < 0) return
+            const before = current(e.drawings[i]!) as Wall
+            const after = fn(before)
+            if (after === before) return
+            e.drawings[i] = after
+            e.openings = reattachOpenings(before, after, current(e.openings))
+          }),
+        editWalls: (fn) =>
+          set((s) => {
+            const e = env(s)
+            const before = e.drawings
+              .filter((d): d is Wall => d.kind === 'wall')
+              .map((w) => current(w) as Wall)
+            const after = fn(before)
+            const byId = new Map(after.map((w) => [w.id, w]))
+            let openings = current(e.openings)
+            e.drawings = e.drawings.map((d) => {
+              if (d.kind !== 'wall') return d
+              const old = before.find((w) => w.id === d.id)!
+              const nw = byId.get(d.id)
+              if (!nw || JSON.stringify(nw.points) === JSON.stringify(old.points)) return d
+              openings = reattachOpenings(old, nw, openings)
+              return nw
+            })
+            e.openings = openings
           }),
         updateDrawing: (id, patch) =>
           set((s) => {

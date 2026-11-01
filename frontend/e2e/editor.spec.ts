@@ -72,7 +72,7 @@ test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfa
   await moveModel(page, 0, 0)
   await clickModel(page, 0, 0)
   await page.keyboard.press('f')
-  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-wall"]')).toHaveCount(1)
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '1')
 
   // Porta na parede de baixo, abrindo para dentro (cursor do lado de dentro)
   await page.getByTestId('tool-door').click()
@@ -265,7 +265,7 @@ test('planta base: importar imagem e calibrar com medida conhecida', async ({ pa
   }
   await page.keyboard.press('Enter')
   await page.keyboard.press('Escape')
-  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-wall"]')).toHaveCount(3)
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '3')
   // Mobília por cima da planta calibrada
   const [qx, qy] = M(300, 300)
   await placeBlock(page, 'cama-casal', qx, qy)
@@ -442,7 +442,7 @@ test('unidades: paredes em m ou cm, móveis em cm ou mm, e sufixo digitado manda
   await page.reload()
   await expect(page.getByTestId('unit-wall')).toHaveValue('cm')
   await expect(items(page)).toHaveCount(1)
-  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-wall"]')).toHaveCount(1)
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('drawings').locator('g[data-role="drawing-area"]')).toHaveCount(1)
   await page.getByTestId('tool-room').click()
   // A medida padrão do Ambiente (3 m) agora aparece em cm
@@ -450,4 +450,93 @@ test('unidades: paredes em m ou cm, móveis em cm ou mm, e sufixo digitado manda
   await page.keyboard.press('Escape')
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('18-editor-unidades') })
+})
+
+test('quarto + banheiro encostados (parede compartilhada) e edição da parede', async ({ page }) => {
+  test.setTimeout(90_000)
+  await freshEditor(page)
+  const wallsState = () =>
+    page.evaluate(() => {
+      const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+        project: {
+          environments: { drawings: { kind: string; points?: P[] }[]; openings: unknown[] }[]
+        }
+      }
+      const e = st.project.environments[0]!
+      return {
+        walls: e.drawings.filter((d) => d.kind === 'wall').map((d) => d.points),
+        openings: e.openings.length,
+      }
+    })
+
+  // Quarto 4,40 × 3,80 (interno)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  // Banheiro 2,00 × 2,50 encostado à direita: canto interno em x = 4,40 + 0,15
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '2')
+  await setCm(page, 'room-d', '2,5')
+  await moveModel(page, 4550, 0)
+  await clickModel(page, 4550, 0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '2')
+
+  // Porta entre quarto e banheiro, na parede compartilhada
+  await page.getByTestId('tool-door').click()
+  await moveModel(page, 4420, 1200)
+  await clickModel(page, 4420, 1200)
+  await expect(page.getByTestId('opening-props')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('19-quarto-banheiro-parede-compartilhada') })
+
+  // Editar: selecionar o quarto e EMPURRAR a parede de baixo 50 cm (círculo no meio do trecho)
+  await clickModel(page, 2000, 3875)
+  await expect(page.getByTestId('wall-props')).toBeVisible()
+  const from = await modelToPage(page, 2200, 3875)
+  const to = await modelToPage(page, 2200, 4375)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 6 })
+  await page.mouse.up()
+  let st = await wallsState()
+  expect(st.walls[0]).toEqual([
+    { x: -75, y: -75 },
+    { x: 4475, y: -75 },
+    { x: 4475, y: 4375 },
+    { x: -75, y: 4375 },
+  ])
+  expect(st.openings).toBe(1) // a porta continua lá
+
+  // Digitar o comprimento do trecho de cima: 5 m → a parede da direita é empurrada junto
+  await setCm(page, 'wall-seg-0', '5')
+  st = await wallsState()
+  expect(st.walls[0]![1]).toEqual({ x: 4925, y: -75 })
+  expect(st.walls[0]![2]).toEqual({ x: 4925, y: 4375 })
+  // O banheiro, encostado, acompanhou: a parede compartilhada continua uma só
+  expect(st.walls[1]).toEqual([
+    { x: 4925, y: -75 },
+    { x: 6625, y: -75 },
+    { x: 6625, y: 2575 },
+    { x: 4925, y: 2575 },
+  ])
+
+  // Duplo clique na parede de baixo cria um canto; duplo clique no canto o remove
+  const mid = await modelToPage(page, 1000, 4375)
+  await page.mouse.dblclick(mid.x, mid.y)
+  st = await wallsState()
+  expect(st.walls[0]).toHaveLength(5)
+  const corner = await modelToPage(page, 1000, 4375)
+  await page.mouse.dblclick(corner.x, corner.y)
+  st = await wallsState()
+  expect(st.walls[0]).toHaveLength(4)
+
+  await page.keyboard.press('f')
+  await clickModel(page, -75, 2000)
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('20-parede-editada') })
 })

@@ -100,6 +100,12 @@ Em **http://localhost:5173/editor**:
 - **Parede (W):** clique no primeiro ponto e **digite o comprimento** (na unidade das paredes) + Enter (a direção
   segue o mouse), ou clique nos pontos. Clique no primeiro ponto para fechar. Shift desliga o
   modo ortogonal.
+- **Editar parede:** selecione a parede e arraste os **quadrados** (cantos) ou os **círculos**
+  (meio do trecho: empurra a parede). No painel, digite o comprimento de cada trecho. Duplo
+  clique na parede cria um canto; duplo clique num canto o remove.
+- **Cômodos encostados** (quarto + banheiro): desenhe cada um com a ferramenta Ambiente, encostado
+  no outro. As paredes sobrepostas viram uma só no desenho e no PDF, a porta entre eles corta as
+  duas, e mexer na parede compartilhada leva os dois cômodos juntos.
 - **Porta (P) e Janela (J):** clique sobre uma parede, e o lado do cursor define para onde a
   porta abre. A parede é recortada. Arraste para deslizar a peça, use R para abrir para o
   outro lado e M para inverter a dobradiça. Há 3 tipos de porta e 5 de janela na seção

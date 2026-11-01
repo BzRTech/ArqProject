@@ -1,3 +1,4 @@
+import { Minus, Plus } from 'lucide-react'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getBlock } from '@/core/blocks/catalog'
 import { dimensionDirection } from '@/core/dimensions/layout'
@@ -66,6 +67,7 @@ import {
   DISPLAY_SCALE,
   dimensionLine,
   refsInRect,
+  selectedMarkerEntities,
   wallEditGuides,
   hitHandle,
   hitTest,
@@ -78,10 +80,18 @@ import {
 } from './geometry'
 import { useAssetUrl } from './hooks'
 import { redo, selectActiveEnv, undo, useEditor, type Selection } from './store'
+import { UI } from './theme'
 import { useUnits } from './units-pref'
 
-const DRAFT = '#1f6feb'
+const DRAFT = UI.clay
 const GRID_MOVE = 10 // mm — passo ao arrastar e inserir
+/** Faixas (px) cobertas pelos elementos flutuantes do palco, evitadas ao enquadrar. */
+const FLOAT_TOP = 64
+const FLOAT_BOTTOM = 104
+/** Escala da vista (px de tela por mm do modelo) que mostra 1:50 em tamanho real: 96 px/pol. */
+const SCALE_100 = 96 / 25.4 / DISPLAY_SCALE
+/** Dica do rodapé: texto simples ou pares atalho + ação. */
+type Hint = string | { k?: string; t: string }[]
 const GRID_DRAW = 50 // mm — passo da grade ao desenhar
 
 const ItemView = memo(function ItemView({ item }: { item: Item }) {
@@ -183,7 +193,7 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
             y={p.y - 3 * px}
             width={6 * px}
             height={6 * px}
-            fill="#fff"
+            fill={UI.white}
             stroke={DRAFT}
             strokeWidth={px}
           />
@@ -234,7 +244,7 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
             cx={m.at.x}
             cy={m.at.y}
             r={5 * px}
-            fill="#fff"
+            fill={UI.white}
             stroke={DRAFT}
             strokeWidth={1.5 * px}
             data-testid="wall-mid-handle"
@@ -248,7 +258,7 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
             width={10 * px}
             height={10 * px}
             fill={DRAFT}
-            stroke="#fff"
+            stroke={UI.white}
             strokeWidth={px}
             data-testid="wall-vertex-handle"
           />
@@ -312,7 +322,7 @@ function CadCursor({
   snapKind: SnapKind
   pickbox: boolean
 }) {
-  const snapColor = snapKind === 'endpoint' || snapKind === 'midpoint' ? '#e0a43a' : DRAFT
+  const snapColor = snapKind === 'endpoint' || snapKind === 'midpoint' ? UI.clay : UI.muted
   const r = 6
   return (
     <g pointerEvents="none" data-testid="cad-cursor">
@@ -323,7 +333,7 @@ function CadCursor({
             x2="100%"
             y1={screen.y}
             y2={screen.y}
-            stroke="#5b6b7d"
+            stroke={UI.muted}
             strokeOpacity={0.55}
             strokeWidth={1}
           />
@@ -332,7 +342,7 @@ function CadCursor({
             y2="100%"
             x1={screen.x}
             x2={screen.x}
-            stroke="#5b6b7d"
+            stroke={UI.muted}
             strokeOpacity={0.55}
             strokeWidth={1}
           />
@@ -343,7 +353,7 @@ function CadCursor({
               width={10}
               height={10}
               fill="none"
-              stroke="#1d2733"
+              stroke={UI.ink}
               strokeWidth={1}
             />
           )}
@@ -459,6 +469,15 @@ export function PlanCanvas({ fitSignal }: Props) {
     () => environmentMarkers({ items: env.items }, DISPLAY_SCALE),
     [env.items],
   )
+  const selectedMarkers = useMemo(
+    () =>
+      selectedMarkerEntities(
+        env,
+        new Set(selected.filter((r) => r.kind === 'item').map((r) => r.id)),
+        UI.clay,
+      ),
+    [env, selected],
+  )
   const walls = useMemo(() => wallsOf(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
   const midpoints = useMemo(() => snapMidpoints(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
   const humanized = useUnits((s) => s.humanized)
@@ -519,17 +538,20 @@ export function PlanCanvas({ fitSignal }: Props) {
     )
     if (isEmpty(bb)) bb = { minX: 0, minY: 0, maxX: 6000, maxY: 4500 }
     bb = expand(bb, 300)
-    setView(
-      fit(
-        { x: bb.minX, y: bb.minY, width: bb.maxX - bb.minX, height: bb.maxY - bb.minY },
-        { width: el.clientWidth, height: el.clientHeight },
-        24,
-      ),
+    // Deixa livres as faixas dos elementos flutuantes: título e opções em cima, ferramentas e
+    // rodapé embaixo.
+    const top = el.clientHeight > 400 ? FLOAT_TOP : 0
+    const bottom = el.clientHeight > 400 ? FLOAT_BOTTOM : 0
+    const v = fit(
+      { x: bb.minX, y: bb.minY, width: bb.maxX - bb.minX, height: bb.maxY - bb.minY },
+      { width: el.clientWidth, height: el.clientHeight - top - bottom },
+      24,
     )
+    setView({ ...v, ty: v.ty + top })
   }, [])
 
   // Enquadrar ao abrir, ao trocar de ambiente e quando pedirem.
-  useEffect(fitToContent, [fitToContent, env.id, fitSignal])
+  useEffect(fitToContent, [fitToContent, env.id, fitSignal, env.basePlan?.assetId])
 
   useEffect(() => {
     const el = ref.current
@@ -1209,7 +1231,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           ],
           closed: true,
           style: null,
-          fill: { color: '#ffffff' },
+          fill: { color: UI.white },
         },
         ...openingEntities(w, ghost),
         ...openingGuides(w, ghost, t.side, DRAFT),
@@ -1250,9 +1272,16 @@ export function PlanCanvas({ fitSignal }: Props) {
 
   const gridMinorVisible = view.scale * 100 >= 6
 
-  const hint = {
-    select:
-      'Arraste no vazio para selecionar (→ janela, ← cruzamento) · Shift soma · Ctrl+A tudo · Del exclui · Espaço+arrastar move a vista',
+  const hint: Hint = {
+    select: [
+      { t: 'arraste no vazio para selecionar' },
+      { k: 'Shift', t: 'soma' },
+      { k: 'Ctrl+A', t: 'tudo' },
+      { k: 'R', t: 'gira' },
+      { k: 'M', t: 'espelha' },
+      { k: 'Del', t: 'exclui' },
+      { k: 'Espaço', t: 'vista' },
+    ],
     wall: wallDraft.length
       ? 'Clique ou DIGITE o comprimento (cm) + Enter · clique no 1º ponto fecha · Esc termina · Shift livre'
       : 'Clique para começar a parede (eixo) · Shift desliga o ortogonal',
@@ -1269,6 +1298,13 @@ export function PlanCanvas({ fitSignal }: Props) {
     place: 'Clique para inserir o bloco · Esc cancela',
     calibrate: 'Clique em dois pontos de medida conhecida da planta base',
   }[tool]
+
+  /** Zoom pelos botões, em torno do centro da vista. */
+  const zoomBy = (factor: number) => {
+    const el = ref.current
+    if (!el) return
+    setView((v) => zoomAt(v, factor, { x: el.clientWidth / 2, y: el.clientHeight / 2 }))
+  }
 
   return (
     <div className="plan-canvas">
@@ -1327,15 +1363,15 @@ export function PlanCanvas({ fitSignal }: Props) {
       >
         <defs>
           <pattern id="grid-minor" width={100} height={100} patternUnits="userSpaceOnUse">
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="#e7e2d7" strokeWidth={px} />
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke={UI.gridMinor} strokeWidth={px} />
           </pattern>
           <pattern id="grid-major" width={1000} height={1000} patternUnits="userSpaceOnUse">
             {gridMinorVisible && <rect width={1000} height={1000} fill="url(#grid-minor)" />}
-            <path d="M 1000 0 L 0 0 0 1000" fill="none" stroke="#d3ccbd" strokeWidth={px} />
+            <path d="M 1000 0 L 0 0 0 1000" fill="none" stroke={UI.gridMajor} strokeWidth={px} />
           </pattern>
         </defs>
         <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
-          <rect x={-100000} y={-100000} width={200000} height={200000} fill="#fbfaf7" />
+          <rect x={-100000} y={-100000} width={200000} height={200000} fill={UI.canvas} />
           <rect x={-100000} y={-100000} width={200000} height={200000} fill="url(#grid-major)" />
           <BasePlanView env={env} />
           <g data-testid="floors-layer">
@@ -1355,6 +1391,7 @@ export function PlanCanvas({ fitSignal }: Props) {
               ))}
           </g>
           <Compiled entities={markers} role="marcadores" />
+          <Compiled entities={selectedMarkers} role="marcador-selecionado" />
           <g data-testid={editGuide ? 'edit-guides' : 'draft'}>
             <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />
           </g>
@@ -1379,7 +1416,7 @@ export function PlanCanvas({ fitSignal }: Props) {
                   cy={p.y}
                   r={5 * px}
                   fill="none"
-                  stroke="#b23b3b"
+                  stroke={UI.brick}
                   strokeWidth={2 * px}
                 />
                 {i === 1 && (
@@ -1388,7 +1425,7 @@ export function PlanCanvas({ fitSignal }: Props) {
                     y1={calibration[0]!.y}
                     x2={p.x}
                     y2={p.y}
-                    stroke="#b23b3b"
+                    stroke={UI.brick}
                     strokeWidth={2 * px}
                   />
                 )}
@@ -1400,7 +1437,7 @@ export function PlanCanvas({ fitSignal }: Props) {
               y={cursor.y - 12 * px}
               fontSize={13 * px}
               fontFamily="Roboto, Arial, sans-serif"
-              fill={typed ? '#b23b3b' : DRAFT}
+              fill={typed ? UI.brick : DRAFT}
               data-testid="typed-length"
             >
               {typed
@@ -1414,8 +1451,8 @@ export function PlanCanvas({ fitSignal }: Props) {
               y={hoverGrip.y - 6 * px}
               width={12 * px}
               height={12 * px}
-              fill="#e0a43a"
-              stroke="#fff"
+              fill={UI.clay}
+              stroke={UI.white}
               strokeWidth={px}
               data-testid="hover-grip"
             />
@@ -1427,8 +1464,8 @@ export function PlanCanvas({ fitSignal }: Props) {
             y={Math.min(band.a.y, band.b.y)}
             width={Math.abs(band.b.x - band.a.x)}
             height={Math.abs(band.b.y - band.a.y)}
-            fill={band.b.x >= band.a.x ? 'rgba(31,111,235,0.08)' : 'rgba(47,125,79,0.08)'}
-            stroke={band.b.x >= band.a.x ? '#1f6feb' : '#2f7d4f'}
+            fill={band.b.x >= band.a.x ? UI.claySoft : UI.sageSoft}
+            stroke={band.b.x >= band.a.x ? UI.clay : UI.sage}
             strokeDasharray={band.b.x >= band.a.x ? undefined : '6 4'}
             pointerEvents="none"
             data-testid="selection-band"
@@ -1450,20 +1487,50 @@ export function PlanCanvas({ fitSignal }: Props) {
         />
       </svg>
       <footer className="statusbar" data-testid="editor-status">
-        <span>
+        <span className="statusbar__coords">
           {cursor
             ? `x ${formatLength(cursor.x, wallUnit)} · y ${formatLength(cursor.y, wallUnit)} ${UNIT_LABEL[wallUnit]}`
             : '—'}
         </span>
-        <span>
-          {snapKind === 'endpoint'
-            ? 'snap: extremidade'
-            : snapKind === 'ortho'
-              ? 'snap: ortogonal'
-              : ''}
+        {snapKind === 'endpoint' && <span>snap: extremidade</span>}
+        {snapKind === 'midpoint' && <span>snap: ponto médio</span>}
+        {snapKind === 'ortho' && <span>snap: ortogonal</span>}
+        {dragDelta && (
+          <span className="statusbar__delta" data-testid="drag-delta">
+            {dragDelta}
+          </span>
+        )}
+        <span className="statusbar__hint">
+          {typeof hint === 'string'
+            ? hint
+            : hint.map((h, i) => (
+                <span key={i}>
+                  {h.k && <kbd>{h.k}</kbd>}
+                  {h.t}
+                </span>
+              ))}
         </span>
-        {dragDelta && <span data-testid="drag-delta">{dragDelta}</span>}
-        <span className="statusbar__hint">{hint}</span>
+        <span className="zoom" data-testid="zoom">
+          <button
+            type="button"
+            onClick={() => zoomBy(1 / 1.25)}
+            aria-label="Afastar"
+            title="Afastar"
+          >
+            <Minus size={13} strokeWidth={1.5} />
+          </button>
+          <span title="100% = escala 1:50 em tamanho real na tela">
+            {Math.round((view.scale / SCALE_100) * 100)}%
+          </span>
+          <button
+            type="button"
+            onClick={() => zoomBy(1.25)}
+            aria-label="Aproximar"
+            title="Aproximar"
+          >
+            <Plus size={13} strokeWidth={1.5} />
+          </button>
+        </span>
       </footer>
     </div>
   )

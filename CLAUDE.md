@@ -62,6 +62,13 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
   - Interação estilo CAD: cursor em cruz (`CadCursor`, preferência `cadCursor`), snap de PONTO MÉDIO (`SnapOptions.midpoints`, triângulo), cantos de qualquer parede arrastáveis direto (grip; arrasto pelo deslocamento com snap congelado no início), esquadrias grudam no centro do trecho (`segmentCenterOffset`) com guias (`openingGuides`: marca de centro + cotas livres até as faces, `openingClearances`).
   - Seleção múltipla: `selected: SelRef[]` no store (`selection` = o único selecionado ou null; `setSel` mantém os dois em sincronia), `selectMany`/`toggleSelect`; mover/excluir agem no grupo (um passo de desfazer). Área de seleção arrastando no vazio: esq.→dir. = janela (inteiro dentro, `shapeInRect` em `core/geometry/bbox.ts`), dir.→esq. = cruzamento (tocou, pegou); Shift soma/alterna, Ctrl+A tudo, Espaço+arrastar move a vista. Painel `MultiSelectionProps` (contagem por tipo, "Manter só", excluir).
   - Medidas ao editar parede: `wallEditGuides` (feature `geometry.ts`) desenha cotas provisórias dos trechos que mudam ao arrastar canto/empurrar trecho; rodapé mostra o deslocamento (Δ).
+  - **Design system v1.0** (`docs/design-system/`, exportado do Claude Design):
+    - tokens em `frontend/src/app/tokens.css`; fontes self-hosted via `@fontsource` (Instrument Serif nos títulos, Montserrat na interface, Geist Mono nas medidas); ícones `lucide-react` (traço 1,5);
+    - argila (`--clay`) só para seleção e foco; sálvia para cruzamento e alinhado; grafite para a ação principal;
+    - cores da interface SOBRE o desenho em `features/plan-editor/theme.ts` (atributos SVG não aceitam `var()`); o desenho técnico e o PDF não mudam;
+    - layout do editor: Importar planta e Baixar PDF na barra superior (portal `app/topbar-slot.ts`); barra de ferramentas flutuante no rodapé do palco (só ícones; a ativa mostra o rótulo); opções da vista flutuando no topo; rodapé com atalhos (`kbd`) e zoom (100% = 1:50 em tamanho real); "Enquadrar" evita as faixas flutuantes (`FLOAT_TOP`/`FLOAT_BOTTOM`);
+    - controles em `app/ui/` (`Switch`, `Segmented`); avisos em toast; balão do item selecionado em argila (só na tela);
+    - prints em `docs/prints/design-system/`.
   - DWG: via LibreDWG (`dwg2dxf`) como programa SEPARADO no servidor (GPL-3.0 — não linkar no app nem empacotar no front); depois da Fase 2, junto da importação de DXF.
   - Prints em `docs/prints/editor/`.
 - Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).

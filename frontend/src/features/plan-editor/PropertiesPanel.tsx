@@ -1,3 +1,4 @@
+import { ImageUp } from 'lucide-react'
 import { useState } from 'react'
 import { getBlock } from '@/core/blocks/catalog'
 import { distance } from '@/core/geometry/vec'
@@ -17,6 +18,7 @@ import {
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { BudgetFields } from './BudgetFields'
+import { importBasePlan } from './base-plan-import'
 import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
 import { FloorFields } from './FloorFields'
@@ -475,6 +477,46 @@ function DrawingProps({ d }: { d: Drawing }) {
   )
 }
 
+/** Área para soltar (ou escolher) a imagem da planta base. */
+function BasePlanDropzone() {
+  const [over, setOver] = useState(false)
+  const take = (f: File | undefined) => {
+    if (f && f.type.startsWith('image/')) void importBasePlan(f)
+  }
+  return (
+    <label
+      className="dropzone"
+      style={over ? { borderColor: 'var(--ink)' } : undefined}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setOver(true)
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setOver(false)
+        take(e.dataTransfer.files[0])
+      }}
+      data-testid="base-plan-dropzone"
+    >
+      <ImageUp size={20} strokeWidth={1.5} />
+      <strong>Arraste a imagem da planta</strong>
+      <span>
+        Ou clique para escolher. Depois calibre com uma medida conhecida e desenhe por cima.
+      </span>
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          take(e.target.files?.[0])
+          e.target.value = ''
+        }}
+      />
+    </label>
+  )
+}
+
 function BasePlanProps({ env }: { env: Environment }) {
   const u = useUnits()
   const tool = useEditor((s) => s.tool)
@@ -486,10 +528,7 @@ function BasePlanProps({ env }: { env: Environment }) {
     return (
       <section>
         <h2>Planta base</h2>
-        <p className="muted small">
-          Importe uma imagem da planta (botão “Importar planta”), calibre com uma medida conhecida e
-          desenhe por cima.
-        </p>
+        <BasePlanDropzone />
       </section>
     )
   }

@@ -355,7 +355,7 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   await expect(rows).toHaveCount(4)
   await expect(rows.nth(2)).toContainText('2 un')
   await expect(rows.nth(2)).toContainText('R$ 1.780,00')
-  await expect(rows.nth(0)).toContainText('(existente)')
+  await expect(rows.nth(0)).toContainText('existente')
   await expect(page.getByTestId('env-total')).toHaveText('R$ 17.780,00')
   await expect(page.getByTestId('env-approved')).toHaveText('1/5')
   await page.mouse.move(0, 0)
@@ -412,8 +412,8 @@ test('unidades: paredes em m ou cm, móveis em cm ou mm, e sufixo digitado manda
   page,
 }) => {
   await freshEditor(page)
-  await expect(page.getByTestId('unit-wall')).toHaveValue('m')
-  await expect(page.getByTestId('unit-item')).toHaveValue('cm')
+  await expect(page.getByTestId('unit-wall')).toHaveAttribute('data-value', 'm')
+  await expect(page.getByTestId('unit-item')).toHaveAttribute('data-value', 'cm')
 
   // Ambiente em metros, mas digitando com sufixo em cm na profundidade
   await page.getByTestId('tool-room').click()
@@ -430,17 +430,17 @@ test('unidades: paredes em m ou cm, móveis em cm ou mm, e sufixo digitado manda
   // Móvel em cm e depois em mm (mesma medida)
   await placeBlock(page, 'cama-casal', 1750, 1400)
   await expect(page.getByTestId('item-w')).toHaveValue('158')
-  await page.getByTestId('unit-item').selectOption('mm')
+  await page.getByTestId('unit-item-mm').click()
   await expect(page.getByTestId('item-w')).toHaveValue('1580')
   await setCm(page, 'item-w', '1600')
-  await page.getByTestId('unit-item').selectOption('cm')
+  await page.getByTestId('unit-item-cm').click()
   await expect(page.getByTestId('item-w')).toHaveValue('160')
 
   // Preferência fica salva no navegador
-  await page.getByTestId('unit-wall').selectOption('cm')
+  await page.getByTestId('unit-wall-cm').click()
   // Recarrega LOGO depois de editar: nada pode se perder (gravação ao sair da página)
   await page.reload()
-  await expect(page.getByTestId('unit-wall')).toHaveValue('cm')
+  await expect(page.getByTestId('unit-wall')).toHaveAttribute('data-value', 'cm')
   await expect(items(page)).toHaveCount(1)
   await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '1')
   await expect(page.getByTestId('drawings').locator('g[data-role="drawing-area"]')).toHaveCount(1)

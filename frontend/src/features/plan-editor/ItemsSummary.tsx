@@ -1,3 +1,4 @@
+import { Sheet } from 'lucide-react'
 import { floorRows, floorTotalCents } from '@/core/finishes/budget'
 import { budgetSummary, computeLegend } from '@/core/project/markers'
 import type { Environment } from '@/core/project/schema'
@@ -9,6 +10,9 @@ import { useEditor } from './store'
 export function ItemsSummary({ env }: { env: Environment }) {
   const project = useEditor((s) => s.project)
   const select = useEditor((s) => s.select)
+  const selection = useEditor((s) => s.selection)
+  const isSel = (kind: 'item' | 'drawing', ids: string[]) =>
+    selection?.kind === kind && ids.includes(selection.id)
   const { rows } = computeLegend(env)
   const floors = floorRows(env)
   const envSum = budgetSummary(env.items)
@@ -21,7 +25,10 @@ export function ItemsSummary({ env }: { env: Environment }) {
   const empty = env.items.length === 0 && floors.length === 0
   return (
     <section data-testid="env-summary">
-      <h2>Itens do ambiente</h2>
+      <div className="panel-head">
+        <h2>Itens do ambiente</h2>
+        <span className="count">{env.items.length} un</span>
+      </div>
       {empty ? (
         <p className="muted small">
           Clique num bloco à esquerda e depois na planta (ou arraste). Para o piso, selecione uma
@@ -42,6 +49,7 @@ export function ItemsSummary({ env }: { env: Environment }) {
               {rows.map((r) => (
                 <tr
                   key={r.key}
+                  className={isSel('item', r.itemIds) ? 'is-selected' : ''}
                   onClick={() => select({ kind: 'item', id: r.itemIds[0]! })}
                   data-testid="legend-row"
                 >
@@ -50,20 +58,17 @@ export function ItemsSummary({ env }: { env: Environment }) {
                       {r.label}
                     </span>
                   </td>
-                  <td>
-                    {r.name}
-                    {r.existing && <small className="muted"> (existente)</small>}
-                  </td>
+                  <td>{r.name}</td>
                   <td className="num">
                     {formatQty(r.qty)} {r.unit}
                   </td>
                   <td className="num">
                     {r.existing ? (
-                      '—'
+                      <span className="pill pill--plain">existente</span>
                     ) : r.totalCents ? (
                       formatBRL(r.totalCents)
                     ) : (
-                      <span className="muted">sem preço</span>
+                      <span className="pill pill--pending">sem preço</span>
                     )}
                   </td>
                 </tr>
@@ -90,6 +95,7 @@ export function ItemsSummary({ env }: { env: Environment }) {
               {floors.map((r) => (
                 <tr
                   key={r.key}
+                  className={isSel('drawing', r.areaIds) ? 'is-selected' : ''}
                   onClick={() => select({ kind: 'drawing', id: r.areaIds[0]! })}
                   data-testid="floor-row"
                 >
@@ -104,7 +110,7 @@ export function ItemsSummary({ env }: { env: Environment }) {
                     {r.totalCents ? (
                       formatBRL(r.totalCents)
                     ) : (
-                      <span className="muted">sem preço</span>
+                      <span className="pill pill--pending">sem preço</span>
                     )}
                   </td>
                 </tr>
@@ -124,9 +130,9 @@ export function ItemsSummary({ env }: { env: Environment }) {
                 <dd>{envSum.missingPrice}</dd>
               </>
             )}
-            <dt>Total do projeto</dt>
-            <dd data-testid="project-total">
-              <strong>{formatBRL(projTotal)}</strong>
+            <dt className="totals__grand">Total do projeto</dt>
+            <dd className="totals__grand" data-testid="project-total">
+              {formatBRL(projTotal)}
             </dd>
           </dl>
         </>
@@ -137,6 +143,7 @@ export function ItemsSummary({ env }: { env: Environment }) {
         data-testid="export-csv"
         title="Planilha com todos os itens do projeto"
       >
+        <Sheet size={15} strokeWidth={1.5} />
         Exportar planilha (CSV)
       </button>
     </section>

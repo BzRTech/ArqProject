@@ -100,6 +100,13 @@ npm run gen:api         # regenera src/api/schema.d.ts a partir do OpenAPI
 
 Em **http://localhost:5173/editor**:
 
+O visual segue o design system em [`docs/design-system/`](docs/design-system/).
+
+- **Onde fica cada coisa:**
+  - **Barra superior:** "Importar planta" e "Baixar PDF".
+  - **Rodapé da área de desenho:** barra de ferramentas (passe o mouse sobre um ícone para ver o
+    nome e o atalho), atalhos do teclado e zoom (100% = escala 1:50 em tamanho real).
+  - **Topo da área de desenho:** Humanizado, Cursor CAD e unidades.
 - **Blocos:** clique num bloco do catálogo e depois na planta, ou arraste o bloco. Mude L × P
   no painel da direita e o bloco se redesenha (travesseiros, portas, módulos e assentos
   acompanham a medida).
@@ -157,8 +164,9 @@ Em **http://localhost:5173/editor**:
   painel "Trechos".
 - **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e
   refaz, F enquadra.
-- **Importar planta:** carregue uma imagem, clique em dois pontos de medida conhecida e
-  informe a distância real.
+- **Importar planta:** carregue uma imagem (botão na barra superior, ou arraste-a até o quadro
+  "Planta base" no painel da direita), clique em dois pontos de medida conhecida e informe a
+  distância real.
 - **Baixar PDF:** gera uma prancha A3 por ambiente, na maior escala que couber.
 
 Por enquanto o projeto fica salvo **neste navegador**. A Fase 2 leva para o servidor. Há prints

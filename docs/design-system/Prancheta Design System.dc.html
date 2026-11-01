@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Montserrat:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://code.iconify.design/iconify-icon/2.1.0/iconify-icon.min.js"></script>
+<style>
+body{margin:0;background:#F5F3EE;-webkit-font-smoothing:antialiased}
+a{color:#A65F45;text-decoration:none}a:hover{color:#1C1B19}
+iconify-icon{display:inline-flex}
+button{font-family:inherit}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#F5F3EE;color:#1C1B19;font-family:'Montserrat',system-ui,sans-serif;font-size:14px;line-height:1.5;padding-bottom:120px">
+
+<header style="max-width:1200px;margin:0 auto;padding:72px 40px 56px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:48px;align-items:end">
+  <div>
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Design system · v1.0</div>
+    <h1 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:112px;line-height:.95;letter-spacing:-.02em;margin:16px 0 0">Prancheta</h1>
+  </div>
+  <p style="margin:0;font-size:17px;line-height:1.6;color:#4A4741;text-wrap:pretty">Uma interface que recua para o desenho aparecer. Paleta de materiais, linhas de 1px, medidas em fonte mono e um serifado para dar o tom de prancha de apresentação.</p>
+</header>
+
+<section style="max-width:1200px;margin:0 auto;padding:0 40px"><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:#E3DED5;border-top:1px solid #E3DED5;border-bottom:1px solid #E3DED5">
+  <div style="background:#F5F3EE;padding:28px 28px 28px 0">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#A65F45">I.</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:30px;margin:6px 0 8px">Silêncio</div>
+    <div style="color:#4A4741;text-wrap:pretty">O desenho é o protagonista. Painéis neutros, sem cor de marca competindo com a planta.</div>
+  </div>
+  <div style="background:#F5F3EE;padding:28px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#A65F45">II.</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:30px;margin:6px 0 8px">Precisão</div>
+    <div style="color:#4A4741;text-wrap:pretty">Medidas e códigos sempre em mono. Bordas de 1px, grid de 4px, alinhamento rigoroso.</div>
+  </div>
+  <div style="background:#F5F3EE;padding:28px">
+    <div style="font-family:'Geist Mono',monospace;font-size:12px;color:#A65F45">III.</div>
+    <div style="font-family:'Instrument Serif',serif;font-size:30px;margin:6px 0 8px">Materialidade</div>
+    <div style="color:#4A4741;text-wrap:pretty">Cores tiradas do ateliê: papel, grafite, argila, sálvia, carvalho e travertino.</div>
+  </div>
+</div></section>
+
+<section style="max-width:1200px;margin:0 auto;padding:80px 40px 0">
+  <div style="display:flex;align-items:baseline;gap:20px;border-top:1px solid #1C1B19;padding-top:16px;margin-bottom:36px">
+    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">01</span>
+    <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;margin:0;line-height:1">Cores</h2>
+    <span style="margin-left:auto;color:#8A857C;max-width:360px;text-align:right">Base neutra quente. Argila é o único acento — reservado para seleção e foco.</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px">
+    <sc-for list="{{ swatches }}" as="c" hint-placeholder-count="12">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="height:120px;border-radius:8px;border:1px solid rgba(28,27,25,.08);background:{{ c.hex }}"></div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span style="font-weight:500">{{ c.name }}</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">{{ c.hex }}</span>
+        </div>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C;margin-top:-8px">{{ c.token }} · {{ c.use }}</span>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section style="max-width:1200px;margin:0 auto;padding:96px 40px 0">
+  <div style="display:flex;align-items:baseline;gap:20px;border-top:1px solid #1C1B19;padding-top:16px;margin-bottom:36px">
+    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">02</span>
+    <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;margin:0;line-height:1">Tipografia</h2>
+    <span style="margin-left:auto;color:#8A857C;max-width:360px;text-align:right">Instrument Serif para títulos, Montserrat para interface, Geist Mono para medidas.</span>
+  </div>
+  <div style="display:grid;grid-template-columns:minmax(0,1fr);border-top:1px solid #E3DED5">
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Display · Serif 64/1.0</span>
+      <span style="font-family:'Instrument Serif',serif;font-size:64px;line-height:1;letter-spacing:-.01em">Quarto do casal, <i>proposta B</i></span>
+    </div>
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Título painel · Serif 24</span>
+      <span style="font-family:'Instrument Serif',serif;font-size:24px">Itens do ambiente</span>
+    </div>
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Corpo · Montserrat 14/1.5</span>
+      <span style="font-size:14px;color:#4A4741;max-width:560px">Importe uma imagem da planta, calibre com uma medida conhecida e desenhe por cima.</span>
+    </div>
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Rótulo · Montserrat 500 13</span>
+      <span style="font-size:13px;font-weight:500">Selecionar · Parede · Ambiente · Cota</span>
+    </div>
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Eyebrow · Mono 11 caps</span>
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Esquadrias · na parede</span>
+    </div>
+    <div style="display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;padding:24px 0;border-bottom:1px solid #E3DED5;align-items:baseline">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Medida · Mono 12</span>
+      <span style="font-family:'Geist Mono',monospace;font-size:12px">592 × 330 cm · 16,86 m² · peitoril 100</span>
+    </div>
+  </div>
+</section>
+
+<section style="max-width:1200px;margin:0 auto;padding:96px 40px 0">
+  <div style="display:flex;align-items:baseline;gap:20px;border-top:1px solid #1C1B19;padding-top:16px;margin-bottom:36px">
+    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">03</span>
+    <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;margin:0;line-height:1">Forma</h2>
+    <span style="margin-left:auto;color:#8A857C;max-width:360px;text-align:right">Bordas antes de sombras. Sombra só no que flutua sobre a prancheta.</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px">
+    <div>
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C;margin-bottom:16px">Espaço · base 4</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <sc-for list="{{ spaces }}" as="s" hint-placeholder-count="7">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C;width:28px">{{ s.v }}</span>
+            <div style="height:8px;background:#1C1B19;border-radius:1px;width:{{ s.w }}"></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C;margin-bottom:16px">Raios</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px">
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border:1px solid #CFC9BE;border-radius:6px;background:#FBFAF8"></div><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">6 · campos, chips</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border:1px solid #CFC9BE;border-radius:8px;background:#FBFAF8"></div><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">8 · botões</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border:1px solid #CFC9BE;border-radius:12px;background:#FBFAF8"></div><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">12 · cards, painéis</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px"><div style="height:64px;border:1px solid #CFC9BE;border-radius:999px;background:#FBFAF8"></div><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">pill · status</span></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C;margin-bottom:16px">Elevação</div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div style="height:52px;border:1px solid #E3DED5;border-radius:12px;background:#FBFAF8;display:flex;align-items:center;padding:0 16px;font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">0 · borda 1px — painéis</div>
+        <div style="height:52px;border:1px solid #E3DED5;border-radius:12px;background:#FFFFFF;box-shadow:0 1px 2px rgba(28,27,25,.06),0 8px 24px -8px rgba(28,27,25,.14);display:flex;align-items:center;padding:0 16px;font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">1 · flutuante — barra de ferramentas</div>
+        <div style="height:52px;border:1px solid #E3DED5;border-radius:12px;background:#FFFFFF;box-shadow:0 2px 4px rgba(28,27,25,.06),0 16px 40px -12px rgba(28,27,25,.22);display:flex;align-items:center;padding:0 16px;font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">2 · pop — menus, diálogos</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="max-width:1200px;margin:0 auto;padding:96px 40px 0">
+  <div style="display:flex;align-items:baseline;gap:20px;border-top:1px solid #1C1B19;padding-top:16px;margin-bottom:36px">
+    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">04</span>
+    <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;margin:0;line-height:1">Componentes</h2>
+    <span style="margin-left:auto;color:#8A857C;max-width:360px;text-align:right">Ícones Lucide, traço 1.5. Grafite para a ação principal, nunca mais de uma por área.</span>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#E3DED5;border:1px solid #E3DED5;border-radius:12px;overflow:hidden">
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Botões</span>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button style="height:36px;padding:0 16px;border:0;border-radius:8px;background:#1C1B19;color:#F5F3EE;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="background:#33312D"><iconify-icon icon="lucide:file-down" width="16"></iconify-icon>Baixar PDF</button>
+        <button style="height:36px;padding:0 16px;border:1px solid #CFC9BE;border-radius:8px;background:#FFFFFF;color:#1C1B19;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="border-color:#1C1B19"><iconify-icon icon="lucide:image-up" width="16"></iconify-icon>Importar planta</button>
+        <button style="height:36px;padding:0 14px;border:0;border-radius:8px;background:transparent;color:#4A4741;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#EFECE6;color:#1C1B19">Cancelar</button>
+        <button style="height:36px;padding:0 16px;border:1px solid #E3DED5;border-radius:8px;background:#F5F3EE;color:#B4AFA6;font-size:13px;font-weight:500">Refazer</button>
+        <button style="width:36px;height:36px;border:1px solid #CFC9BE;border-radius:8px;background:#FFFFFF;color:#1C1B19;display:flex;align-items:center;justify-content:center;cursor:pointer"><iconify-icon icon="lucide:maximize" width="16"></iconify-icon></button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button style="height:30px;padding:0 12px;border:0;border-radius:6px;background:#1C1B19;color:#F5F3EE;font-size:12px;font-weight:500">Pequeno</button>
+        <button style="height:30px;padding:0 12px;border:1px solid #CFC9BE;border-radius:6px;background:#FFFFFF;color:#1C1B19;font-size:12px;font-weight:500">Pequeno</button>
+        <button style="height:30px;padding:0 12px;border:1px solid #A8473A;border-radius:6px;background:transparent;color:#A8473A;font-size:12px;font-weight:500;display:flex;align-items:center;gap:6px"><iconify-icon icon="lucide:trash-2" width="14"></iconify-icon>Excluir</button>
+      </div>
+    </div>
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Barra de ferramentas</span>
+      <div style="display:flex;align-items:center;gap:2px;padding:4px;background:#FFFFFF;border:1px solid #E3DED5;border-radius:12px;box-shadow:0 1px 2px rgba(28,27,25,.06),0 8px 24px -8px rgba(28,27,25,.14);align-self:flex-start">
+        <span style="height:34px;padding:0 12px;border-radius:8px;background:#1C1B19;color:#F5F3EE;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500"><iconify-icon icon="lucide:mouse-pointer-2" width="16"></iconify-icon>Selecionar</span>
+        <span style="width:34px;height:34px;border-radius:8px;color:#4A4741;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:brick-wall" width="16"></iconify-icon></span>
+        <span style="width:34px;height:34px;border-radius:8px;color:#4A4741;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:ruler" width="16"></iconify-icon></span>
+        <span style="width:1px;height:20px;background:#E3DED5;margin:0 4px"></span>
+        <span style="width:34px;height:34px;border-radius:8px;color:#4A4741;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:door-open" width="16"></iconify-icon></span>
+        <span style="width:34px;height:34px;border-radius:8px;color:#4A4741;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:app-window" width="16"></iconify-icon></span>
+      </div>
+      <span style="color:#8A857C;font-size:13px">Ferramenta ativa mostra o rótulo; as demais só o ícone, com dica no hover e atalho de teclado.</span>
+    </div>
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Campos</span>
+      <div style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid #CFC9BE;border-radius:6px;background:#FFFFFF;color:#8A857C"><iconify-icon icon="lucide:search" width="15"></iconify-icon><span>Buscar bloco</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#4A4741">Largura</span><span style="display:flex;align-items:center;justify-content:space-between;height:36px;padding:0 12px;border:1px solid #1C1B19;border-radius:6px;background:#FFFFFF;box-shadow:0 0 0 3px #F1E3DB"><span style="font-family:'Geist Mono',monospace;font-size:13px">80</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">cm</span></span></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#4A4741">Altura</span><span style="display:flex;align-items:center;justify-content:space-between;height:36px;padding:0 12px;border:1px solid #CFC9BE;border-radius:6px;background:#FFFFFF"><span style="font-family:'Geist Mono',monospace;font-size:13px">210</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">cm</span></span></label>
+        <label style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12px;color:#4A4741">Abertura</span><span style="display:flex;align-items:center;justify-content:space-between;height:36px;padding:0 12px;border:1px solid #CFC9BE;border-radius:6px;background:#FFFFFF"><span style="font-size:13px">Interna</span><iconify-icon icon="lucide:chevron-down" width="14" style="color:#8A857C"></iconify-icon></span></label>
+      </div>
+    </div>
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Controles</span>
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+        <span style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:32px;height:18px;border-radius:999px;background:#1C1B19;position:relative;display:block"><span style="position:absolute;top:2px;left:16px;width:14px;height:14px;border-radius:50%;background:#FFFFFF"></span></span>Humanizado</span>
+        <span style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:32px;height:18px;border-radius:999px;background:#CFC9BE;position:relative;display:block"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#FFFFFF"></span></span>Cursor CAD</span>
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="width:16px;height:16px;border-radius:4px;background:#1C1B19;color:#F5F3EE;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:check" width="12"></iconify-icon></span>Mostrar cotas</span>
+      </div>
+      <div style="display:flex;gap:16px;align-items:center">
+        <span style="font-size:12px;color:#4A4741">Paredes</span>
+        <span style="display:flex;padding:2px;background:#EFECE6;border-radius:8px"><span style="padding:4px 12px;border-radius:6px;background:#FFFFFF;box-shadow:0 1px 2px rgba(28,27,25,.1);font-family:'Geist Mono',monospace;font-size:12px">m</span><span style="padding:4px 12px;font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">cm</span><span style="padding:4px 12px;font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">mm</span></span>
+      </div>
+    </div>
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Marcadores de planta</span>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;font-weight:500;padding:2px 6px;border:1px solid #1C1B19;border-radius:3px;background:#FFFFFF">M01</span>
+        <span style="width:22px;height:22px;border-radius:50%;border:1px solid #1C1B19;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11px;background:#FFFFFF">1</span>
+        <span style="width:22px;height:22px;border-radius:50%;border:1px solid #A65F45;background:#A65F45;color:#FFFFFF;display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:11px">2</span>
+        <span style="display:flex;flex-direction:column;line-height:1.1"><span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:20px">Quarto</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">16,86 m²</span></span>
+      </div>
+      <span style="color:#8A857C;font-size:13px">Argila preenchida = item selecionado. Mesma lógica na planta e na lista.</span>
+    </div>
+
+    <div style="background:#FBFAF8;padding:28px;display:flex;flex-direction:column;gap:18px">
+      <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C">Status e feedback</span>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <span style="display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:#E5E8E0;color:#4F5A47;font-size:12px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:#6F7B66"></span>Aprovado</span>
+        <span style="display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:#F3EAD6;color:#7D6128;font-size:12px;font-weight:500"><span style="width:6px;height:6px;border-radius:50%;background:#B08A3E"></span>Sem preço</span>
+        <span style="display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;border:1px solid #E3DED5;color:#4A4741;font-size:12px">Rascunho</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:#1C1B19;color:#F5F3EE;border-radius:10px;align-self:flex-start;box-shadow:0 2px 4px rgba(28,27,25,.06),0 16px 40px -12px rgba(28,27,25,.22);font-size:13px"><iconify-icon icon="lucide:check" width="15" style="color:#B9C2B0"></iconify-icon>Planta exportada em PDF<span style="color:#CFC9BE;text-decoration:underline;text-underline-offset:3px">Abrir</span></div>
+    </div>
+
+  </div>
+</section>
+
+<section style="max-width:1520px;margin:0 auto;padding:96px 40px 0">
+  <div style="max-width:1120px;margin:0 auto;display:flex;align-items:baseline;gap:20px;border-top:1px solid #1C1B19;padding-top:16px;margin-bottom:36px">
+    <span style="font-family:'Geist Mono',monospace;font-size:12px;color:#8A857C">05</span>
+    <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:48px;margin:0;line-height:1">Editor</h2>
+    <span style="margin-left:auto;color:#8A857C;max-width:400px;text-align:right">Aplicação no editor. Ferramentas, tabs e itens são clicáveis.</span>
+  </div>
+
+  <div style="overflow-x:auto">
+  <div style="width:1440px;height:880px;margin:0 auto;border:1px solid #CFC9BE;border-radius:14px;overflow:hidden;display:grid;grid-template-rows:56px 48px minmax(0,1fr);background:#FBFAF8;box-shadow:0 30px 80px -40px rgba(28,27,25,.35)">
+
+    <div style="display:flex;align-items:center;gap:32px;padding:0 20px;border-bottom:1px solid #E3DED5">
+      <span style="font-family:'Instrument Serif',serif;font-size:26px;letter-spacing:-.01em">Prancheta</span>
+      <nav style="display:flex;gap:4px">
+        <a style="padding:6px 12px;border-radius:6px;color:#8A857C;font-size:13px" style-hover="color:#1C1B19">Início</a>
+        <a style="padding:6px 12px;border-radius:6px;background:#EFECE6;color:#1C1B19;font-size:13px;font-weight:500">Editor</a>
+        <a style="padding:6px 12px;border-radius:6px;color:#8A857C;font-size:13px" style-hover="color:#1C1B19">Primitivas</a>
+        <a style="padding:6px 12px;border-radius:6px;color:#8A857C;font-size:13px;display:flex;gap:6px;align-items:center" style-hover="color:#1C1B19">3D<span style="font-family:'Geist Mono',monospace;font-size:10px;padding:0 5px;border:1px solid #CFC9BE;border-radius:4px">beta</span></a>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8A857C;margin-right:8px"><span style="width:6px;height:6px;border-radius:50%;background:#6F7B66"></span>Salvo neste navegador</span>
+        <button style="height:32px;padding:0 12px;border:1px solid #CFC9BE;border-radius:8px;background:#FFFFFF;color:#1C1B19;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="border-color:#1C1B19"><iconify-icon icon="lucide:image-up" width="15"></iconify-icon>Importar planta</button>
+        <button style="height:32px;padding:0 14px;border:0;border-radius:8px;background:#1C1B19;color:#F5F3EE;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;cursor:pointer" style-hover="background:#33312D"><iconify-icon icon="lucide:file-down" width="15"></iconify-icon>Baixar PDF</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;padding:0 20px;border-bottom:1px solid #E3DED5;background:#F5F3EE">
+      <span style="display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px">Projeto sem nome<iconify-icon icon="lucide:pencil" width="13" style="color:#8A857C"></iconify-icon></span>
+      <span style="width:1px;height:20px;background:#CFC9BE"></span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <sc-for list="{{ rooms }}" as="r" hint-placeholder-count="1">
+          <button onClick="{{ r.onClick }}" style="height:30px;padding:0 10px 0 12px;border-radius:6px;border:1px solid {{ r.border }};background:{{ r.bg }};color:#1C1B19;font-size:13px;display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">{{ r.name }}<span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">{{ r.n }}</span></button>
+        </sc-for>
+        <button onClick="{{ addRoom }}" style="height:30px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:#8A857C;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer" style-hover="color:#1C1B19;background:#EFECE6"><iconify-icon icon="lucide:plus" width="14"></iconify-icon>Ambiente</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:272px minmax(0,1fr) 320px;min-height:0">
+
+      <aside style="border-right:1px solid #E3DED5;padding:20px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+        <span style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1">Blocos</span>
+        <div style="display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid #CFC9BE;border-radius:6px;background:#FFFFFF;color:#8A857C;font-size:13px"><iconify-icon icon="lucide:search" width="14"></iconify-icon>Buscar bloco</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span style="padding:3px 10px;border-radius:999px;background:#1C1B19;color:#F5F3EE;font-size:12px">Esquadrias</span>
+          <span style="padding:3px 10px;border-radius:999px;border:1px solid #E3DED5;color:#4A4741;font-size:12px">Mobiliário</span>
+          <span style="padding:3px 10px;border-radius:999px;border:1px solid #E3DED5;color:#4A4741;font-size:12px">Louças</span>
+          <span style="padding:3px 10px;border-radius:999px;border:1px solid #E3DED5;color:#4A4741;font-size:12px">Vegetação</span>
+        </div>
+        <span style="font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C;margin-top:4px">Esquadrias · na parede</span>
+        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><line x1="20" y1="38" x2="80" y2="38" style="stroke:#CFC9BE;stroke-width:3"></line><line x1="30" y1="38" x2="30" y2="12" style="stroke:#1C1B19;stroke-width:1.5"></line><path d="M30 12 A26 26 0 0 1 56 38" style="fill:none;stroke:#1C1B19;stroke-width:.8;stroke-dasharray:2 2"></path></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Porta de abrir</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">80 × 210</span></div>
+          </div>
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><line x1="15" y1="26" x2="85" y2="26" style="stroke:#CFC9BE;stroke-width:3"></line><line x1="25" y1="23" x2="55" y2="23" style="stroke:#1C1B19;stroke-width:1.5"></line><line x1="45" y1="29" x2="75" y2="29" style="stroke:#1C1B19;stroke-width:1.5"></line></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Porta de correr</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">90 × 210</span></div>
+          </div>
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><line x1="15" y1="38" x2="85" y2="38" style="stroke:#CFC9BE;stroke-width:3"></line><line x1="50" y1="38" x2="50" y2="10" style="stroke:#1C1B19;stroke-width:1.5"></line><path d="M50 10 A28 28 0 0 1 78 38" style="fill:none;stroke:#1C1B19;stroke-width:.8;stroke-dasharray:2 2"></path><path d="M50 10 A28 28 0 0 0 22 38" style="fill:none;stroke:#1C1B19;stroke-width:.8;stroke-dasharray:2 2"></path></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Porta pivotante</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">120 × 240</span></div>
+          </div>
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><rect x="15" y="20" width="70" height="10" style="fill:#FFFFFF;stroke:#1C1B19;stroke-width:1"></rect><line x1="15" y1="25" x2="85" y2="25" style="stroke:#1C1B19;stroke-width:.8"></line><line x1="50" y1="20" x2="50" y2="30" style="stroke:#1C1B19;stroke-width:.8"></line></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500">Correr 2 folhas</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">120 × 120 · p100</span></div>
+          </div>
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><rect x="10" y="20" width="80" height="10" style="fill:#FFFFFF;stroke:#1C1B19;stroke-width:1"></rect><line x1="10" y1="25" x2="90" y2="25" style="stroke:#1C1B19;stroke-width:.8"></line><line x1="30" y1="20" x2="30" y2="30" style="stroke:#1C1B19;stroke-width:.8"></line><line x1="50" y1="20" x2="50" y2="30" style="stroke:#1C1B19;stroke-width:.8"></line><line x1="70" y1="20" x2="70" y2="30" style="stroke:#1C1B19;stroke-width:.8"></line></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500">Correr 4 folhas</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">200 × 120 · p100</span></div>
+          </div>
+          <div style="border:1px solid #E3DED5;border-radius:10px;background:#FFFFFF;padding:10px;display:flex;flex-direction:column;gap:8px;cursor:grab" style-hover="border-color:#1C1B19">
+            <svg viewBox="0 0 100 50" style="height:46px;width:100%;background:#F8F6F2;border-radius:6px"><rect x="32" y="20" width="36" height="10" style="fill:#FFFFFF;stroke:#1C1B19;stroke-width:1"></rect><path d="M32 30 L50 42 L68 30" style="fill:none;stroke:#1C1B19;stroke-width:.8;stroke-dasharray:2 2"></path></svg>
+            <div style="display:flex;flex-direction:column"><span style="font-size:13px;font-weight:500">Maxim-ar</span><span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">60 × 60 · p150</span></div>
+          </div>
+        </div>
+      </aside>
+
+      <main style="position:relative;background:#F8F6F2;overflow:hidden">
+        <sc-if value="{{ showGrid }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(28,27,25,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(28,27,25,.045) 1px,transparent 1px),linear-gradient(rgba(28,27,25,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(28,27,25,.025) 1px,transparent 1px);background-size:100px 100px,100px 100px,20px 20px,20px 20px"></div>
+        </sc-if>
+
+        <div style="position:absolute;top:16px;left:16px;display:flex;align-items:baseline;gap:10px;white-space:nowrap">
+          <span style="font-family:'Instrument Serif',serif;font-size:22px">Quarto</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">Planta baixa · 1:50</span>
+        </div>
+
+        <div style="position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:16px;padding:8px 12px;background:#FFFFFF;border:1px solid #E3DED5;border-radius:12px;box-shadow:0 1px 2px rgba(28,27,25,.06),0 8px 24px -8px rgba(28,27,25,.14);font-size:12px;z-index:2">
+          <button onClick="{{ toggleHuman }}" style="display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;cursor:pointer;font-size:12px;color:#1C1B19"><span style="width:28px;height:16px;border-radius:999px;background:{{ humanTrack }};position:relative;display:block;transition:background .16s"><span style="position:absolute;top:2px;left:{{ humanKnob }};width:12px;height:12px;border-radius:50%;background:#FFFFFF;transition:left .16s"></span></span>Humanizado</button>
+          <button onClick="{{ toggleCad }}" style="display:flex;align-items:center;gap:8px;border:0;background:transparent;padding:0;cursor:pointer;font-size:12px;color:#1C1B19"><span style="width:28px;height:16px;border-radius:999px;background:{{ cadTrack }};position:relative;display:block;transition:background .16s"><span style="position:absolute;top:2px;left:{{ cadKnob }};width:12px;height:12px;border-radius:50%;background:#FFFFFF;transition:left .16s"></span></span>Cursor CAD</button>
+          <span style="width:1px;height:18px;background:#E3DED5"></span>
+          <span style="display:flex;align-items:center;gap:8px;color:#4A4741">Paredes
+            <span style="display:flex;padding:2px;background:#EFECE6;border-radius:6px">
+              <sc-for list="{{ wallUnits }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onClick }}" style="border:0;padding:2px 8px;border-radius:4px;background:{{ u.bg }};color:{{ u.fg }};font-family:'Geist Mono',monospace;font-size:11px;cursor:pointer">{{ u.v }}</button></sc-for>
+            </span>
+          </span>
+          <span style="display:flex;align-items:center;gap:8px;color:#4A4741">Móveis
+            <span style="display:flex;padding:2px;background:#EFECE6;border-radius:6px">
+              <sc-for list="{{ furnUnits }}" as="u" hint-placeholder-count="2"><button onClick="{{ u.onClick }}" style="border:0;padding:2px 8px;border-radius:4px;background:{{ u.bg }};color:{{ u.fg }};font-family:'Geist Mono',monospace;font-size:11px;cursor:pointer">{{ u.v }}</button></sc-for>
+            </span>
+          </span>
+        </div>
+
+        <svg viewBox="-100 -80 790 520" style="position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);width:760px;height:500px">
+          <defs>
+            <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" style="stroke:#1C1B19;stroke-width:.7"></line></pattern>
+          </defs>
+          <rect x="15" y="15" width="562" height="300" style="fill:{{ floorFill }}"></rect>
+          <g style="fill:{{ wallFill }};stroke:#1C1B19;stroke-width:1">
+            <rect x="0" y="0" width="290" height="15"></rect>
+            <rect x="420" y="0" width="172" height="15"></rect>
+            <rect x="0" y="315" width="592" height="15"></rect>
+            <rect x="0" y="15" width="15" height="30"></rect>
+            <rect x="0" y="125" width="15" height="190"></rect>
+            <rect x="577" y="15" width="15" height="130"></rect>
+            <rect x="577" y="265" width="15" height="50"></rect>
+          </g>
+          <g style="stroke:#1C1B19;stroke-width:.8;fill:none">
+            <line x1="290" y1="5" x2="420" y2="5"></line><line x1="290" y1="10" x2="420" y2="10"></line>
+            <line x1="582" y1="145" x2="582" y2="265"></line><line x1="587" y1="145" x2="587" y2="265"></line>
+            <path d="M95 125 A80 80 0 0 0 15 45" style="stroke-dasharray:3 3"></path>
+          </g>
+          <rect x="15" y="123" width="80" height="3" style="fill:#FFFFFF;stroke:#1C1B19;stroke-width:1"></rect>
+
+          <g style="font-family:'Instrument Serif',serif">
+            <text x="230" y="205" style="font-size:26px;font-style:italic;fill:#1C1B19;text-anchor:middle">Quarto</text>
+          </g>
+          <text x="230" y="224" style="font-family:'Geist Mono',monospace;font-size:10px;fill:#8A857C;text-anchor:middle">16,86 m² · piso 0,00</text>
+
+          <g onClick="{{ pickM01 }}" style="cursor:pointer">
+            <rect x="18" y="170" width="58" height="142" style="fill:{{ furnFill }};stroke:#1C1B19;stroke-width:1"></rect>
+            <line x1="47" y1="172" x2="47" y2="310" style="stroke:#1C1B19;stroke-width:.6;stroke-dasharray:3 3"></line>
+            <rect x="27" y="232" width="40" height="18" rx="2" style="fill:{{ tagFillM01 }};stroke:{{ tagStrokeM01 }};stroke-width:1"></rect>
+            <text x="47" y="245" style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;fill:{{ tagTextM01 }};text-anchor:middle">M01</text>
+            <g style="opacity:{{ selM01 }};transition:opacity .16s">
+              <rect x="13" y="165" width="68" height="152" style="fill:none;stroke:#A65F45;stroke-width:1;stroke-dasharray:4 3"></rect>
+              <rect x="10" y="162" width="6" height="6" style="fill:#FFFFFF;stroke:#A65F45"></rect><rect x="78" y="162" width="6" height="6" style="fill:#FFFFFF;stroke:#A65F45"></rect>
+              <rect x="10" y="314" width="6" height="6" style="fill:#FFFFFF;stroke:#A65F45"></rect><rect x="78" y="314" width="6" height="6" style="fill:#FFFFFF;stroke:#A65F45"></rect>
+            </g>
+          </g>
+
+          <g onClick="{{ pick1 }}" style="cursor:pointer">
+            <rect x="430" y="15" width="95" height="200" style="fill:{{ bedFill }};stroke:#1C1B19;stroke-width:1"></rect>
+            <rect x="430" y="15" width="95" height="8" style="fill:{{ furnFill }};stroke:#1C1B19;stroke-width:1"></rect>
+            <rect x="442" y="30" width="71" height="30" rx="5" style="fill:#FFFFFF;stroke:#1C1B19;stroke-width:.8"></rect>
+            <line x1="430" y1="85" x2="525" y2="85" style="stroke:#1C1B19;stroke-width:.6;stroke-dasharray:3 3"></line>
+            <circle cx="477" cy="150" r="11" style="fill:{{ markFill1 }};stroke:{{ markStroke1 }};stroke-width:1"></circle>
+            <text x="477" y="154" style="font-family:'Geist Mono',monospace;font-size:10px;fill:{{ markText1 }};text-anchor:middle">1</text>
+            <rect x="425" y="10" width="105" height="210" style="opacity:{{ sel1 }};fill:none;stroke:#A65F45;stroke-width:1;stroke-dasharray:4 3;transition:opacity .16s"></rect>
+          </g>
+
+          <g onClick="{{ pick2 }}" style="cursor:pointer">
+            <rect x="385" y="18" width="40" height="40" style="fill:{{ furnFill }};stroke:#1C1B19;stroke-width:1"></rect>
+            <rect x="530" y="18" width="40" height="40" style="fill:{{ furnFill }};stroke:#1C1B19;stroke-width:1"></rect>
+            <circle cx="405" cy="38" r="10" style="fill:{{ markFill2 }};stroke:{{ markStroke2 }};stroke-width:1"></circle>
+            <text x="405" y="42" style="font-family:'Geist Mono',monospace;font-size:10px;fill:{{ markText2 }};text-anchor:middle">2</text>
+            <circle cx="550" cy="38" r="10" style="fill:{{ markFill2 }};stroke:{{ markStroke2 }};stroke-width:1"></circle>
+            <text x="550" y="42" style="font-family:'Geist Mono',monospace;font-size:10px;fill:{{ markText2 }};text-anchor:middle">2</text>
+            <g style="opacity:{{ sel2 }};fill:none;stroke:#A65F45;stroke-width:1;stroke-dasharray:4 3;transition:opacity .16s">
+              <rect x="380" y="13" width="50" height="50"></rect><rect x="525" y="13" width="50" height="50"></rect>
+            </g>
+          </g>
+
+          <g style="stroke:#8A857C;stroke-width:.7;fill:none">
+            <line x1="0" y1="338" x2="0" y2="382"></line><line x1="592" y1="338" x2="592" y2="382"></line>
+            <line x1="-6" y1="375" x2="598" y2="375"></line>
+            <line x1="-4" y1="379" x2="4" y2="371"></line><line x1="588" y1="379" x2="596" y2="371"></line>
+            <line x1="-8" y1="0" x2="-52" y2="0"></line><line x1="-8" y1="330" x2="-52" y2="330"></line>
+            <line x1="-45" y1="-6" x2="-45" y2="336"></line>
+            <line x1="-49" y1="4" x2="-41" y2="-4"></line><line x1="-49" y1="334" x2="-41" y2="326"></line>
+            <line x1="0" y1="-8" x2="0" y2="-42"></line><line x1="290" y1="-8" x2="290" y2="-42"></line><line x1="420" y1="-8" x2="420" y2="-42"></line><line x1="592" y1="-8" x2="592" y2="-42"></line>
+            <line x1="-6" y1="-35" x2="598" y2="-35"></line>
+            <line x1="-4" y1="-31" x2="4" y2="-39"></line><line x1="286" y1="-31" x2="294" y2="-39"></line><line x1="416" y1="-31" x2="424" y2="-39"></line><line x1="588" y1="-31" x2="596" y2="-39"></line>
+            <line x1="600" y1="0" x2="642" y2="0"></line><line x1="600" y1="145" x2="642" y2="145"></line><line x1="600" y1="265" x2="642" y2="265"></line><line x1="600" y1="330" x2="642" y2="330"></line>
+            <line x1="635" y1="-6" x2="635" y2="336"></line>
+            <line x1="631" y1="4" x2="639" y2="-4"></line><line x1="631" y1="149" x2="639" y2="141"></line><line x1="631" y1="269" x2="639" y2="261"></line><line x1="631" y1="334" x2="639" y2="326"></line>
+          </g>
+          <g style="font-family:'Geist Mono',monospace;font-size:10px;fill:#4A4741;text-anchor:middle">
+            <text x="296" y="369">592</text>
+            <text x="145" y="-41">290</text><text x="355" y="-41">130</text><text x="506" y="-41">172</text>
+            <text x="-51" y="165" transform="rotate(-90 -51 165)">330</text>
+            <text x="629" y="72" transform="rotate(-90 629 72)">145</text>
+            <text x="629" y="205" transform="rotate(-90 629 205)">120</text>
+            <text x="629" y="297" transform="rotate(-90 629 297)">65</text>
+          </g>
+        </svg>
+
+        <div style="position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:4px;background:#FFFFFF;border:1px solid #E3DED5;border-radius:12px;box-shadow:0 1px 2px rgba(28,27,25,.06),0 8px 24px -8px rgba(28,27,25,.14);z-index:2">
+          <sc-for list="{{ tools }}" as="t" hint-placeholder-count="12">
+            <sc-if value="{{ t.sep }}" hint-placeholder-val="{{ false }}"><span style="width:1px;height:20px;background:#E3DED5;margin:0 4px"></span></sc-if>
+            <button onClick="{{ t.onClick }}" title="{{ t.title }}" style="height:34px;min-width:34px;padding:0 {{ t.pad }};border:0;border-radius:8px;background:{{ t.bg }};color:{{ t.fg }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:500;cursor:{{ t.cursor }};transition:background .16s" style-hover="background:{{ t.hoverBg }}">
+              <iconify-icon icon="{{ t.icon }}" width="16"></iconify-icon>
+              <sc-if value="{{ t.active }}" hint-placeholder-val="{{ false }}"><span>{{ t.label }}</span></sc-if>
+            </button>
+          </sc-for>
+        </div>
+
+        <div style="position:absolute;left:16px;right:16px;bottom:14px;display:flex;align-items:center;gap:14px;font-size:11px;color:#8A857C;white-space:nowrap">
+          <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Geist Mono',monospace;padding:1px 5px;border:1px solid #CFC9BE;border-radius:4px;background:#FFFFFF;color:#4A4741">R</span>gira</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Geist Mono',monospace;padding:1px 5px;border:1px solid #CFC9BE;border-radius:4px;background:#FFFFFF;color:#4A4741">M</span>espelha</span>
+          <span style="display:flex;align-items:center;gap:6px"><span style="font-family:'Geist Mono',monospace;padding:1px 5px;border:1px solid #CFC9BE;border-radius:4px;background:#FFFFFF;color:#4A4741">Del</span>exclui</span>
+          <span>arraste para mover</span>
+          <span style="margin-left:auto;display:flex;align-items:center;gap:2px;padding:2px;background:#FFFFFF;border:1px solid #E3DED5;border-radius:8px;color:#4A4741">
+            <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:minus" width="13"></iconify-icon></span>
+            <span style="font-family:'Geist Mono',monospace;font-size:11px;padding:0 4px">100%</span>
+            <span style="width:24px;height:24px;display:flex;align-items:center;justify-content:center"><iconify-icon icon="lucide:plus" width="13"></iconify-icon></span>
+          </span>
+        </div>
+      </main>
+
+      <aside style="border-left:1px solid #E3DED5;padding:20px;display:flex;flex-direction:column;gap:20px;overflow:hidden">
+        <div style="display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1">Itens do ambiente</span>
+          <span style="font-family:'Geist Mono',monospace;font-size:11px;color:#8A857C">4 un</span>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:grid;grid-template-columns:36px minmax(0,1fr) 44px 64px;gap:8px;padding:0 8px 8px;font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8A857C;border-bottom:1px solid #E3DED5">
+            <span></span><span>Item</span><span style="text-align:right">Qtd</span><span style="text-align:right">Total</span>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+            <div onClick="{{ r.onClick }}" style="display:grid;grid-template-columns:36px minmax(0,1fr) 44px 64px;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #EFECE6;border-radius:6px;background:{{ r.bg }};cursor:pointer;transition:background .16s">
+              <span style="display:flex">
+                <sc-if value="{{ r.tag }}" hint-placeholder-val="{{ false }}"><span style="font-family:'Geist Mono',monospace;font-size:10px;font-weight:500;padding:1px 4px;border:1px solid {{ r.mStroke }};border-radius:3px;background:{{ r.mFill }};color:{{ r.mText }}">{{ r.code }}</span></sc-if>
+                <sc-if value="{{ r.circle }}" hint-placeholder-val="{{ true }}"><span style="width:20px;height:20px;border-radius:50%;border:1px solid {{ r.mStroke }};background:{{ r.mFill }};color:{{ r.mText }};display:flex;align-items:center;justify-content:center;font-family:'Geist Mono',monospace;font-size:10px">{{ r.code }}</span></sc-if>
+              </span>
+              <span style="font-size:13px">{{ r.name }}</span>
+              <span style="font-family:'Geist Mono',monospace;font-size:12px;text-align:right;color:#4A4741">{{ r.qty }}</span>
+              <span style="justify-self:end;padding:1px 7px;border-radius:999px;background:#F3EAD6;color:#7D6128;font-size:11px">sem preço</span>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="display:flex;justify-content:space-between;color:#4A4741"><span>Total do ambiente</span><span style="font-family:'Geist Mono',monospace;font-size:12px">R$ 0,00</span></div>
+          <div style="display:flex;justify-content:space-between;color:#4A4741"><span>Aprovados</span><span style="font-family:'Geist Mono',monospace;font-size:12px">0/4</span></div>
+          <div style="display:flex;justify-content:space-between;color:#4A4741"><span>Sem preço</span><span style="font-family:'Geist Mono',monospace;font-size:12px">4</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #E3DED5;padding-top:12px;margin-top:4px"><span style="font-weight:500">Total do projeto</span><span style="font-family:'Instrument Serif',serif;font-size:24px">R$ 0,00</span></div>
+        </div>
+        <button style="height:34px;border:1px solid #CFC9BE;border-radius:8px;background:#FFFFFF;color:#1C1B19;font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer" style-hover="border-color:#1C1B19"><iconify-icon icon="lucide:sheet" width="15"></iconify-icon>Exportar planilha (CSV)</button>
+
+        <div style="border-top:1px solid #E3DED5;padding-top:20px;display:flex;flex-direction:column;gap:12px">
+          <span style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1">Planta base</span>
+          <div style="border:1px dashed #CFC9BE;border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:#F8F6F2;cursor:pointer" style-hover="border-color:#1C1B19">
+            <iconify-icon icon="lucide:image-up" width="20" style="color:#4A4741"></iconify-icon>
+            <span style="font-size:13px;font-weight:500">Arraste a imagem da planta</span>
+            <span style="font-size:12px;color:#8A857C;text-wrap:pretty">Depois calibre com uma medida conhecida e desenhe por cima.</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;humanized&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Editor&quot;},&quot;showGrid&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Editor&quot;}}">
+class Component extends DCLogic {
+  state = { tool: 'select', human: null, cad: true, wallU: 'm', furnU: 'cm', sel: 'M01', rooms: [{ name: 'Ambiente 2', n: 4 }], room: 0 };
+  renderVals() {
+    const s = this.state, p = this.props;
+    const human = s.human ?? p.humanized ?? true;
+    const INK = '#1C1B19', CLAY = '#A65F45';
+    const swatches = [
+      ['Papel', '#F5F3EE', '--paper', 'fundo'], ['Superfície', '#FBFAF8', '--surface', 'painéis'], ['Prancheta', '#F8F6F2', '--canvas', 'área de desenho'],
+      ['Grafite', '#1C1B19', '--ink', 'texto, ação'], ['Grafite 70', '#4A4741', '--ink-2', 'texto 2º'], ['Névoa', '#8A857C', '--muted', 'legendas'],
+      ['Linha', '#E3DED5', '--line', 'divisórias'], ['Linha forte', '#CFC9BE', '--line-strong', 'campos'], ['Argila', '#A65F45', '--clay', 'seleção'],
+      ['Argila clara', '#F1E3DB', '--clay-soft', 'foco'], ['Sálvia', '#6F7B66', '--sage', 'aprovado'], ['Sálvia clara', '#E5E8E0', '--sage-soft', 'fundo status'],
+      ['Carvalho', '#D8C7AE', '--oak', 'móveis'], ['Travertino', '#EFE7DA', '--travertine', 'piso'], ['Ocre', '#B08A3E', '--ochre', 'pendente'], ['Tijolo', '#A8473A', '--brick', 'excluir']
+    ].map(([name, hex, token, use]) => ({ name, hex, token, use }));
+    const spaces = [4, 8, 12, 16, 24, 32, 48].map(v => ({ v, w: v * 4 + 'px' }));
+    const groups = [
+      [['select', 'Selecionar', 'lucide:mouse-pointer-2', 'V'], ['wall', 'Parede', 'lucide:brick-wall', 'W'], ['room', 'Ambiente', 'lucide:square', 'A'], ['area', 'Área', 'lucide:scan', 'Shift+A'], ['dim', 'Cota', 'lucide:ruler', 'D'], ['text', 'Texto', 'lucide:type', 'T']],
+      [['door', 'Porta', 'lucide:door-open', 'P'], ['window', 'Janela', 'lucide:app-window', 'J']],
+      [['undo', 'Desfazer', 'lucide:undo-2', '⌘Z', true], ['redo', 'Refazer', 'lucide:redo-2', '⇧⌘Z', true, true], ['fit', 'Enquadrar', 'lucide:maximize', 'F', true]]
+    ];
+    const tools = [];
+    groups.forEach((g, gi) => g.forEach(([id, label, icon, key, action, disabled], i) => {
+      const active = !action && s.tool === id;
+      tools.push({ id, label, icon, title: `${label} (${key})`, sep: gi > 0 && i === 0, active,
+        pad: active ? '12px' : '0px', bg: active ? INK : 'transparent', fg: disabled ? '#C9C4BB' : active ? '#F5F3EE' : '#4A4741',
+        hoverBg: active ? INK : disabled ? 'transparent' : '#EFECE6', cursor: disabled ? 'default' : 'pointer',
+        onClick: () => { if (!action) this.setState({ tool: id }); } });
+    }));
+    const mark = (id) => s.sel === id ? { f: CLAY, st: CLAY, t: '#FFFFFF' } : { f: '#FFFFFF', st: INK, t: INK };
+    const mM = mark('M01'), m1 = mark('1'), m2 = mark('2');
+    const pick = (id) => () => this.setState({ sel: s.sel === id ? null : id });
+    const rows = [['M01', true, 'Guarda-roupa', '1 un'], ['1', false, 'Cama de solteiro', '1 un'], ['2', false, 'Criado-mudo', '2 un']].map(([code, tag, name, qty]) => {
+      const m = mark(code);
+      return { code, tag, circle: !tag, name, qty, bg: s.sel === code ? '#F1E3DB' : 'transparent', mFill: m.f, mStroke: m.st, mText: m.t, onClick: pick(code) };
+    });
+    const unit = (key, list) => list.map(v => ({ v, bg: s[key] === v ? '#FFFFFF' : 'transparent', fg: s[key] === v ? INK : '#8A857C', onClick: () => this.setState({ [key]: v }) }));
+    return {
+      swatches, spaces, tools, rows,
+      showGrid: p.showGrid ?? true,
+      rooms: s.rooms.map((r, i) => ({ ...r, bg: i === s.room ? '#FFFFFF' : 'transparent', border: i === s.room ? '#CFC9BE' : 'transparent', onClick: () => this.setState({ room: i }) })),
+      addRoom: () => this.setState(st => ({ rooms: [...st.rooms, { name: `Ambiente ${st.rooms.length + 2}`, n: 0 }], room: st.rooms.length })),
+      toggleHuman: () => this.setState({ human: !human }), humanTrack: human ? INK : '#CFC9BE', humanKnob: human ? '14px' : '2px',
+      toggleCad: () => this.setState({ cad: !s.cad }), cadTrack: s.cad ? INK : '#CFC9BE', cadKnob: s.cad ? '14px' : '2px',
+      wallUnits: unit('wallU', ['m', 'cm']), furnUnits: unit('furnU', ['cm', 'mm']),
+      floorFill: human ? '#EFE7DA' : '#FFFFFF', wallFill: human ? '#2A2825' : 'url(#hatch)',
+      furnFill: human ? '#D8C7AE' : '#FFFFFF', bedFill: human ? '#F5F0E8' : '#FFFFFF',
+      pickM01: pick('M01'), pick1: pick('1'), pick2: pick('2'),
+      selM01: s.sel === 'M01' ? 1 : 0, sel1: s.sel === '1' ? 1 : 0, sel2: s.sel === '2' ? 1 : 0,
+      tagFillM01: mM.f, tagStrokeM01: mM.st, tagTextM01: mM.t,
+      markFill1: m1.f, markStroke1: m1.st, markText1: m1.t, markFill2: m2.f, markStroke2: m2.st, markText2: m2.t
+    };
+  }
+}
+</script>
+</body>
+</html>

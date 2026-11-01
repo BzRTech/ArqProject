@@ -6,7 +6,7 @@ import { shapeInRect, type BBox, type PickShape } from '@/core/geometry/bbox'
 import { signedArea } from '@/core/geometry/polygon'
 import { hitItem, itemCorners } from '@/core/project/items'
 import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
-import { computeLegend, markerPosition } from '@/core/project/markers'
+import { computeLegend, markerEntities, markerPosition } from '@/core/project/markers'
 import { hitOpening, openingClearances, openingFrame, openingJambs } from '@/core/project/openings'
 import type {
   ChainDrawing,
@@ -195,7 +195,7 @@ export function openingGuides(
   const center = add(seg.a, scale(seg.dir, seg.length / 2))
   const centered = Math.abs(f.offset - seg.length / 2) < 1
   const tick = h + 3 * DISPLAY_SCALE
-  const markColor = centered ? '#e0a43a' : color
+  const markColor = centered ? '#6f7b66' : color // sálvia = alinhado ao centro
   const out: Entity[] = [
     {
       kind: 'line',
@@ -348,4 +348,26 @@ export function wallEditGuides(
       offset: outSign * (w.thicknessMm / 2 / DISPLAY_SCALE + 5),
       style: { color },
     }))
+}
+
+// --- Marcador do item selecionado ----------------------------------------------------
+
+/** Balões dos itens selecionados preenchidos com a cor de seleção (só na tela). */
+export function selectedMarkerEntities(
+  env: Environment,
+  ids: Set<string>,
+  color: string,
+): Entity[] {
+  if (!ids.size) return []
+  const { labelOf } = computeLegend(env)
+  return env.items.flatMap((it) => {
+    const label = labelOf.get(it.id)
+    if (!ids.has(it.id) || !it.showMarker || !label) return []
+    return markerEntities(it, label, DISPLAY_SCALE).map((e): Entity => {
+      if (e.kind === 'text') return { ...e, color: '#ffffff' }
+      if (e.kind === 'rect' || e.kind === 'circle')
+        return { ...e, style: { ...e.style, color }, fill: { color } }
+      return e
+    })
+  })
 }

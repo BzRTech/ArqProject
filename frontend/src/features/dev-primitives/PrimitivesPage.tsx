@@ -49,7 +49,13 @@ export default function PrimitivesPage() {
     <section className="spike">
       <header className="spike__header">
         <h1>Núcleo de geometria — catálogo de primitivas (A3)</h1>
-        <button type="button" onClick={downloadPdf} disabled={busy} data-testid="download-pdf">
+        <button
+          type="button"
+          className="primary"
+          onClick={downloadPdf}
+          disabled={busy}
+          data-testid="download-pdf"
+        >
           {busy ? 'Gerando…' : 'Baixar PDF A3'}
         </button>
       </header>

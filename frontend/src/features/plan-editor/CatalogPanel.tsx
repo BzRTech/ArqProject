@@ -1,3 +1,4 @@
+import { Search } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
 import { CATALOG } from '@/core/blocks/catalog'
 import { buildSymbol } from '@/core/blocks/symbol'
@@ -41,7 +42,11 @@ function thumbNode(es: Entity[]) {
 /** Miniatura gerada pelo mesmo núcleo que desenha a planta e o PDF. */
 const BlockThumb = memo(function BlockThumb({ block }: { block: BlockDef }) {
   const node = useMemo(() => thumbNode(buildSymbol(block.symbol, block.defaultSize)), [block])
-  return <SvgNodeView node={node} width={56} height={56} />
+  return (
+    <span className="block__thumb">
+      <SvgNodeView node={node} width={50} height={50} />
+    </span>
+  )
 })
 
 /** Miniatura de esquadria: um trecho de parede com o vão. */
@@ -72,8 +77,14 @@ const OpeningThumb = memo(function OpeningThumb({ def }: { def: OpeningDef }) {
     }
     return thumbNode(drawingEntities(wall, 50, [opening]))
   }, [def])
-  return <SvgNodeView node={node} width={56} height={56} />
+  return (
+    <span className="block__thumb">
+      <SvgNodeView node={node} width={50} height={50} />
+    </span>
+  )
 })
+
+const OPENINGS = 'Esquadrias'
 
 function OpeningsSection({ query }: { query: string }) {
   const unit = useUnits((u) => u.item)
@@ -86,7 +97,7 @@ function OpeningsSection({ query }: { query: string }) {
   if (!list.length) return null
   return (
     <section>
-      <h3>Esquadrias (na parede)</h3>
+      <h3>Esquadrias · na parede</h3>
       <ul className="block-list">
         {list.map((d) => (
           <li key={d.type}>
@@ -100,14 +111,14 @@ function OpeningsSection({ query }: { query: string }) {
                 e.dataTransfer.effectAllowed = 'copy'
               }}
               onClick={() => startOpening(d.type)}
-              title={`${d.name} — clique e depois clique sobre uma parede`}
+              title={`${d.name}: clique e depois clique sobre uma parede`}
             >
               <OpeningThumb def={d} />
               <span className="block__name">{d.name}</span>
               <span className="block__meta">
                 {formatLength(d.widthMm, unit)} × {formatLength(d.heightMm, unit)}{' '}
                 {UNIT_LABEL[unit]}
-                {d.sillMm ? ` · peitoril ${formatLength(d.sillMm, unit)}` : ''}
+                {d.sillMm ? ` · p${formatLength(d.sillMm, unit)}` : ''}
               </span>
             </button>
           </li>
@@ -120,60 +131,81 @@ function OpeningsSection({ query }: { query: string }) {
 export function CatalogPanel() {
   const unit = useUnits((u) => u.item)
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<string | null>(null)
+  const categories = useMemo(() => [...new Set(CATALOG.map((b) => b.category))], [])
   const placing = useEditor((s) => (s.tool === 'place' ? s.placeBlockId : null))
   const startPlacing = useEditor((s) => s.startPlacing)
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
     const list = CATALOG.filter(
-      (b) => !q || b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q),
+      (b) =>
+        (!category || b.category === category) &&
+        (!q || b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q)),
     )
     const map = new Map<string, BlockDef[]>()
     for (const b of list) map.set(b.category, [...(map.get(b.category) ?? []), b])
     return [...map.entries()]
-  }, [query])
+  }, [query, category])
 
   return (
     <aside className="panel panel--catalog" data-testid="catalog">
       <h2>Blocos</h2>
-      <input
-        type="search"
-        placeholder="Buscar bloco…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        aria-label="Buscar bloco"
-      />
-      <OpeningsSection query={query} />
-      {groups.map(([category, blocks]) => (
-        <section key={category}>
-          <h3>{category}</h3>
-          <ul className="block-list">
-            {blocks.map((b) => (
-              <li key={b.id}>
-                <button
-                  type="button"
-                  className={`block ${placing === b.id ? 'block--active' : ''}`}
-                  data-testid={`block-${b.id}`}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData('application/x-prancheta-block', b.id)
-                    e.dataTransfer.effectAllowed = 'copy'
-                  }}
-                  onClick={() => startPlacing(b.id)}
-                  title={`${b.name} — clique e depois clique na planta, ou arraste`}
-                >
-                  <BlockThumb block={b} />
-                  <span className="block__name">{b.name}</span>
-                  <span className="block__meta">
-                    {formatLength(b.defaultSize.w, unit)} × {formatLength(b.defaultSize.d, unit)}{' '}
-                    {UNIT_LABEL[unit]} · {DISCIPLINE_LABEL[b.discipline]}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+      <label className="search">
+        <Search size={14} strokeWidth={1.5} />
+        <input
+          type="search"
+          placeholder="Buscar bloco"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Buscar bloco"
+        />
+      </label>
+      <div className="chips" role="group" aria-label="Filtrar por categoria">
+        {[null, OPENINGS, ...categories].map((c) => (
+          <button
+            key={c ?? 'todos'}
+            type="button"
+            className="chip"
+            aria-pressed={category === c}
+            onClick={() => setCategory(category === c ? null : c)}
+          >
+            {c ?? 'Todos'}
+          </button>
+        ))}
+      </div>
+      {(!category || category === OPENINGS) && <OpeningsSection query={query} />}
+      {category !== OPENINGS &&
+        groups.map(([cat, blocks]) => (
+          <section key={cat}>
+            <h3>{cat}</h3>
+            <ul className="block-list">
+              {blocks.map((b) => (
+                <li key={b.id}>
+                  <button
+                    type="button"
+                    className={`block ${placing === b.id ? 'block--active' : ''}`}
+                    data-testid={`block-${b.id}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/x-prancheta-block', b.id)
+                      e.dataTransfer.effectAllowed = 'copy'
+                    }}
+                    onClick={() => startPlacing(b.id)}
+                    title={`${b.name} (${DISCIPLINE_LABEL[b.discipline]}): clique e depois clique na planta, ou arraste`}
+                  >
+                    <BlockThumb block={b} />
+                    <span className="block__name">{b.name}</span>
+                    <span className="block__meta">
+                      {formatLength(b.defaultSize.w, unit)} × {formatLength(b.defaultSize.d, unit)}{' '}
+                      {UNIT_LABEL[unit]}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
     </aside>
   )
 }

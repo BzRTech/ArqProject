@@ -10,6 +10,12 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage },
       {
+        path: 'editor',
+        lazy: async () => ({
+          Component: (await import('@/features/plan-editor/EditorPage')).default,
+        }),
+      },
+      {
         path: 'dev/primitivas',
         lazy: async () => ({
           Component: (await import('@/features/dev-primitives/PrimitivesPage')).default,

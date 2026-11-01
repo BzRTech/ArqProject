@@ -20,6 +20,15 @@ export default function HomePage() {
 
       <ul className="cards">
         <li>
+          <Link to="/editor" data-testid="open-editor">
+            <strong>Editor de planta</strong>
+            <span>
+              Paredes, cotas, textos e blocos do catálogo (cama, rack, sofá…). Salva no navegador e
+              gera PDF.
+            </span>
+          </Link>
+        </li>
+        <li>
           <Link to="/dev/primitivas">
             <strong>Catálogo de primitivas</strong>
             <span>Prancha A3 com planta 1:50, vista 1:20, cotas em cadeia — na tela e em PDF.</span>

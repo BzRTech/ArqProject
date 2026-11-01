@@ -1,0 +1,7 @@
+﻿Ambiente;Marcador;Item;Qtd;Unid;L (cm);P (cm);Marca/modelo;Fornecedor;Preço unit. (R$);Total (R$);Existente;Aprovado;Observação
+Ambiente 1;1;Tapete;1;un;200;300;;;;;sim;não;
+Ambiente 1;2;Cama de casal;1;un;158;200;;Loja do Centro;3500,00;3500,00;não;sim;
+Ambiente 1;3;Criado-mudo;1;un;45;40;;;890,00;890,00;não;não;
+Ambiente 1;3;Criado-mudo;1;un;45;40;;;890,00;890,00;não;não;
+Ambiente 1;M01;Rack / painel de TV;1;un;318;45;;;12500,00;12500,00;não;não;
+;;TOTAL;;;;;;;;17780,00;;;

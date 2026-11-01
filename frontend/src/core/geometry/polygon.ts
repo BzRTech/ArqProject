@@ -104,3 +104,44 @@ export function hatchLines(
   }
   return out
 }
+
+/** Dentro da região formada por anéis (regra par-ímpar: furos contam como fora). */
+export function insideRings(rings: readonly (readonly Vec2[])[], p: Vec2): boolean {
+  return rings.reduce((acc, r) => (containsPoint(r, p) ? !acc : acc), false)
+}
+
+/** Partes do segmento ab que ficam dentro da região (aceita côncavos e furos). */
+export function clipSegment(rings: readonly (readonly Vec2[])[], a: Vec2, b: Vec2): Segment[] {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const ts = [0, 1]
+  for (const ring of rings) {
+    for (let i = 0; i < ring.length; i++) {
+      const p = ring[i]!
+      const q = ring[(i + 1) % ring.length]!
+      const ex = q.x - p.x
+      const ey = q.y - p.y
+      const den = dx * ey - dy * ex
+      if (Math.abs(den) < 1e-12) continue
+      const t = ((p.x - a.x) * ey - (p.y - a.y) * ex) / den
+      const u = ((p.x - a.x) * dy - (p.y - a.y) * dx) / den
+      if (t > 0 && t < 1 && u >= 0 && u <= 1) ts.push(t)
+    }
+  }
+  ts.sort((m, n) => m - n)
+  const at = (t: number) => ({ x: a.x + dx * t, y: a.y + dy * t })
+  const out: Segment[] = []
+  for (let i = 0; i + 1 < ts.length; i++) {
+    const t0 = ts[i]!
+    const t1 = ts[i + 1]!
+    if (t1 - t0 < 1e-9) continue
+    if (insideRings(rings, at((t0 + t1) / 2))) {
+      const last = out[out.length - 1]
+      // junta trechos contíguos (o ponto de corte caiu num vértice)
+      if (last && Math.abs(last.b.x - at(t0).x) < 1e-6 && Math.abs(last.b.y - at(t0).y) < 1e-6)
+        last.b = at(t1)
+      else out.push({ a: at(t0), b: at(t1) })
+    }
+  }
+  return out
+}

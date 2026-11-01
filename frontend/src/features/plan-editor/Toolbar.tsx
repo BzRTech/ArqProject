@@ -5,6 +5,7 @@ import { exportProjectPdf } from './export-pdf'
 import { imageSize, putAsset, readFileAsDataUrl } from './persistence'
 import { rememberAsset } from './hooks'
 import { newId, redo, selectActiveEnv, undo, useEditor, type Tool } from './store'
+import { useUnits } from './units-pref'
 
 const TOOLS: { id: Tool; label: string; key: string }[] = [
   { id: 'select', label: 'Selecionar', key: 'V' },
@@ -25,6 +26,7 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
   const canUndo = useStore(useEditor.temporal, (s) => s.pastStates.length > 0)
   const canRedo = useStore(useEditor.temporal, (s) => s.futureStates.length > 0)
   const fileRef = useRef<HTMLInputElement>(null)
+  const units = useUnits()
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -171,6 +173,33 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
         >
           {busy ? 'Gerando…' : 'Baixar PDF'}
         </button>
+      </div>
+      <div
+        className="tool-group units-group"
+        title="Unidades de digitação e exibição (o desenho é sempre exato, em mm)"
+      >
+        <label className="inline-field">
+          Paredes
+          <select
+            value={units.wall}
+            onChange={(e) => units.setWall(e.target.value as 'm' | 'cm')}
+            data-testid="unit-wall"
+          >
+            <option value="m">m</option>
+            <option value="cm">cm</option>
+          </select>
+        </label>
+        <label className="inline-field">
+          Móveis
+          <select
+            value={units.item}
+            onChange={(e) => units.setItem(e.target.value as 'cm' | 'mm')}
+            data-testid="unit-item"
+          >
+            <option value="cm">cm</option>
+            <option value="mm">mm</option>
+          </select>
+        </label>
       </div>
       {message && (
         <span className="toolbar-message" data-testid="toolbar-message">

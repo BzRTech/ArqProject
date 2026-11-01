@@ -629,3 +629,13 @@ button.link:hover:not(:disabled) {
   background: none;
   color: var(--accent);
 }
+.units-group {
+  margin-left: auto;
+  gap: 0.6rem;
+}
+.units-group select {
+  padding: 0.2rem 0.3rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}

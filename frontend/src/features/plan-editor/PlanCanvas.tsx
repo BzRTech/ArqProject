@@ -30,7 +30,7 @@ import {
   type OpeningType,
 } from '@/core/project/schema'
 import { nearestWall, wallEntities, wallOutline } from '@/core/project/walls'
-import { formatCm, formatDecimal, parseCm } from '@/core/units'
+import { formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { Compiled } from './Compiled'
 import {
   DISPLAY_SCALE,
@@ -43,6 +43,7 @@ import {
 } from './geometry'
 import { useAssetUrl } from './hooks'
 import { redo, selectActiveEnv, undo, useEditor, type Selection } from './store'
+import { useUnits } from './units-pref'
 
 const DRAFT = '#1f6feb'
 const GRID_MOVE = 10 // mm — passo ao arrastar e inserir
@@ -208,6 +209,7 @@ export function PlanCanvas({ fitSignal }: Props) {
   const placeBlockId = useEditor((s) => s.placeBlockId)
   const wallThickness = useEditor((s) => s.wallThicknessMm)
   const calibration = useEditor((s) => s.calibration)
+  const wallUnit = useUnits((s) => s.wall)
   const placeOpeningType = useEditor((s) => s.placeOpeningType)
   const roomSize = useEditor((s) => s.roomSize)
 
@@ -263,14 +265,14 @@ export function PlanCanvas({ fitSignal }: Props) {
   /** Ponto do próximo vértice quando o usuário digitou um comprimento. */
   const typedPoint = useCallback(
     (from: Vec2, toward: Vec2 | null): Vec2 | null => {
-      const mm = parseCm(typed)
+      const mm = parseLength(typed, wallUnit)
       if (!mm || mm <= 0) return null
       const d =
         toward && distance(from, toward) > 0.5 ? normalize(sub(toward, from)) : { x: 1, y: 0 }
       const q = add(from, scale(d, mm))
       return { x: Math.round(q.x), y: Math.round(q.y) }
     },
-    [typed],
+    [typed, wallUnit],
   )
 
   /** Onde uma porta/janela cairia com o cursor em `p`. */
@@ -864,7 +866,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     wall: wallDraft.length
       ? 'Clique ou DIGITE o comprimento (cm) + Enter · clique no 1º ponto fecha · Esc termina · Shift livre'
       : 'Clique para começar a parede (eixo) · Shift desliga o ortogonal',
-    room: `Clique para posicionar o canto interno · ${formatCm(roomSize.w)} × ${formatCm(roomSize.d)} cm internos`,
+    room: `Clique para posicionar o canto interno · ${formatLength(roomSize.w, wallUnit)} × ${formatLength(roomSize.d, wallUnit)} ${UNIT_LABEL[wallUnit]} internos`,
     opening: 'Aproxime de uma parede e clique · o lado do cursor define para onde abre',
     dimension:
       ['Clique no 1º ponto da cota', 'Clique no 2º ponto', 'Mova para afastar a cota e clique'][
@@ -987,7 +989,9 @@ export function PlanCanvas({ fitSignal }: Props) {
               fill={typed ? '#b23b3b' : DRAFT}
               data-testid="typed-length"
             >
-              {typed ? `${typed} cm ↵` : 'digite o comprimento'}
+              {typed
+                ? `${typed} ${UNIT_LABEL[wallUnit]} ↵`
+                : `digite o comprimento (${UNIT_LABEL[wallUnit]})`}
             </text>
           )}
           {cursor && (tool === 'wall' || tool === 'dimension' || tool === 'area') && (
@@ -1006,7 +1010,7 @@ export function PlanCanvas({ fitSignal }: Props) {
       <footer className="statusbar" data-testid="editor-status">
         <span>
           {cursor
-            ? `x ${formatDecimal(cursor.x / 10, 1)} · y ${formatDecimal(cursor.y / 10, 1)} cm`
+            ? `x ${formatLength(cursor.x, wallUnit)} · y ${formatLength(cursor.y, wallUnit)} ${UNIT_LABEL[wallUnit]}`
             : '—'}
         </span>
         <span>

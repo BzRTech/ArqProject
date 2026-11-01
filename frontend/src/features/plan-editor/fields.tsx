@@ -1,5 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { formatBRL, formatCm, formatQty, parseBRL, parseCm } from '@/core/units'
+import {
+  formatBRL,
+  formatLength,
+  formatQty,
+  parseBRL,
+  parseLength,
+  UNIT_LABEL,
+  type LengthUnit,
+} from '@/core/units'
 
 /**
  * Mantém o input não controlado em dia com o valor do documento (desfazer, outro campo)
@@ -22,21 +30,26 @@ function keys(e: React.KeyboardEvent<HTMLInputElement>, reset: string) {
   }
 }
 
-/** Campo de comprimento em cm (pt-BR) que grava mm inteiros ao sair ou com Enter. */
-export function CmField({
+/**
+ * Campo de comprimento que grava mm inteiros ao sair ou com Enter. Mostra e lê na unidade
+ * dada; um sufixo digitado ("350cm", "4,4 m") tem prioridade sobre ela.
+ */
+export function LengthField({
   label,
   value,
+  unit,
   onCommit,
   allowZero,
   testId,
 }: {
   label: string
   value: number
+  unit: LengthUnit
   onCommit: (mm: number) => void
   allowZero?: boolean
   testId?: string
 }) {
-  const shown = formatCm(value)
+  const shown = formatLength(value, unit)
   const ref = useSyncedInput(shown)
   return (
     <label className="field">
@@ -48,13 +61,13 @@ export function CmField({
           inputMode="decimal"
           data-testid={testId}
           onBlur={(e) => {
-            const mm = parseCm(e.target.value)
+            const mm = parseLength(e.target.value, unit)
             if (mm !== null && (allowZero || mm > 0) && mm !== value) onCommit(mm)
             else e.target.value = shown
           }}
           onKeyDown={(e) => keys(e, shown)}
         />
-        <small>cm</small>
+        <small>{UNIT_LABEL[unit]}</small>
       </span>
     </label>
   )

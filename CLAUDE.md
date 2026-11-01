@@ -54,6 +54,8 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
   - Esquadrias como VÃOS na parede (schema v2 + migração v1→v2): 3 portas e 5 janelas, recorte da parede, deslizar pela parede, inverter lado/dobradiça; "Cotar parede" (cadeia pela face externa com os vãos); comprimento DIGITADO ao desenhar parede; ferramenta "Ambiente" (retângulo pelas medidas internas). Adendo no ADR 004.
   - A escala da prancha é escolhida montando o desenho em cada escala candidata (as cotas dependem dela).
   - Legenda e orçamento (schema v3 + migração v2→v3): `core/project/markers.ts` (numeração por grupo de itens iguais; marcenaria M01…; balão arrastável via `markerOffset`), legenda na prancha (`plan-sheet` reserva coluna), dinheiro em CENTAVOS inteiros (`formatBRL`/`parseBRL`), totais do ambiente/projeto, aprovados, planilha CSV pt-BR; áreas (`core/project/areas.ts`, ferramenta Q, "Criar área do ambiente", rótulo arrastável).
+  - Unidades de entrada/exibição por preferência do usuário (`units-pref.ts`, localStorage): paredes m|cm, móveis/esquadrias cm|mm; `formatLength`/`parseLength` (sufixo digitado tem prioridade). Espessura sempre em cm; cotas da prancha em cm.
+  - Autosave: grava no máx. 400 ms após a 1ª mudança (edições seguidas não adiam) e, ao sair da página, cópia síncrona em localStorage (`prancheta.backup`); ao abrir vale a mais recente.
   - Prints em `docs/prints/editor/`.
 - Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).
 - Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.

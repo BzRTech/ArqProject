@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   cmToMm,
+  formatLength,
+  parseLength,
   formatBRL,
   formatQty,
   parseBRL,
@@ -122,5 +124,37 @@ describe('dinheiro (centavos inteiros)', () => {
     expect(formatQty(2)).toBe('2')
     expect(formatQty(2.5)).toBe('2,5')
     expect(formatQty(1.25)).toBe('1,25')
+  })
+})
+
+describe('unidades de entrada/exibição', () => {
+  it.each([
+    [4400, 'm', '4,40'],
+    [4405, 'm', '4,41'],
+    [150, 'cm', '15'],
+    [452, 'cm', '45,2'],
+    [1580, 'mm', '1580'],
+  ] as const)('%i mm em %s → "%s"', (mm, unit, text) => {
+    expect(formatLength(mm, unit)).toBe(text)
+  })
+
+  it.each([
+    ['4,40', 'm', 4400],
+    ['4.4', 'm', 4400],
+    ['3', 'm', 3000],
+    ['158', 'cm', 1580],
+    ['45,2', 'cm', 452],
+    ['1580', 'mm', 1580],
+    // sufixo explícito manda, qualquer que seja a preferência
+    ['350cm', 'm', 3500],
+    ['4,4 m', 'cm', 4400],
+    ['3500 mm', 'm', 3500],
+    ['1.234,5', 'cm', 12345],
+  ] as const)('"%s" com padrão %s → %i mm', (input, unit, mm) => {
+    expect(parseLength(input, unit)).toBe(mm)
+  })
+
+  it.each(['', 'abc', '4,4,4', '3 km', 'm'])('"%s" é inválido', (input) => {
+    expect(parseLength(input, 'm')).toBeNull()
   })
 })

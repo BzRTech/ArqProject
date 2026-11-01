@@ -7,13 +7,15 @@ import { computeLegend } from '@/core/project/markers'
 import { calibrateBasePlan } from '@/core/project/base-plan'
 import { OPENING_DEFS, openingDef, openingFrame } from '@/core/project/openings'
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
-import { formatCm, formatDecimal, parseCm } from '@/core/units'
+import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { BudgetFields } from './BudgetFields'
-import { CmField, TextField } from './fields'
+import { LengthField, TextField } from './fields'
+import { useUnits } from './units-pref'
 import { ItemsSummary } from './ItemsSummary'
 import { selectActiveEnv, useEditor } from './store'
 
 function ItemProps({ item }: { item: Item }) {
+  const u = useUnits()
   const s = useEditor.getState()
   const block = getBlock(item.blockId)
   return (
@@ -30,21 +32,24 @@ function ItemProps({ item }: { item: Item }) {
         testId="item-name"
       />
       <div className="field-row">
-        <CmField
+        <LengthField
           label="Largura (L)"
+          unit={u.item}
           value={item.sizeMm.w}
           onCommit={(w) => s.updateItem(item.id, { sizeMm: { ...item.sizeMm, w } })}
           testId="item-w"
         />
-        <CmField
+        <LengthField
           label="Profund. (P)"
+          unit={u.item}
           value={item.sizeMm.d}
           onCommit={(d) => s.updateItem(item.id, { sizeMm: { ...item.sizeMm, d } })}
           testId="item-d"
         />
       </div>
       <p className="muted small">
-        Mínimo {formatCm(block.minSize.w)} × {formatCm(block.minSize.d)} cm
+        Mínimo {formatLength(block.minSize.w, u.item)} × {formatLength(block.minSize.d, u.item)}{' '}
+        {UNIT_LABEL[u.item]}
       </p>
       <TextField
         label="Rotação (°)"
@@ -116,8 +121,9 @@ function WallProps({ wall }: { wall: Wall }) {
   return (
     <section data-testid="wall-props">
       <h2>Parede</h2>
-      <CmField
+      <LengthField
         label="Espessura"
+        unit="cm"
         value={wall.thicknessMm}
         onCommit={(thicknessMm) => s.updateDrawing(wall.id, { thicknessMm })}
       />
@@ -157,6 +163,7 @@ function WallProps({ wall }: { wall: Wall }) {
 }
 
 function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment }) {
+  const u = useUnits()
   const s = useEditor.getState()
   const def = openingDef(o.type)
   const wall = env.drawings.find((d): d is Wall => d.kind === 'wall' && d.id === o.wallId)
@@ -180,29 +187,33 @@ function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment 
         </select>
       </label>
       <div className="field-row">
-        <CmField
+        <LengthField
           label="Largura"
+          unit={u.item}
           value={o.widthMm}
           onCommit={(widthMm) => s.updateOpening(o.id, { widthMm })}
           testId="opening-w"
         />
-        <CmField
+        <LengthField
           label="Altura"
+          unit={u.item}
           value={o.heightMm}
           onCommit={(heightMm) => s.updateOpening(o.id, { heightMm })}
         />
       </div>
       {!isDoor && (
-        <CmField
+        <LengthField
           label="Peitoril"
+          unit={u.item}
           value={o.sillMm}
           allowZero
           onCommit={(sillMm) => s.updateOpening(o.id, { sillMm })}
         />
       )}
       {f && (
-        <CmField
+        <LengthField
           label="Distância do início do trecho (eixo)"
+          unit={u.wall}
           value={Math.round(f.offset - f.width / 2)}
           allowZero
           onCommit={(edge) => s.updateOpening(o.id, { offsetMm: edge + f.width / 2 })}
@@ -243,6 +254,7 @@ function OpeningProps({ opening: o, env }: { opening: Opening; env: Environment 
 }
 
 function ToolOptions() {
+  const u = useUnits()
   const tool = useEditor((s) => s.tool)
   const roomSize = useEditor((s) => s.roomSize)
   const thickness = useEditor((s) => s.wallThicknessMm)
@@ -253,21 +265,24 @@ function ToolOptions() {
         <h2>Ambiente retangular</h2>
         <p className="muted small">Medidas INTERNAS (de face a face), como na medição da obra.</p>
         <div className="field-row">
-          <CmField
+          <LengthField
             label="Largura"
+            unit={u.wall}
             value={roomSize.w}
             onCommit={(w) => s.setRoomSize({ ...roomSize, w })}
             testId="room-w"
           />
-          <CmField
+          <LengthField
             label="Profundidade"
+            unit={u.wall}
             value={roomSize.d}
             onCommit={(d) => s.setRoomSize({ ...roomSize, d })}
             testId="room-d"
           />
         </div>
-        <CmField
+        <LengthField
           label="Espessura das paredes"
+          unit="cm"
           value={thickness}
           onCommit={(mm) => s.setWallThickness(mm)}
           testId="room-t"
@@ -301,6 +316,7 @@ function ToolOptions() {
 }
 
 function DrawingProps({ d }: { d: Drawing }) {
+  const u = useUnits()
   const s = useEditor.getState()
   if (d.kind === 'wall') return <WallProps wall={d} />
   if (d.kind === 'chain') {
@@ -308,8 +324,9 @@ function DrawingProps({ d }: { d: Drawing }) {
       <section>
         <h2>Cota em cadeia</h2>
         <p className="muted">{d.points.length - 1} vão(s)</p>
-        <CmField
+        <LengthField
           label="Afastamento"
+          unit={u.wall}
           value={d.offsetMm}
           allowZero
           onCommit={(offsetMm) => s.updateDrawing(d.id, { offsetMm })}
@@ -333,11 +350,12 @@ function DrawingProps({ d }: { d: Drawing }) {
       <section>
         <h2>Cota</h2>
         <p className="muted">
-          {formatCm(Math.round(distance(d.p1, d.p2)), { unit: true })} ·{' '}
+          {formatLength(Math.round(distance(d.p1, d.p2)), u.wall)} {UNIT_LABEL[u.wall]} ·{' '}
           {d.orientation === 'aligned' ? 'alinhada' : d.orientation}
         </p>
-        <CmField
+        <LengthField
           label="Afastamento"
+          unit={u.wall}
           value={d.offsetMm}
           allowZero
           onCommit={(offsetMm) => s.updateDrawing(d.id, { offsetMm })}
@@ -399,6 +417,7 @@ function DrawingProps({ d }: { d: Drawing }) {
 }
 
 function BasePlanProps({ env }: { env: Environment }) {
+  const u = useUnits()
   const tool = useEditor((s) => s.tool)
   const calibration = useEditor((s) => s.calibration)
   const s = useEditor.getState()
@@ -466,7 +485,7 @@ function BasePlanProps({ env }: { env: Environment }) {
                   disabled={!ready}
                   data-testid="calibration-real"
                 />
-                <small>cm</small>
+                <small>{UNIT_LABEL[u.wall]}</small>
               </span>
             </label>
           </div>
@@ -474,10 +493,10 @@ function BasePlanProps({ env }: { env: Environment }) {
             <button
               type="button"
               className="primary"
-              disabled={!ready || !parseCm(real)}
+              disabled={!ready || !parseLength(real, u.wall)}
               data-testid="apply-calibration"
               onClick={() => {
-                const mm = parseCm(real)
+                const mm = parseLength(real, u.wall)
                 if (!mm || !ready) return
                 s.setBasePlan(calibrateBasePlan(bp, calibration[0]!, calibration[1]!, mm))
                 setReal('')

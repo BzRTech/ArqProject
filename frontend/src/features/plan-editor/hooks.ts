@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useEditor } from './store'
-import { getAsset, loadProject, saveProject } from './persistence'
+import { getAsset, loadProject, saveBackupSync, saveProject } from './persistence'
 import { clearHistory } from './store'
 
 export type SaveStatus = 'carregando' | 'salvo' | 'salvando' | 'erro'
@@ -12,7 +12,30 @@ export function useLocalPersistence(): SaveStatus {
   useEffect(() => {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
+    let dirty = false
     let unsubscribe: (() => void) | undefined
+
+    const flush = () => {
+      clearTimeout(timer)
+      timer = undefined
+      if (!dirty) return
+      dirty = false
+      saveProject(useEditor.getState().project)
+        .then(() => {
+          if (!dirty) setStatus('salvo')
+        })
+        .catch(() => setStatus('erro'))
+    }
+    // Ao esconder/recarregar/fechar a aba: cópia SÍNCRONA (localStorage) + gravação normal.
+    const leave = () => {
+      if (dirty) saveBackupSync(useEditor.getState().project)
+      flush()
+    }
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') leave()
+    }
+    window.addEventListener('pagehide', leave)
+    document.addEventListener('visibilitychange', onHide)
 
     loadProject()
       .then((p) => {
@@ -22,21 +45,20 @@ export function useLocalPersistence(): SaveStatus {
         setStatus('salvo')
         unsubscribe = useEditor.subscribe((s, prev) => {
           if (s.project === prev.project) return
+          dirty = true
           setStatus('salvando')
-          clearTimeout(timer)
-          timer = setTimeout(() => {
-            saveProject(useEditor.getState().project)
-              .then(() => setStatus('salvo'))
-              .catch(() => setStatus('erro'))
-          }, 400)
+          // Grava no máximo 400 ms depois da PRIMEIRA mudança; edições seguidas não adiam.
+          timer ??= setTimeout(flush, 400)
         })
       })
       .catch(() => setStatus('erro'))
 
     return () => {
       cancelled = true
-      clearTimeout(timer)
+      flush()
       unsubscribe?.()
+      window.removeEventListener('pagehide', leave)
+      document.removeEventListener('visibilitychange', onHide)
     }
   }, [])
 

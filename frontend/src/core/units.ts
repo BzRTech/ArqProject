@@ -108,3 +108,34 @@ export function parseBRL(input: string): number | null {
 export function formatQty(q: number): string {
   return Number.isInteger(q) ? String(q) : formatDecimal(q, Math.round(q * 10) === q * 10 ? 1 : 2)
 }
+
+// --- Unidades de exibição/entrada de comprimento ------------------------------------
+// O modelo continua em mm inteiros; isto só muda como o usuário VÊ e DIGITA.
+
+export type LengthUnit = 'm' | 'cm' | 'mm'
+
+/** mm → texto na unidade: m com 2 casas ("4,40"), cm como formatCm ("45,2"), mm inteiro. */
+export function formatLength(mm: number, unit: LengthUnit): string {
+  if (unit === 'm') return formatDecimal(roundMm(mm) / 1000, 2)
+  if (unit === 'cm') return formatCm(mm)
+  return String(roundMm(mm))
+}
+
+const UNIT_FACTOR: Record<LengthUnit, number> = { m: 1000, cm: 10, mm: 1 }
+
+/**
+ * Lê um comprimento digitado e devolve mm inteiros. Sem sufixo, usa `unit`; com sufixo
+ * ("3,5 m", "350cm", "3500 mm"), o sufixo manda. Aceita vírgula ou ponto decimal e
+ * milhar com ponto quando há vírgula ("1.234,5"). Retorna `null` se inválido.
+ */
+export function parseLength(input: string, unit: LengthUnit): number | null {
+  const m = /^\s*(-?[\d.,]+)\s*(mm|cm|m)?\s*$/i.exec(input)
+  if (!m) return null
+  let num = m[1]!
+  const u = (m[2]?.toLowerCase() as LengthUnit | undefined) ?? unit
+  if (num.includes(',')) num = num.replace(/\./g, '').replace(',', '.')
+  if (!/^-?\d+(\.\d+)?$/.test(num)) return null
+  return roundMm(Number(num) * UNIT_FACTOR[u])
+}
+
+export const UNIT_LABEL: Record<LengthUnit, string> = { m: 'm', cm: 'cm', mm: 'mm' }

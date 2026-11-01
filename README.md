@@ -92,9 +92,12 @@ Em **http://localhost:5173/editor**:
 - **Blocos:** clique num bloco do catálogo e depois na planta, ou arraste o bloco. Mude L × P
   no painel da direita e o bloco se redesenha (travesseiros, portas, módulos e assentos
   acompanham a medida).
+- **Unidades (canto da barra):** paredes em **m** ou cm, móveis e esquadrias em **cm** ou mm
+  (padrão: m e cm; fica salvo no navegador). Escrever a unidade no campo sempre vale: "350cm"
+  num campo em metros, "4,4 m" num campo em cm. Espessura de parede é sempre em cm.
 - **Ambiente (A):** informe largura e profundidade **internas** e clique para posicionar. As
   paredes saem com a espessura escolhida.
-- **Parede (W):** clique no primeiro ponto e **digite o comprimento em cm** + Enter (a direção
+- **Parede (W):** clique no primeiro ponto e **digite o comprimento** (na unidade das paredes) + Enter (a direção
   segue o mouse), ou clique nos pontos. Clique no primeiro ponto para fechar. Shift desliga o
   modo ortogonal.
 - **Porta (P) e Janela (J):** clique sobre uma parede, e o lado do cursor define para onde a

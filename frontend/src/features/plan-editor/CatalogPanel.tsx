@@ -7,10 +7,11 @@ import { compileView } from '@/core/drawing/compile'
 import type { Entity } from '@/core/drawing/entities'
 import { OPENING_DEFS, type OpeningDef } from '@/core/project/openings'
 import { drawingEntities } from '@/core/project/render'
-import { formatCm } from '@/core/units'
+import { formatLength, UNIT_LABEL } from '@/core/units'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { SvgNodeView } from '@/render/svg/SvgNodeView'
 import { useEditor } from './store'
+import { useUnits } from './units-pref'
 
 const DISCIPLINE_LABEL: Record<BlockDef['discipline'], string> = {
   layout: 'Layout',
@@ -75,6 +76,7 @@ const OpeningThumb = memo(function OpeningThumb({ def }: { def: OpeningDef }) {
 })
 
 function OpeningsSection({ query }: { query: string }) {
+  const unit = useUnits((u) => u.item)
   const placing = useEditor((s) => (s.tool === 'opening' ? s.placeOpeningType : null))
   const startOpening = useEditor((s) => s.startOpening)
   const q = query.trim().toLowerCase()
@@ -103,8 +105,9 @@ function OpeningsSection({ query }: { query: string }) {
               <OpeningThumb def={d} />
               <span className="block__name">{d.name}</span>
               <span className="block__meta">
-                {formatCm(d.widthMm)} × {formatCm(d.heightMm)}
-                {d.sillMm ? ` · peitoril ${formatCm(d.sillMm)}` : ''}
+                {formatLength(d.widthMm, unit)} × {formatLength(d.heightMm, unit)}{' '}
+                {UNIT_LABEL[unit]}
+                {d.sillMm ? ` · peitoril ${formatLength(d.sillMm, unit)}` : ''}
               </span>
             </button>
           </li>
@@ -115,6 +118,7 @@ function OpeningsSection({ query }: { query: string }) {
 }
 
 export function CatalogPanel() {
+  const unit = useUnits((u) => u.item)
   const [query, setQuery] = useState('')
   const placing = useEditor((s) => (s.tool === 'place' ? s.placeBlockId : null))
   const startPlacing = useEditor((s) => s.startPlacing)
@@ -161,8 +165,8 @@ export function CatalogPanel() {
                   <BlockThumb block={b} />
                   <span className="block__name">{b.name}</span>
                   <span className="block__meta">
-                    {formatCm(b.defaultSize.w)} × {formatCm(b.defaultSize.d)} ·{' '}
-                    {DISCIPLINE_LABEL[b.discipline]}
+                    {formatLength(b.defaultSize.w, unit)} × {formatLength(b.defaultSize.d, unit)}{' '}
+                    {UNIT_LABEL[unit]} · {DISCIPLINE_LABEL[b.discipline]}
                   </span>
                 </button>
               </li>

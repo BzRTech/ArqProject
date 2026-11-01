@@ -40,6 +40,7 @@ async function freshEditor(page: Page) {
   await page.evaluate(
     () =>
       new Promise<void>((resolve) => {
+        localStorage.removeItem('prancheta.backup')
         const req = indexedDB.deleteDatabase('prancheta')
         req.onsuccess = req.onerror = req.onblocked = () => resolve()
       }),
@@ -66,8 +67,8 @@ test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfa
 
   // Ambiente retangular pelas medidas INTERNAS (como na medição da obra): 4,40 × 3,80 m
   await page.getByTestId('tool-room').click()
-  await setCm(page, 'room-w', '440')
-  await setCm(page, 'room-d', '380')
+  await setCm(page, 'room-w', '4,40') // paredes em metros (padrão)
+  await setCm(page, 'room-d', '3,80')
   await moveModel(page, 0, 0)
   await clickModel(page, 0, 0)
   await page.keyboard.press('f')
@@ -161,13 +162,13 @@ test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfa
   await moveModel(page, 0, 0)
   await clickModel(page, 0, 0)
   for (const [x, y, len] of [
-    [1500, 0, '500'],
-    [5000, 1500, '400'],
-    [3500, 4000, '500'],
+    [1500, 0, '5'],
+    [5000, 1500, '4'],
+    [3500, 4000, '5'],
   ] as const) {
     await moveModel(page, x, y)
     await page.keyboard.type(len)
-    await expect(page.getByTestId('typed-length')).toContainText(`${len} cm`)
+    await expect(page.getByTestId('typed-length')).toContainText(`${len} m`)
     await page.keyboard.press('Enter')
   }
   await moveModel(page, 0, 0)
@@ -239,7 +240,7 @@ test('planta base: importar imagem e calibrar com medida conhecida', async ({ pa
   await expect(page.getByTestId('base-plan')).toHaveAttribute('width', '10000')
   await clickModel(page, 1000, 6600)
   await clickModel(page, 9000, 6600)
-  await setCm(page, 'calibration-real', '600')
+  await setCm(page, 'calibration-real', '6')
   await page.getByTestId('apply-calibration').click()
   await expect(page.getByTestId('base-plan')).toHaveAttribute('width', '7500')
   await expect(page.getByTestId('base-plan-props')).toContainText('Calibrada')
@@ -284,8 +285,8 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
 
   // Quarto 4,40 × 3,80 m internos + área do ambiente pelas faces internas
   await page.getByTestId('tool-room').click()
-  await setCm(page, 'room-w', '440')
-  await setCm(page, 'room-d', '380')
+  await setCm(page, 'room-w', '4,40') // paredes em metros (padrão)
+  await setCm(page, 'room-d', '3,80')
   await moveModel(page, 0, 0)
   await clickModel(page, 0, 0)
   await page.getByTestId('wall-area').click()
@@ -405,4 +406,48 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   await pdfDl.saveAs('test-results/editor-legenda.pdf')
   const pdf = await readFile('test-results/editor-legenda.pdf')
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+})
+
+test('unidades: paredes em m ou cm, móveis em cm ou mm, e sufixo digitado manda', async ({
+  page,
+}) => {
+  await freshEditor(page)
+  await expect(page.getByTestId('unit-wall')).toHaveValue('m')
+  await expect(page.getByTestId('unit-item')).toHaveValue('cm')
+
+  // Ambiente em metros, mas digitando com sufixo em cm na profundidade
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '3,5')
+  await setCm(page, 'room-d', '280cm')
+  await expect(page.getByTestId('room-w')).toHaveValue('3,50')
+  await expect(page.getByTestId('room-d')).toHaveValue('2,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.getByTestId('wall-area').click()
+  await expect(page.getByTestId('area-value')).toHaveText('9,80 m²')
+  await page.keyboard.press('Escape')
+
+  // Móvel em cm e depois em mm (mesma medida)
+  await placeBlock(page, 'cama-casal', 1750, 1400)
+  await expect(page.getByTestId('item-w')).toHaveValue('158')
+  await page.getByTestId('unit-item').selectOption('mm')
+  await expect(page.getByTestId('item-w')).toHaveValue('1580')
+  await setCm(page, 'item-w', '1600')
+  await page.getByTestId('unit-item').selectOption('cm')
+  await expect(page.getByTestId('item-w')).toHaveValue('160')
+
+  // Preferência fica salva no navegador
+  await page.getByTestId('unit-wall').selectOption('cm')
+  // Recarrega LOGO depois de editar: nada pode se perder (gravação ao sair da página)
+  await page.reload()
+  await expect(page.getByTestId('unit-wall')).toHaveValue('cm')
+  await expect(items(page)).toHaveCount(1)
+  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-wall"]')).toHaveCount(1)
+  await expect(page.getByTestId('drawings').locator('g[data-role="drawing-area"]')).toHaveCount(1)
+  await page.getByTestId('tool-room').click()
+  // A medida padrão do Ambiente (3 m) agora aparece em cm
+  await expect(page.getByTestId('room-w')).toHaveValue('300')
+  await page.keyboard.press('Escape')
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('18-editor-unidades') })
 })

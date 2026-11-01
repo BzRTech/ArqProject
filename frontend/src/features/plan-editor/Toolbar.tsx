@@ -57,7 +57,7 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
     setBusy(true)
     setMessage(null)
     try {
-      const r = await exportProjectPdf(useEditor.getState().project)
+      const r = await exportProjectPdf(useEditor.getState().project, { humanized: units.humanized })
       setMessage(`PDF: ${r.pages} prancha(s) · escala ${r.scales.map((s) => `1:${s}`).join(', ')}`)
     } catch (e) {
       setMessage(`Erro ao gerar PDF: ${e instanceof Error ? e.message : String(e)}`)
@@ -178,6 +178,15 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
         className="tool-group units-group"
         title="Unidades de digitação e exibição (o desenho é sempre exato, em mm)"
       >
+        <label className="inline-field" title="Pisos com cor, na tela e no PDF">
+          <input
+            type="checkbox"
+            checked={units.humanized}
+            onChange={(e) => units.setHumanized(e.target.checked)}
+            data-testid="humanized"
+          />
+          Humanizado
+        </label>
         <label className="inline-field">
           Paredes
           <select

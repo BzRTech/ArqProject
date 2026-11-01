@@ -18,6 +18,7 @@ import {
 import { fit, pan, screenToWorld, zoomAt, type Viewport } from '@/core/geometry/viewport'
 import { areaM2Text } from '@/core/project/areas'
 import { itemCorners, itemEntities } from '@/core/project/items'
+import { floorEntities } from '@/core/finishes/layout'
 import { environmentMarkers } from '@/core/project/markers'
 import { openingDef, openingEntities, openingFrame } from '@/core/project/openings'
 import { drawingEntities, environmentEntities } from '@/core/project/render'
@@ -337,6 +338,15 @@ export function PlanCanvas({ fitSignal }: Props) {
     [env.items],
   )
   const walls = useMemo(() => wallsOf(env), [env.drawings]) // eslint-disable-line react-hooks/exhaustive-deps
+  const humanized = useUnits((s) => s.humanized)
+  /** Pisos (por baixo dos móveis); só muda quando as áreas mudam. */
+  const floors = useMemo(
+    () =>
+      env.drawings.flatMap((d) =>
+        d.kind === 'area' && d.floor ? floorEntities(d.points, d.floor, humanized) : [],
+      ),
+    [env.drawings, humanized],
+  )
   /** Ponto do próximo vértice quando o usuário digitou um comprimento. */
   const typedPoint = useCallback(
     (from: Vec2, toward: Vec2 | null): Vec2 | null => {
@@ -1067,6 +1077,9 @@ export function PlanCanvas({ fitSignal }: Props) {
           <rect x={-100000} y={-100000} width={200000} height={200000} fill="#fbfaf7" />
           <rect x={-100000} y={-100000} width={200000} height={200000} fill="url(#grid-major)" />
           <BasePlanView env={env} />
+          <g data-testid="floors-layer">
+            <Compiled entities={floors} role="pisos" />
+          </g>
           <g data-testid="items">
             {env.items.map((it) => (
               <ItemView key={it.id} item={it} />

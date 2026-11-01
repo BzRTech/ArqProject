@@ -35,6 +35,8 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
       })),
     })),
   }),
+  // v3 → v4: piso opcional nas áreas (nada a converter; documentos v3 continuam válidos).
+  3: (p) => ({ ...p, schemaVersion: 4 }),
 }
 
 export class MigrationError extends Error {}

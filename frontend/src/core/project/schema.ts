@@ -6,7 +6,7 @@ import { z } from 'zod'
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -43,6 +43,42 @@ export const ChainSchema = z.object({
   total: z.boolean(),
 })
 
+/** Piso aplicado a uma área (cópia editável do catálogo de revestimentos). */
+export const FloorSchema = z.object({
+  finishId: z.string(),
+  name: z.string(),
+  material: z.enum([
+    'porcelanato',
+    'ceramica',
+    'madeira',
+    'vinilico',
+    'laminado',
+    'pedra',
+    'cimento',
+    'carpete',
+  ]),
+  /** Peça: comprimento (direção de assentamento) × largura, mm; 0 = monolítico. */
+  pieceAMm: mm.nonnegative(),
+  pieceBMm: mm.nonnegative(),
+  jointMm: z.number().nonnegative(),
+  pattern: z.enum(['grid', 'half', 'third']),
+  /** Direção de assentamento (0 = ao longo de x). */
+  angleDeg: z.number(),
+  /** Peça inteira centralizada na área ou começando pelo canto. */
+  origin: z.enum(['center', 'corner']),
+  wastePct: z.number().min(0).max(100),
+  color: z.string(),
+  /** Preço por m² em CENTAVOS. */
+  priceCentsPerM2: z.number().int().nonnegative().optional(),
+  skirting: z
+    .object({
+      heightMm: positiveMm,
+      /** Preço por metro linear em CENTAVOS. */
+      priceCentsPerM: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+})
+
 /** Área (polígono) com nome; o m² é calculado, nunca guardado. */
 export const AreaSchema = z.object({
   id,
@@ -51,6 +87,7 @@ export const AreaSchema = z.object({
   name: z.string(),
   /** Deslocamento do rótulo em relação ao centroide (o usuário arrasta). */
   labelOffset: Vec2Schema.optional(),
+  floor: FloorSchema.optional(),
 })
 
 export const TextSchema = z.object({
@@ -167,6 +204,7 @@ export type DimensionDrawing = z.infer<typeof DimensionSchema>
 export type TextDrawing = z.infer<typeof TextSchema>
 export type ChainDrawing = z.infer<typeof ChainSchema>
 export type AreaDrawing = z.infer<typeof AreaSchema>
+export type Floor = z.infer<typeof FloorSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>
 export type Item = z.infer<typeof ItemSchema>

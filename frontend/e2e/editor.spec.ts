@@ -540,3 +540,60 @@ test('quarto + banheiro encostados (parede compartilhada) e edição da parede',
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('20-parede-editada') })
 })
+
+test('piso: revestimento com paginação, perda, rodapé sem a porta, orçamento e PDF', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.getByTestId('tool-door').click()
+  await moveModel(page, 1300, 3820)
+  await clickModel(page, 1300, 3820)
+  await page.keyboard.press('Escape')
+
+  // Área do ambiente + porcelanato 90×90
+  await clickModel(page, -75, 2000)
+  await page.getByTestId('wall-area').click()
+  await page.getByTestId('floor-finish').selectOption('porcelanato-90')
+  await expect(page.getByTestId('floor-buy')).toHaveText('18,40 m²') // 16,72 m² + 10%
+  await setCm(page, 'floor-price', '129,90')
+  await expect(page.getByTestId('floor-total')).toHaveText('R$ 2.390,16')
+  await page.getByTestId('floor-skirting').check()
+  await expect(page.getByTestId('skirting-m')).toHaveText('15,60 m') // 16,40 − porta 0,80
+  await setCm(page, 'skirting-price', '35')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+
+  // Resumo: P1 piso e P1 rodapé; total do ambiente
+  await expect(page.getByTestId('floor-row')).toHaveCount(2)
+  await expect(page.getByTestId('env-total')).toHaveText('R$ 2.936,16')
+  await expect(page.getByTestId('floors-layer').locator('line').first()).toBeAttached()
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('21-piso-porcelanato') })
+
+  // Madeira em régua, amarração 1/3, na vertical; sem humanizado
+  await clickModel(page, 2200, 1900)
+  await expect(page.getByTestId('floor-fields')).toBeVisible()
+  await page.getByTestId('floor-finish').selectOption('madeira-20x120')
+  await page.getByTestId('floor-angle').selectOption('90')
+  await page.screenshot({ path: shot('22-piso-madeira-painel') })
+  await page.keyboard.press('Escape')
+  await page.getByTestId('humanized').uncheck()
+  await page.mouse.move(0, 0)
+  await page.screenshot({ path: shot('23-piso-madeira-sem-humanizado') })
+  await page.getByTestId('humanized').check()
+
+  // PDF com o piso e a legenda
+  const [dl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('export-pdf').click(),
+  ])
+  await dl.saveAs('test-results/piso.pdf')
+  const pdf = await readFile('test-results/piso.pdf')
+  expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+})

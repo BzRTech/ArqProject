@@ -13,6 +13,7 @@ import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/uni
 import { BudgetFields } from './BudgetFields'
 import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
+import { FloorFields } from './FloorFields'
 import { ItemsSummary } from './ItemsSummary'
 import { selectActiveEnv, useEditor } from './store'
 
@@ -343,6 +344,7 @@ function ToolOptions() {
 }
 
 function DrawingProps({ d }: { d: Drawing }) {
+  const env = useEditor(selectActiveEnv)
   const u = useUnits()
   const s = useEditor.getState()
   if (d.kind === 'wall') return <WallProps wall={d} />
@@ -395,22 +397,25 @@ function DrawingProps({ d }: { d: Drawing }) {
   }
   if (d.kind === 'area') {
     return (
-      <section data-testid="area-props">
-        <h2>Área</h2>
-        <p className="area-value" data-testid="area-value">
-          {areaM2Text(d)}
-        </p>
-        <p className="muted small">Perímetro {formatDecimal(areaPerimeterMm(d) / 1000, 2)} m</p>
-        <TextField
-          label="Nome"
-          value={d.name}
-          onCommit={(name) => s.updateDrawing(d.id, { name })}
-          testId="area-name"
-        />
-        <button type="button" className="danger" onClick={() => s.deleteSelection()}>
-          Excluir
-        </button>
-      </section>
+      <>
+        <section data-testid="area-props">
+          <h2>Área</h2>
+          <p className="area-value" data-testid="area-value">
+            {areaM2Text(d)}
+          </p>
+          <p className="muted small">Perímetro {formatDecimal(areaPerimeterMm(d) / 1000, 2)} m</p>
+          <TextField
+            label="Nome"
+            value={d.name}
+            onCommit={(name) => s.updateDrawing(d.id, { name })}
+            testId="area-name"
+          />
+          <button type="button" className="danger" onClick={() => s.deleteSelection()}>
+            Excluir
+          </button>
+        </section>
+        <FloorFields area={d} env={env} />
+      </>
     )
   }
   return (

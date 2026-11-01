@@ -48,7 +48,8 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
   shown.forEach((l, i) => {
     const cy = y + 9 + i * LEGEND_ROW
     const cx = x + 4
-    if (l.label.startsWith('M')) {
+    // Marcenaria (M01) e revestimentos (P1) em etiqueta; móveis em círculo.
+    if (/^[MP]\d/.test(l.label)) {
       out.push({
         kind: 'rect',
         x: cx - 4,

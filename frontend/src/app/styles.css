@@ -650,3 +650,15 @@ button.link:hover:not(:disabled) {
 .segment-list .field {
   margin-bottom: 0.3rem;
 }
+.marker-chip--p {
+  border-radius: 3px;
+  background: #e8e3da;
+}
+.items-table .group-row td {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  padding-top: 0.5rem;
+  cursor: default;
+}

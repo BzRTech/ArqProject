@@ -118,6 +118,12 @@ Em **http://localhost:5173/editor**:
 - **Orçamento:** no painel do item há quantidade, unidade, preço, marca/modelo, fornecedor,
   observação, "existente" e "aprovado". O painel do ambiente mostra a legenda com os totais do
   ambiente e do projeto, e **Exportar planilha (CSV)** abre direto no Excel.
+- **Piso:** selecione uma área e escolha o **revestimento** (porcelanatos, cerâmica, pedra, madeira,
+  vinílico e laminado em régua, cimento queimado, carpete). A paginação é desenhada em escala:
+  peça, junta, grade ou amarração 1/2 e 1/3, direção (horizontal, vertical ou 45°), início
+  centralizado ou pelo canto. A quantidade a comprar já inclui a **perda** (arredondada para
+  cima), e o **rodapé** é medido pelo perímetro **descontando as portas**. Os dois entram no
+  orçamento (P1, P2…), na legenda e na planilha. **Humanizado** (na barra) liga a cor dos pisos.
 - **Área (Q):** clique nos cantos (com snap nas faces das paredes). Numa parede fechada, o botão
   "Criar área do ambiente" faz isso sozinho. O rótulo com o m² também se arrasta.
 - **Cota (C):** clique nos dois pontos e mova para afastar a cota.

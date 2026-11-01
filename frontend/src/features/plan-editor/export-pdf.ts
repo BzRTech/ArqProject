@@ -1,3 +1,4 @@
+import { floorRows } from '@/core/finishes/budget'
 import { computeLegend } from '@/core/project/markers'
 import { environmentEntities } from '@/core/project/render'
 import type { Project } from '@/core/project/schema'
@@ -12,6 +13,7 @@ import { getAsset } from './persistence'
 /** Uma prancha A3 por ambiente com conteúdo; escala automática (maior que couber). */
 export async function exportProjectPdf(
   project: Project,
+  options: { humanized?: boolean } = {},
 ): Promise<{ pages: number; scales: number[] }> {
   await registerWebFonts()
   const date = new Date().toLocaleDateString('pt-BR')
@@ -25,12 +27,20 @@ export async function exportProjectPdf(
       title: env.name,
       subtitle: project.name.toUpperCase(),
       dateText: date,
-      legend: computeLegend(env).rows.map((r) => ({
-        label: r.label,
-        text: r.existing ? `${r.name} (existente)` : r.name,
-        qty: `${formatQty(r.qty)} ${r.unit}`,
-      })),
-      build: (scale) => environmentEntities(env, { scale, basePlanHref: href }),
+      legend: [
+        ...computeLegend(env).rows.map((r) => ({
+          label: r.label,
+          text: r.existing ? `${r.name} (existente)` : r.name,
+          qty: `${formatQty(r.qty)} ${r.unit}`,
+        })),
+        ...floorRows(env).map((r) => ({
+          label: r.label,
+          text: r.name,
+          qty: `${formatQty(r.qty)} ${r.unit}`,
+        })),
+      ],
+      build: (scale) =>
+        environmentEntities(env, { scale, basePlanHref: href, humanized: options.humanized }),
     })
     scales.push(sheet.scale)
     pages.push({

@@ -33,6 +33,17 @@ export function areaEntities(d: AreaDrawing, scale: number): Entity[] {
       vAlign: 'middle',
     },
   ]
+  if (d.floor) {
+    out.push({
+      kind: 'text',
+      at: { x: c.x, y: c.y + gap * 2.6 },
+      text: d.floor.name,
+      size: 1.9,
+      anchor: 'middle',
+      vAlign: 'middle',
+      color: '#59626d',
+    })
+  }
   if (d.name) {
     out.push({
       kind: 'text',

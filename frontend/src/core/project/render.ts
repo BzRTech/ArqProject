@@ -1,5 +1,6 @@
 import type { Entity } from '../drawing/entities'
 import { itemEntities } from './items'
+import { floorEntities } from '../finishes/layout'
 import { areaEntities } from './areas'
 import { environmentMarkers } from './markers'
 import { openingEntities, openingGaps } from './openings'
@@ -55,6 +56,8 @@ export interface EnvironmentRenderOptions {
   scale: number
   /** URL da imagem da planta base (resolvida fora do núcleo). */
   basePlanHref?: string
+  /** Modo humanizado: pisos com cor. */
+  humanized?: boolean
 }
 
 /** Tudo o que o ambiente desenha, na ordem de empilhamento (planta base → itens → paredes → anotações). */
@@ -78,6 +81,14 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
       ],
     })
   }
+  // Pisos por baixo de tudo (móveis e paredes cobrem as juntas).
+  out.push({
+    kind: 'group',
+    role: 'pisos',
+    children: env.drawings.flatMap((d) =>
+      d.kind === 'area' && d.floor ? floorEntities(d.points, d.floor, o.humanized ?? false) : [],
+    ),
+  })
   out.push({ kind: 'group', role: 'itens', children: env.items.flatMap(itemEntities) })
   const walls = env.drawings.filter((d) => d.kind === 'wall')
   const notes = env.drawings.filter((d) => d.kind !== 'wall')

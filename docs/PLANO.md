@@ -274,7 +274,8 @@ São pontos de partida: valide com um marceneiro.
 > numerados e legenda, disciplinas como filtro, área (m²), guia, modo humanizada, preço,
 > fornecedor e aprovação no painel de itens. (Esquadrias como vãos na parede, comprimento digitado e
 > ambiente retangular já entraram; depois, marcadores, legenda, áreas e orçamento no painel.)
-> Próximas entradas de planta: PDF como base e importação de DXF. Falta das Fases 4–5:
+> Próximas entradas de planta: PDF como base e importação de DXF; DWG via LibreDWG (`dwg2dxf`)
+> rodando como programa separado no servidor (GPL-3.0: não linkar nem empacotar no front). Falta das Fases 4–5:
 > disciplinas como filtro, guia e modo humanizada.
 
 

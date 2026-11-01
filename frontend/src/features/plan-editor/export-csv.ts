@@ -1,3 +1,4 @@
+import { floorRows } from '@/core/finishes/budget'
 import { computeLegend, itemTotalCents } from '@/core/project/markers'
 import type { Project } from '@/core/project/schema'
 import { formatCm, formatDecimal } from '@/core/units'
@@ -53,6 +54,25 @@ export function projectItemsCsv(project: Project): string {
         it.existing ? 'sim' : 'não',
         it.approved ? 'sim' : 'não',
         it.notes ?? '',
+      ])
+    }
+    for (const r of floorRows(env)) {
+      total += r.totalCents
+      lines.push([
+        env.name,
+        r.label,
+        r.name,
+        qty(r.qty),
+        r.unit,
+        '',
+        '',
+        '',
+        '',
+        money(r.unitPriceCents),
+        money(r.unitPriceCents === undefined ? undefined : r.totalCents),
+        'não',
+        'não',
+        r.unit === 'm²' ? 'quantidade já com perda' : 'descontadas as portas',
       ])
     }
   }

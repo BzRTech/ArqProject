@@ -11,6 +11,9 @@ export interface UnitsPref {
   item: Extract<LengthUnit, 'cm' | 'mm'>
   setWall: (u: UnitsPref['wall']) => void
   setItem: (u: UnitsPref['item']) => void
+  /** Modo humanizado (pisos com cor), na tela e no PDF. */
+  humanized: boolean
+  setHumanized: (v: boolean) => void
 }
 
 export const useUnits = create<UnitsPref>()(
@@ -20,6 +23,8 @@ export const useUnits = create<UnitsPref>()(
       item: 'cm',
       setWall: (wall) => set({ wall }),
       setItem: (item) => set({ item }),
+      humanized: true,
+      setHumanized: (humanized) => set({ humanized }),
     }),
     { name: 'prancheta.unidades' },
   ),

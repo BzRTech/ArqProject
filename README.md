@@ -18,13 +18,24 @@ git clone https://github.com/BzRTech/ArqProject.git
 cd ArqProject
 git checkout fase-editor-blocos      # (ou main, depois que os PRs forem mesclados)
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
 Abra **http://localhost:5173/editor**. A tela inicial vai mostrar "API: indisponível", o que é
 esperado sem o backend; o editor funciona normalmente. Para parar, use Ctrl+C no terminal.
-Para atualizar depois: `git pull` e `npm install` de novo.
+Para atualizar depois (na pasta `ArqProject`):
+
+```bash
+git pull
+cd frontend
+npm ci
+npm run dev
+```
+
+Use **`npm ci`** (e não `npm install`): ele instala exatamente as versões do projeto e não altera o
+`package-lock.json`. Se um `git pull` reclamar que esse arquivo "would be overwritten", descarte a
+alteração local com `git checkout -- frontend/package-lock.json` e repita o `git pull`.
 
 Sem Git: no GitHub, escolha a branch `fase-editor-blocos` → **Code → Download ZIP**, descompacte
 e rode os mesmos comandos a partir da pasta `frontend`.

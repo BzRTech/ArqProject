@@ -512,18 +512,39 @@ test('quarto + banheiro encostados (parede compartilhada) e edição da parede',
   ])
   expect(st.openings).toBe(1) // a porta continua lá
 
-  // Digitar o comprimento do trecho de cima: 5 m → a parede da direita é empurrada junto
-  await setCm(page, 'wall-seg-0', '5')
-  st = await wallsState()
-  expect(st.walls[0]![1]).toEqual({ x: 4925, y: -75 })
-  expect(st.walls[0]![2]).toEqual({ x: 4925, y: 4375 })
-  // O banheiro, encostado, acompanhou: a parede compartilhada continua uma só
-  expect(st.walls[1]).toEqual([
-    { x: 4925, y: -75 },
+  // Digitar o comprimento do trecho de cima: 5 m. A parede da direita é compartilhada com o
+  // banheiro, então quem anda é a da esquerda: o banheiro NÃO muda.
+  const banheiro = [
+    { x: 4475, y: -75 },
     { x: 6625, y: -75 },
     { x: 6625, y: 2575 },
-    { x: 4925, y: 2575 },
+    { x: 4475, y: 2575 },
+  ]
+  await setCm(page, 'wall-seg-0', '5')
+  st = await wallsState()
+  expect(st.walls[0]).toEqual([
+    { x: -525, y: -75 },
+    { x: 4475, y: -75 },
+    { x: 4475, y: 4375 },
+    { x: -525, y: 4375 },
   ])
+  expect(st.walls[1]).toEqual(banheiro)
+
+  // No banheiro: encurtar o trecho de baixo (o seguinte é o compartilhado) puxa a parede de
+  // fora; o quarto não muda
+  await clickModel(page, 6625, 1200)
+  await expect(page.getByTestId('wall-props')).toBeVisible()
+  await setCm(page, 'wall-seg-2', '1,65')
+  st = await wallsState()
+  expect(st.walls[1]).toEqual([
+    { x: 4475, y: -75 },
+    { x: 6125, y: -75 },
+    { x: 6125, y: 2575 },
+    { x: 4475, y: 2575 },
+  ])
+  expect(st.walls[0]![1]).toEqual({ x: 4475, y: -75 })
+  expect(st.walls[0]![2]).toEqual({ x: 4475, y: 4375 })
+  await clickModel(page, 1000, 4375)
 
   // Duplo clique na parede de baixo cria um canto; duplo clique no canto o remove
   const mid = await modelToPage(page, 1000, 4375)
@@ -536,7 +557,7 @@ test('quarto + banheiro encostados (parede compartilhada) e edição da parede',
   expect(st.walls[0]).toHaveLength(4)
 
   await page.keyboard.press('f')
-  await clickModel(page, -75, 2000)
+  await clickModel(page, -525, 2000)
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('20-parede-editada') })
 })

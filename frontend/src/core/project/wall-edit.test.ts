@@ -179,11 +179,67 @@ describe('edições ligadas (paredes encostadas acompanham)', () => {
     expect(pts(out, 'l')).toEqual(longe.points)
   })
 
-  it('comprimento digitado no quarto empurra também o banheiro', () => {
-    const out = setSegmentLengthLinked([quarto, banheiro], 'q', 0, 5000) // trecho de cima: 4550 → 5000
+  it('comprimento digitado no quarto NÃO mexe no banheiro: cresce pelo lado livre', () => {
+    // trecho de cima: 4550 → 5000. O trecho seguinte (direita) é a parede compartilhada,
+    // então quem anda é o trecho anterior (esquerda).
+    const out = setSegmentLengthLinked([quarto, banheiro], 'q', 0, 5000)
+    expect(pts(out, 'q')).toEqual([
+      vec(-525, -75),
+      vec(4475, -75),
+      vec(4475, 3875),
+      vec(-525, 3875),
+    ])
+    expect(pts(out, 'b')).toEqual(banheiro.points)
+  })
+
+  it('banheiro: encurtar o trecho de baixo puxa a parede de fora, não a compartilhada', () => {
+    // trecho 2 (embaixo, da direita para a esquerda): 2150 → 1650; o seguinte é o compartilhado
+    const out = setSegmentLengthLinked([quarto, banheiro], 'b', 2, 1650)
+    expect(pts(out, 'b')).toEqual([
+      vec(4475, -75),
+      vec(6125, -75),
+      vec(6125, 2575),
+      vec(4475, 2575),
+    ])
+    expect(pts(out, 'q')).toEqual(quarto.points)
+  })
+
+  it('sem paredes compartilhadas, continua empurrando o trecho seguinte', () => {
+    const out = setSegmentLengthLinked([banheiro], 'b', 0, 2500)
+    expect(pts(out, 'b')[1]).toEqual(vec(6975, -75))
+    expect(pts(out, 'b')[0]).toEqual(vec(4475, -75))
+  })
+
+  it('compartilhado dos dois lados: aí não tem jeito, empurra o seguinte (e o vizinho junto)', () => {
+    // um terceiro cômodo encostado à esquerda do quarto
+    const sala: Wall = {
+      id: 's',
+      kind: 'wall',
+      points: [vec(-3075, -75), vec(-75, -75), vec(-75, 3875), vec(-3075, 3875)],
+      closed: true,
+      thicknessMm: 150,
+    }
+    const out = setSegmentLengthLinked([sala, quarto, banheiro], 'q', 0, 5000)
     expect(pts(out, 'q')[1]).toEqual(vec(4925, -75))
     expect(pts(out, 'b')[0]).toEqual(vec(4925, -75))
-    expect(pts(out, 'b')[3]).toEqual(vec(4925, 2575))
+    expect(pts(out, 's')).toEqual(sala.points)
+  })
+
+  it('parede aberta: se a ponta seguinte está ligada a outra parede, anda a outra ponta', () => {
+    const rabicho: Wall = {
+      id: 'r',
+      kind: 'wall',
+      points: [vec(1000, 1000), vec(4475, 1000)], // termina NA parede do quarto (canto no eixo)
+      closed: false,
+      thicknessMm: 150,
+    }
+    const quartoComCanto: Wall = {
+      ...quarto,
+      points: [vec(-75, -75), vec(4475, -75), vec(4475, 1000), vec(4475, 3875), vec(-75, 3875)],
+    }
+    const out = setSegmentLengthLinked([quartoComCanto, rabicho], 'r', 0, 3000)
+    expect(pts(out, 'r')).toEqual([vec(1475, 1000), vec(4475, 1000)])
+    expect(pts(out, 'q')).toEqual(quartoComCanto.points)
   })
 
   it('mover canto leva os cantos coincidentes', () => {

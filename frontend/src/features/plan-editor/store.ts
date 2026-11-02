@@ -1,4 +1,5 @@
 import { current } from 'immer'
+import { COLUMN_DEFAULTS } from '@/core/project/columns'
 import { temporal } from 'zundo'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
@@ -23,7 +24,16 @@ import {
 import { roundMm } from '@/core/units'
 
 export type Tool =
-  'select' | 'wall' | 'room' | 'area' | 'dimension' | 'text' | 'place' | 'opening' | 'calibrate'
+  | 'select'
+  | 'wall'
+  | 'room'
+  | 'area'
+  | 'dimension'
+  | 'text'
+  | 'column'
+  | 'place'
+  | 'opening'
+  | 'calibrate'
 export type Selection = { kind: 'item' | 'drawing' | 'opening'; id: string } | null
 export type SelRef = NonNullable<Selection>
 
@@ -71,6 +81,8 @@ export interface EditorState {
   addWall: (points: Vec2[], closed: boolean) => string
   addDimension: (d: Omit<Extract<Drawing, { kind: 'dimension' }>, 'id' | 'kind'>) => string
   addText: (at: Vec2, text?: string) => string
+  /** Pilar centrado em `at` (continua na ferramenta para inserir outros). */
+  addColumn: (at: Vec2, rotationDeg?: number) => string
   addArea: (points: Vec2[], name?: string) => string
   addChains: (chains: Omit<ChainDrawing, 'id' | 'kind'>[]) => void
   /** Ambiente retangular pelas medidas INTERNAS; `corner` = canto interno superior esquerdo. */
@@ -279,6 +291,20 @@ export const useEditor = create<EditorState>()(
           })
           return id
         },
+        addColumn: (at, rotationDeg = 0) => {
+          const id = newId()
+          set((s) => {
+            env(s).drawings.push({
+              id,
+              kind: 'column',
+              ...COLUMN_DEFAULTS,
+              at: rp(at),
+              rotationDeg: Math.round(rotationDeg * 100) / 100,
+            })
+            setSel(s, { kind: 'drawing', id })
+          })
+          return id
+        },
         addArea: (points, name = '') => {
           const id = newId()
           set((s) => {
@@ -420,6 +446,14 @@ export const useEditor = create<EditorState>()(
           if (sel?.kind === 'opening') {
             const o = env(get()).openings.find((x) => x.id === sel.id)
             if (o) get().updateOpening(sel.id, { side: o.side === 'left' ? 'right' : 'left' })
+            return
+          }
+          if (sel?.kind === 'drawing') {
+            const d = env(get()).drawings.find((x) => x.id === sel.id)
+            if (d?.kind === 'column')
+              get().updateDrawing(d.id, {
+                rotationDeg: (((d.rotationDeg + deg) % 360) + 360) % 360,
+              })
             return
           }
           if (sel?.kind !== 'item') return

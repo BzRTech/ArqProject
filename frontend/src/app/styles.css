@@ -993,6 +993,7 @@ kbd {
 .canvas--dimension,
 .canvas--place,
 .canvas--text,
+.canvas--column,
 .canvas--calibrate {
   cursor: crosshair;
 }

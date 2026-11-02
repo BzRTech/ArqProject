@@ -4,6 +4,7 @@ import { getBlock } from '@/core/blocks/catalog'
 import { dimensionDirection } from '@/core/dimensions/layout'
 import { entitiesBBox } from '@/core/drawing/bounds'
 import type { Entity } from '@/core/drawing/entities'
+import { rightAngleSnap, vertexConstraints, type AngleConstraint } from '@/core/editor/right-angle'
 import { snapPoint, type SnapKind } from '@/core/editor/snap'
 import { expand, isEmpty, rectFromCorners } from '@/core/geometry/bbox'
 import {
@@ -25,6 +26,7 @@ import {
   type Viewport,
 } from '@/core/geometry/viewport'
 import { areaM2Text } from '@/core/project/areas'
+import { columnEntities, columnOutline, COLUMN_DEFAULTS } from '@/core/project/columns'
 import { itemCorners, itemEntities } from '@/core/project/items'
 import { floorEntities } from '@/core/finishes/layout'
 import { environmentMarkers } from '@/core/project/markers'
@@ -67,6 +69,8 @@ import {
   DISPLAY_SCALE,
   dimensionLine,
   refsInRect,
+  columnPlacement,
+  cornerAngleMarks,
   selectedMarkerEntities,
   wallEditGuides,
   hitHandle,
@@ -293,6 +297,19 @@ function SelectionOverlay({ env, sel, px }: { env: Environment; sel: Selection; 
       </g>
     )
   }
+  if (d.kind === 'column') {
+    const o = columnOutline(d)
+    return (
+      <g data-testid="selection">
+        <polygon
+          points={o.map((q) => `${q.x},${q.y}`).join(' ')}
+          {...common}
+          strokeWidth={2 * px}
+          fill="none"
+        />
+      </g>
+    )
+  }
   const b = textBox(d.at, d.text, d.sizeMm)
   return (
     <g data-testid="selection">
@@ -460,7 +477,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     /** Edição de parede: canto (índice) ou trecho (índice + normal). */
     wallEdit?: { wallId: string; index: number; n?: Vec2 }
     /** Arrasto de canto: posição inicial e pontos de snap congelados (sem a própria parede). */
-    vertexSnap?: { from: Vec2; endpoints: Vec2[]; midpoints: Vec2[] }
+    vertexSnap?: { from: Vec2; endpoints: Vec2[]; midpoints: Vec2[]; angle: AngleConstraint[] }
   } | null>(null)
 
   const px = 1 / view.scale // 1 px de tela em mm do modelo
@@ -592,13 +609,16 @@ export function PlanCanvas({ fitSignal }: Props) {
   }, [])
 
   /** Pontos de snap para arrastar um canto: tudo menos a própria parede e o que está no canto. */
-  const vertexSnapFor = (wallId: string, from: Vec2) => {
+  const vertexSnapFor = (wallId: string, from: Vec2, index: number) => {
     const rest = { ...env, drawings: env.drawings.filter((x) => x.id !== wallId) }
     const away = (q: Vec2) => distance(q, from) > 1
+    const w = env.drawings.find((x): x is Wall => x.id === wallId && x.kind === 'wall')
     return {
       from,
       endpoints: snapPoints(rest).filter(away),
       midpoints: snapMidpoints(rest).filter(away),
+      // Auxiliar de ângulo reto: restrições pelos vizinhos (que não se mexem no arrasto)
+      angle: w ? vertexConstraints(w.points, w.closed, index) : [],
     }
   }
 
@@ -709,6 +729,9 @@ export function PlanCanvas({ fitSignal }: Props) {
             case 'w':
               s.setTool('wall')
               break
+            case 'l':
+              s.setTool('column')
+              break
             case 'a':
               s.setTool('room')
               break
@@ -792,7 +815,7 @@ export function PlanCanvas({ fitSignal }: Props) {
             start: p,
             applied: { x: 0, y: 0 },
             wallEdit: { wallId: grip.wallId, index: grip.index },
-            vertexSnap: vertexSnapFor(grip.wallId, grip.at),
+            vertexSnap: vertexSnapFor(grip.wallId, grip.at, grip.index),
           }
           break
         }
@@ -822,7 +845,7 @@ export function PlanCanvas({ fitSignal }: Props) {
                 vi >= 0
                   ? { wallId: selWall.id, index: vi }
                   : { wallId: selWall.id, index: mi!.seg, n: mi!.n },
-              vertexSnap: vi >= 0 ? vertexSnapFor(selWall.id, hh.vertices[vi]!) : undefined,
+              vertexSnap: vi >= 0 ? vertexSnapFor(selWall.id, hh.vertices[vi]!, vi) : undefined,
             }
             break
           }
@@ -930,6 +953,11 @@ export function PlanCanvas({ fitSignal }: Props) {
         }
         break
       }
+      case 'column': {
+        const c = columnPlacement(env, p, 10 * px)
+        s.addColumn(c.at, c.rotationDeg)
+        break
+      }
       case 'text':
         s.addText(snap(p, { grid: GRID_MOVE }).point)
         break
@@ -973,7 +1001,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         x: vs.from.x + Math.round((p.x - d.start.x) / GRID_MOVE) * GRID_MOVE,
         y: vs.from.y + Math.round((p.y - d.start.y) / GRID_MOVE) * GRID_MOVE,
       }
-      const r = e.shiftKey
+      let r: { point: Vec2; kind: SnapKind } = e.shiftKey
         ? { point: { x: Math.round(p.x), y: Math.round(p.y) }, kind: 'free' as const }
         : snapPoint(moved, {
             grid: 0,
@@ -981,6 +1009,11 @@ export function PlanCanvas({ fitSignal }: Props) {
             midpoints: vs.midpoints,
             tolerance: 10 * px,
           })
+      // Sem canto/meio de outra parede por perto: gruda no esquadro (90°) ou no alinhamento.
+      if (!e.shiftKey && r.kind !== 'endpoint' && r.kind !== 'midpoint') {
+        const ra = rightAngleSnap(moved, vs.angle, 10 * px)
+        if (ra) r = { point: ra.point, kind: 'right' }
+      }
       setCursor(r.point)
       setSnapKind(r.kind)
       s.editWalls((ws) => moveVertexLinked(ws, we.wallId, we.index, r.point))
@@ -1045,6 +1078,8 @@ export function PlanCanvas({ fitSignal }: Props) {
       const r = snap(p, { ortho: e.shiftKey ? undefined : dimDraft[0] })
       setCursor(r.point)
       setSnapKind(r.kind)
+    } else if (s.tool === 'column') {
+      setCursor(columnPlacement(env, p, 10 * px).at)
     } else if (s.tool === 'place' || s.tool === 'room') {
       setCursor(snap(p, { grid: s.tool === 'room' ? GRID_DRAW : GRID_MOVE }).point)
       setSnapKind('grid')
@@ -1092,7 +1127,28 @@ export function PlanCanvas({ fitSignal }: Props) {
   const draftEntities = useMemo((): Entity[] => {
     if (editGuide) {
       const w = walls.find((x) => x.id === editGuide.wallId)
-      if (w) return wallEditGuides(w, editGuide, DRAFT)
+      if (w) {
+        const corners =
+          editGuide.vertex !== undefined
+            ? [editGuide.vertex - 1, editGuide.vertex, editGuide.vertex + 1]
+            : [editGuide.segment!, editGuide.segment! + 1]
+        return [
+          ...wallEditGuides(w, editGuide, DRAFT),
+          ...cornerAngleMarks(w, corners, DRAFT, UI.sage),
+        ]
+      }
+    }
+    // Parede selecionada: mostra em graus os cantos fora do esquadro.
+    if (tool === 'select' && selection?.kind === 'drawing') {
+      const w = walls.find((x) => x.id === selection.id)
+      if (w)
+        return cornerAngleMarks(
+          w,
+          w.points.map((_, i) => i),
+          UI.muted,
+          UI.sage,
+          true,
+        )
     }
     if (tool === 'select' && selection?.kind === 'opening') {
       const o = env.openings.find((x) => x.id === selection.id)
@@ -1253,10 +1309,18 @@ export function PlanCanvas({ fitSignal }: Props) {
         ...ITEM_DEFAULTS,
       })
     }
+    if (tool === 'column' && cursor) {
+      const c = columnPlacement(env, cursor, 1)
+      return columnEntities(
+        { id: '_', kind: 'column', ...COLUMN_DEFAULTS, at: c.at, rotationDeg: c.rotationDeg },
+        DRAFT,
+      )
+    }
     return []
   }, [
     tool,
     cursor,
+    env,
     wallDraft,
     dimDraft,
     areaDraft,
@@ -1268,7 +1332,6 @@ export function PlanCanvas({ fitSignal }: Props) {
     openingTarget,
     walls,
     selection,
-    env.openings,
     editGuide,
   ])
 
@@ -1294,6 +1357,8 @@ export function PlanCanvas({ fitSignal }: Props) {
         dimDraft.length
       ] ?? '',
     text: 'Clique para inserir um texto',
+    column:
+      'Clique para inserir o pilar (20 × 20 cm) · num canto ou numa parede ele centraliza e gira junto · Esc termina',
     area: areaDraft.length
       ? `Clique nos cantos · clique no 1º ponto ou Enter fecha · ${areaDraft.length >= 2 && cursor ? areaM2Text({ points: [...areaDraft, cursor] }) : ''}`
       : 'Clique nos cantos da área (snap nas faces das paredes) · Q',
@@ -1496,6 +1561,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         </span>
         {snapKind === 'endpoint' && <span>snap: extremidade</span>}
         {snapKind === 'midpoint' && <span>snap: ponto médio</span>}
+        {snapKind === 'right' && <span data-testid="snap-right">snap: esquadro (90°)</span>}
         {snapKind === 'ortho' && <span>snap: ortogonal</span>}
         {dragDelta && (
           <span className="statusbar__delta" data-testid="drag-delta">

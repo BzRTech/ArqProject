@@ -125,6 +125,13 @@ O visual segue o design system em [`docs/design-system/`](docs/design-system/).
 - **Editar parede:** selecione a parede e arraste os **quadrados** (cantos) ou os **círculos**
   (meio do trecho: empurra a parede). No painel, digite o comprimento de cada trecho. Duplo
   clique na parede cria um canto; duplo clique num canto o remove.
+- **Esquadro (ângulo reto):** ao arrastar um canto, ele gruda nas posições que deixam um ângulo
+  de 90° (no próprio canto ou nos vizinhos) ou alinham com os vizinhos. O canto a 90° ganha o
+  símbolo de ângulo reto; os outros mostram os graus. Com a parede selecionada, os cantos fora do
+  esquadro mostram o ângulo. Shift desliga.
+- **Pilar (L):** clique num canto de parede (entra centrado no canto) ou sobre uma parede (centrado
+  no eixo e alinhado a ela). É desenhado cheio (preto), como estrutura cortada. No painel:
+  retangular ou circular, largura × profundidade (ou diâmetro) e rotação; R gira 90°.
 - **Cômodos encostados** (quarto + banheiro): desenhe cada um com a ferramenta Ambiente, encostado
   no outro. As paredes sobrepostas viram uma só no desenho e no PDF, a porta entre eles corta as
   duas, e mexer na parede compartilhada leva os dois cômodos juntos.

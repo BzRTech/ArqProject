@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v3 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v5 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -99,12 +99,29 @@ export const TextSchema = z.object({
   sizeMm: z.number().positive(),
 })
 
+export const COLUMN_SHAPES = ['rect', 'circle'] as const
+
+/** Pilar (estrutura): desenhado cheio (preto), por cima das paredes. */
+export const ColumnSchema = z.object({
+  id,
+  kind: z.literal('column'),
+  /** Centro. */
+  at: Vec2Schema,
+  shape: z.enum(COLUMN_SHAPES),
+  /** Largura (no circular, o diâmetro). */
+  widthMm: positiveMm,
+  /** Profundidade (ignorada no circular). */
+  depthMm: positiveMm,
+  rotationDeg: z.number(),
+})
+
 export const DrawingSchema = z.discriminatedUnion('kind', [
   WallSchema,
   DimensionSchema,
   ChainSchema,
   TextSchema,
   AreaSchema,
+  ColumnSchema,
 ])
 
 export const DOOR_TYPES = ['porta-abrir', 'porta-correr', 'porta-pivotante'] as const
@@ -204,6 +221,7 @@ export type DimensionDrawing = z.infer<typeof DimensionSchema>
 export type TextDrawing = z.infer<typeof TextSchema>
 export type ChainDrawing = z.infer<typeof ChainSchema>
 export type AreaDrawing = z.infer<typeof AreaSchema>
+export type Column = z.infer<typeof ColumnSchema>
 export type Floor = z.infer<typeof FloorSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>

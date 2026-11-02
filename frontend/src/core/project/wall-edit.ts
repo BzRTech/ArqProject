@@ -180,10 +180,17 @@ export function moveVertexLinked(
   })
 }
 
+/** A edição mexeu em alguma parede além da `wallId`? */
+const touchesOthers = (before: readonly Wall[], after: readonly Wall[], wallId: string) =>
+  after.some((w, i) => w.id !== wallId && w !== before[i])
+
 /**
- * Comprimento de um trecho, com paredes ligadas. Fechada: o trecho seguinte (e o que
- * coincide com ele em outras paredes) é empurrado. Aberta: os cantos seguintes andam, e
- * cantos de outras paredes no mesmo ponto vão junto.
+ * Comprimento de um trecho, com paredes ligadas. Muda pelo lado que NÃO mexe em outros
+ * cômodos: se o trecho seguinte (ou a ponta seguinte, na parede aberta) é compartilhado com
+ * outra parede, quem anda é o trecho anterior (ou a outra ponta). Só quando os dois lados são
+ * compartilhados o vizinho vai junto.
+ * Fechada: o trecho empurrado anda paralelo (um retângulo continua retângulo). Aberta: os
+ * cantos daquele lado andam juntos.
  */
 export function setSegmentLengthLinked(
   walls: readonly Wall[],
@@ -196,11 +203,38 @@ export function setSegmentLengthLinked(
   if (!host || !s || length <= 0) return [...walls]
   const delta = scale(s.dir, length - s.length)
   const p = pts(host)
-  if (host.closed) return translateSegmentLinked(walls, wallId, (seg + 1) % p.length, delta)
-  const moved = p.slice(seg + 1)
+  const n = p.length
+  let forward: Wall[]
+  let backward: Wall[]
+  if (host.closed) {
+    forward = translateSegmentLinked(walls, wallId, (seg + 1) % n, delta)
+    backward = translateSegmentLinked(walls, wallId, (seg - 1 + n) % n, scale(delta, -1))
+  } else {
+    forward = shiftPointsLinked(walls, host, p.slice(seg + 1), seg + 1, n, delta)
+    backward = shiftPointsLinked(walls, host, p.slice(0, seg + 1), 0, seg + 1, scale(delta, -1))
+  }
+  if (!touchesOthers(walls, forward, wallId)) return forward
+  if (!touchesOthers(walls, backward, wallId)) return backward
+  return forward
+}
+
+/** Parede aberta: anda os cantos [from, to) e os cantos de outras paredes no mesmo ponto. */
+function shiftPointsLinked(
+  walls: readonly Wall[],
+  host: Wall,
+  moved: Vec2[],
+  from: number,
+  to: number,
+  d: Vec2,
+): Wall[] {
   return walls.map((w) => {
-    if (w.id === wallId) return setSegmentLength(w, seg, length)
+    if (w.id === host.id)
+      return translateIndices(
+        w,
+        Array.from({ length: to - from }, (_, k) => from + k),
+        d,
+      )
     const idx = pts(w).flatMap((q, i) => (moved.some((m) => distance(m, q) <= LINK_TOL) ? [i] : []))
-    return idx.length ? translateIndices(w, idx, delta) : w
+    return idx.length ? translateIndices(w, idx, d) : w
   })
 }

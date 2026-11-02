@@ -512,18 +512,39 @@ test('quarto + banheiro encostados (parede compartilhada) e edição da parede',
   ])
   expect(st.openings).toBe(1) // a porta continua lá
 
-  // Digitar o comprimento do trecho de cima: 5 m → a parede da direita é empurrada junto
-  await setCm(page, 'wall-seg-0', '5')
-  st = await wallsState()
-  expect(st.walls[0]![1]).toEqual({ x: 4925, y: -75 })
-  expect(st.walls[0]![2]).toEqual({ x: 4925, y: 4375 })
-  // O banheiro, encostado, acompanhou: a parede compartilhada continua uma só
-  expect(st.walls[1]).toEqual([
-    { x: 4925, y: -75 },
+  // Digitar o comprimento do trecho de cima: 5 m. A parede da direita é compartilhada com o
+  // banheiro, então quem anda é a da esquerda: o banheiro NÃO muda.
+  const banheiro = [
+    { x: 4475, y: -75 },
     { x: 6625, y: -75 },
     { x: 6625, y: 2575 },
-    { x: 4925, y: 2575 },
+    { x: 4475, y: 2575 },
+  ]
+  await setCm(page, 'wall-seg-0', '5')
+  st = await wallsState()
+  expect(st.walls[0]).toEqual([
+    { x: -525, y: -75 },
+    { x: 4475, y: -75 },
+    { x: 4475, y: 4375 },
+    { x: -525, y: 4375 },
   ])
+  expect(st.walls[1]).toEqual(banheiro)
+
+  // No banheiro: encurtar o trecho de baixo (o seguinte é o compartilhado) puxa a parede de
+  // fora; o quarto não muda
+  await clickModel(page, 6625, 1200)
+  await expect(page.getByTestId('wall-props')).toBeVisible()
+  await setCm(page, 'wall-seg-2', '1,65')
+  st = await wallsState()
+  expect(st.walls[1]).toEqual([
+    { x: 4475, y: -75 },
+    { x: 6125, y: -75 },
+    { x: 6125, y: 2575 },
+    { x: 4475, y: 2575 },
+  ])
+  expect(st.walls[0]![1]).toEqual({ x: 4475, y: -75 })
+  expect(st.walls[0]![2]).toEqual({ x: 4475, y: 4375 })
+  await clickModel(page, 1000, 4375)
 
   // Duplo clique na parede de baixo cria um canto; duplo clique no canto o remove
   const mid = await modelToPage(page, 1000, 4375)
@@ -536,7 +557,7 @@ test('quarto + banheiro encostados (parede compartilhada) e edição da parede',
   expect(st.walls[0]).toHaveLength(4)
 
   await page.keyboard.press('f')
-  await clickModel(page, -75, 2000)
+  await clickModel(page, -525, 2000)
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('20-parede-editada') })
 })
@@ -755,7 +776,11 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   // ...nem durante o arrasto do canto (era o caso que pintava as cotas de azul)
   expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
   const guides = page.getByTestId('edit-guides')
-  await expect(guides.locator('text')).toHaveCount(2)
+  // 2 cotas + os graus dos 2 cantos que saíram do esquadro
+  await expect(guides.locator('text')).toHaveCount(4)
+  await expect(guides.locator('text', { hasText: '°' })).toHaveCount(2)
+  // canto arrastado: 90° − atan(500/3950) = 82,8°
+  await expect(guides).toContainText('82,8°')
   // Pelo eixo, em cm como as cotas da prancha: de cima 455 + 50; o da esquerda ficou inclinado
   await expect(guides.locator('text').nth(0)).toHaveText('505')
   await expect(guides.locator('text').nth(1)).toHaveText('398,2')
@@ -838,4 +863,83 @@ test('paredes tortas que se cruzam não derrubam a tela (nem ao reabrir o projet
   await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '2')
   await expect(page.getByTestId('error-page')).toHaveCount(0)
   expect(errors).toEqual([])
+})
+
+test('auxiliar de ângulo reto ao arrastar canto, e pilares no canto e na parede', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+  const wallPts = () =>
+    page.evaluate(() => {
+      const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+        project: { environments: { drawings: { kind: string; points?: P[] }[] }[] }
+      }
+      return st.project.environments[0]!.drawings.find((d) => d.kind === 'wall')!.points!
+    })
+  const dragCorner = async (from: P, to: P, check?: () => Promise<void>) => {
+    await moveModel(page, from.x, from.y)
+    await expect(page.getByTestId('hover-grip')).toBeVisible()
+    await page.mouse.down()
+    const b = await modelToPage(page, to.x, to.y)
+    await page.mouse.move(b.x, b.y, { steps: 8 })
+    if (check) await check()
+    await page.mouse.up()
+  }
+
+  // Entorta o canto de cima à direita: fica fora do esquadro
+  await dragCorner({ x: 4475, y: -75 }, { x: 4775, y: 25 })
+  expect((await wallPts())[1]).toEqual({ x: 4775, y: 25 })
+  // Com a parede selecionada, os cantos fora do esquadro mostram os graus
+  await expect(page.getByTestId('draft').locator('text').first()).toContainText('°')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('31-canto-fora-do-esquadro') })
+
+  // Arrastando de volta para PERTO do esquadro, ele trava exatamente em 90°
+  await dragCorner({ x: 4775, y: 25 }, { x: 4492, y: -61 }, async () => {
+    await expect(page.getByTestId('snap-right')).toBeVisible()
+    // símbolo de ângulo reto (sem texto de graus) nos cantos em esquadro
+    await expect(page.getByTestId('edit-guides').locator('polyline').first()).toBeVisible()
+    await page.screenshot({ path: shot('32-auxiliar-angulo-reto') })
+  })
+  expect((await wallPts())[1]).toEqual({ x: 4475, y: -75 })
+  await page.keyboard.press('Escape')
+
+  // Pilar no canto: centrado no canto da parede
+  await page.getByTestId('tool-column').click()
+  await moveModel(page, -70, -80)
+  await clickModel(page, -70, -80)
+  // Pilar na parede de baixo: centrado no eixo
+  await moveModel(page, 2200, 3860)
+  await clickModel(page, 2200, 3860)
+  await page.keyboard.press('Escape')
+  const cols = () =>
+    page.evaluate(() => {
+      const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+        project: { environments: { drawings: Record<string, unknown>[] }[] }
+      }
+      return st.project.environments[0]!.drawings.filter((d) => d.kind === 'column')
+    })
+  let c = await cols()
+  expect(c.map((x) => x.at)).toEqual([
+    { x: -75, y: -75 },
+    { x: 2200, y: 3875 },
+  ])
+  // Selecionar e mudar a seção para 20 × 40, girar com R
+  await clickModel(page, 2200, 3875)
+  await expect(page.getByTestId('column-props')).toBeVisible()
+  await setCm(page, 'column-d', '40')
+  await page.keyboard.press('r')
+  c = await cols()
+  expect(c[1]).toMatchObject({ widthMm: 200, depthMm: 400 })
+  expect(Math.round(Number(c[1]!.rotationDeg)) % 180).toBe(90)
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('33-pilares') })
 })

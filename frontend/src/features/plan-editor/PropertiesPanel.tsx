@@ -18,6 +18,7 @@ import {
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { BudgetFields } from './BudgetFields'
+import { ColumnProps } from './ColumnProps'
 import { importBasePlan } from './base-plan-import'
 import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
@@ -189,10 +190,9 @@ function WallProps({ wall }: { wall: Wall }) {
       <p className="muted small">
         Arraste os <strong>quadrados</strong> (cantos) ou os <strong>círculos</strong> (meio da
         parede, empurra o trecho). Duplo clique na parede cria um canto; duplo clique num canto o
-        remove.
-        {wall.closed
-          ? ' Mudar um trecho empurra o trecho seguinte (o retângulo continua retângulo). Paredes encostadas em outro cômodo acompanham.'
-          : ''}
+        remove. Digitar o comprimento de um trecho muda só este cômodo: anda a parede do lado que
+        não é compartilhado (o retângulo continua retângulo). Para mover uma parede compartilhada
+        junto com o vizinho, arraste o círculo dela.
       </p>
       <p className="muted small">Excluir a parede remove as portas e janelas dela.</p>
     </section>
@@ -377,6 +377,7 @@ function DrawingProps({ d }: { d: Drawing }) {
   const u = useUnits()
   const s = useEditor.getState()
   if (d.kind === 'wall') return <WallProps wall={d} />
+  if (d.kind === 'column') return <ColumnProps d={d} />
   if (d.kind === 'chain') {
     return (
       <section>

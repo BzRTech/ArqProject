@@ -767,6 +767,8 @@ export function PlanCanvas({ fitSignal }: Props) {
     const p = toModel(e)
     const sp = screenPt(e)
     e.currentTarget.setPointerCapture(e.pointerId)
+    // Uma seleção de texto que já existia (p. ex. arrastando no painel) não pode seguir pelo desenho.
+    window.getSelection()?.removeAllRanges()
     if (e.button === 1 || e.button === 2 || spaceDown.current) {
       drag.current = { mode: 'pan', last: sp, start: p, applied: { x: 0, y: 0 } }
       return

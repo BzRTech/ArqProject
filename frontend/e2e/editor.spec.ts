@@ -690,6 +690,8 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   await expect(page.getByTestId('selection-band')).toBeVisible()
   await page.screenshot({ path: shot('27-selecao-cruzamento') })
   await page.mouse.up()
+  // Arrastar não pode marcar os textos (cotas) com a seleção de texto do navegador
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
   const multi = page.getByTestId('multi-selection')
   await expect(multi).toContainText('Paredes: 1')
   await expect(multi).toContainText('Cotas: 1')
@@ -734,6 +736,15 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   await page.keyboard.press('Control+z')
   expect((await drawings()).length).toBe(chains)
 
+  // Arrastar um canto em diagonal (passando pelas cotas) não seleciona texto da página
+  await moveModel(page, -75, -75)
+  await page.mouse.down()
+  const diag = await modelToPage(page, -400, -300)
+  await page.mouse.move(diag.x, diag.y, { steps: 10 })
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
+  await page.mouse.up()
+  await page.keyboard.press('Control+z')
+
   // Arrastar um canto mostra as cotas dos trechos que mudam e o deslocamento
   await moveModel(page, -75, -75)
   await expect(page.getByTestId('hover-grip')).toBeVisible()
@@ -741,6 +752,8 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   const e = await modelToPage(page, -575, -75)
   await page.mouse.move(e.x, e.y, { steps: 6 })
   await expect(page.getByTestId('drag-delta')).toContainText('Δx -0,50')
+  // ...nem durante o arrasto do canto (era o caso que pintava as cotas de azul)
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
   const guides = page.getByTestId('edit-guides')
   await expect(guides.locator('text')).toHaveCount(2)
   // Pelo eixo, em cm como as cotas da prancha: de cima 455 + 50; o da esquerda ficou inclinado

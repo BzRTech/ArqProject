@@ -1,4 +1,5 @@
 import { createBrowserRouter } from 'react-router'
+import ErrorPage from './ErrorPage'
 import HomePage from './HomePage'
 import Layout from './Layout'
 
@@ -7,20 +8,26 @@ export const router = createBrowserRouter([
     path: '/',
     Component: Layout,
     HydrateFallback: () => null,
+    ErrorBoundary: ErrorPage,
     children: [
-      { index: true, Component: HomePage },
+      { index: true, Component: HomePage, ErrorBoundary: ErrorPage },
       {
-        path: 'spikes/svg',
+        path: 'editor',
+        ErrorBoundary: ErrorPage,
         lazy: async () => ({
-          Component: (await import('@/spikes/svg-panzoom/SvgPanZoomSpike')).default,
+          Component: (await import('@/features/plan-editor/EditorPage')).default,
         }),
       },
       {
-        path: 'spikes/pdf',
-        lazy: async () => ({ Component: (await import('@/spikes/pdf/PdfSpike')).default }),
+        path: 'dev/primitivas',
+        ErrorBoundary: ErrorPage,
+        lazy: async () => ({
+          Component: (await import('@/features/dev-primitives/PrimitivesPage')).default,
+        }),
       },
       {
         path: 'spikes/3d',
+        ErrorBoundary: ErrorPage,
         lazy: async () => ({ Component: (await import('@/spikes/three/ThreeSpike')).default }),
       },
     ],

@@ -43,12 +43,39 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
 4. atualizar "Estado atual" abaixo.
 
 ## Estado atual
-- Fase: **0 concluída** (branch `fase-0-fundacao`). Próxima: Fase 1 — núcleo de geometria.
-- Feito na Fase 0:
-  - Monorepo + `docker-compose.yml` (postgres 16, redis 7, SeaweedFS S3, backend, frontend com proxy `/api`).
-  - Django 5.2 LTS: settings `base/dev/test/prod`, custom `User` (login por e-mail) na 1ª migration, DRF, drf-spectacular (`/api/schema/`, `/api/docs/`), django-storages, `/api/health/`, comando `ensure_bucket`.
-  - Front: Vite 8 + React 19 + TS 5.9 strict, ESLint (com regra que proíbe React/three em `src/core`), Prettier, Vitest, Playwright, `gen:api` (openapi-typescript + openapi-fetch).
-  - Spikes em `frontend/src/spikes/` (SVG pan/zoom 2 000 linhas, PDF A3 1:50 vetorial com teste que mede a escala, three.js 10 caixas texturizadas). Código descartável: o que servir migra para `core/` e `render/` na Fase 1.
-- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); `docs/adr/001-pdf.md` (jsPDF + svg2pdf, SVG em mm de papel, TTF embutida); `docs/adr/002-s3-local.md` (SeaweedFS no lugar do MinIO).
+- Etapa atual: **editor com blocos concluído** (branch `fase-editor-blocos`, empilhada sobre `fase-1-nucleo` → `fase-0-fundacao`). Próxima: Fase 2 (contas, organizações, projetos no servidor) e depois Fase 3 (bancos). Ordem ajustada: ver nota no início da seção 5 do PLANO.
+- Fase 0: monorepo + Docker Compose (postgres 16, redis 7, SeaweedFS S3, backend, frontend); Django 5.2 LTS com custom `User` (login por e-mail), DRF, drf-spectacular, `/api/health/`, `ensure_bucket`; front Vite 8 + React 19 + TS 5.9 strict, ESLint, Vitest, Playwright, `gen:api`.
+- Fase 1: núcleo em `frontend/src/core` (units, geometry, drawing/compileView, dimensions com cadeia, sheets), `render/svg` e `render/pdf`; página `/dev/primitivas` (A3 de catálogo). ADR 003.
+- Editor com blocos (`/editor`, `frontend/src/features/plan-editor`):
+  - Núcleo novo: `core/blocks` (expressões sem eval, símbolos paramétricos em JSON, catálogo com 15 blocos — ADR 004), `core/project` (schema zod v1 do documento, itens, paredes com meia-esquadria, calibração da planta base, `environmentEntities`), `core/editor/snap`, `core/sheets/fit` + `plan-sheet` (A3 com escala automática), `drawing/bounds` e `drawing/transform-entities`.
+  - Estado: zustand + immer + zundo (desfazer/refazer; arrasto = 1 passo). Persistência local em IndexedDB (projeto + imagens), autosave.
+  - Ferramentas: selecionar/arrastar, parede (snap em extremidade, ortogonal, grade; fecha no 1º ponto), cota (2 pontos + afastamento), texto, inserir bloco (clique ou arrastar do catálogo); item: L×P em cm, rotação, espelhar, duplicar, excluir; ambientes em abas; importar imagem da planta e calibrar; PDF com uma prancha A3 por ambiente.
+  - Tela usa a mesma compilação do PDF na escala de exibição 1:50 (penas e textos como no papel).
+  - Esquadrias como VÃOS na parede (schema v2 + migração v1→v2): 3 portas e 5 janelas, recorte da parede, deslizar pela parede, inverter lado/dobradiça; "Cotar parede" (cadeia pela face externa com os vãos); comprimento DIGITADO ao desenhar parede; ferramenta "Ambiente" (retângulo pelas medidas internas). Adendo no ADR 004.
+  - A escala da prancha é escolhida montando o desenho em cada escala candidata (as cotas dependem dela).
+  - Legenda e orçamento (schema v3 + migração v2→v3): `core/project/markers.ts` (numeração por grupo de itens iguais; marcenaria M01…; balão arrastável via `markerOffset`), legenda na prancha (`plan-sheet` reserva coluna), dinheiro em CENTAVOS inteiros (`formatBRL`/`parseBRL`), totais do ambiente/projeto, aprovados, planilha CSV pt-BR; áreas (`core/project/areas.ts`, ferramenta Q, "Criar área do ambiente", rótulo arrastável).
+  - Unidades de entrada/exibição por preferência do usuário (`units-pref.ts`, localStorage): paredes m|cm, móveis/esquadrias cm|mm; `formatLength`/`parseLength` (sufixo digitado tem prioridade). Espessura sempre em cm; cotas da prancha em cm.
+  - Autosave: grava no máx. 400 ms após a 1ª mudança (edições seguidas não adiam) e, ao sair da página, cópia síncrona em localStorage (`prancheta.backup`); ao abrir vale a mais recente.
+  - Paredes como UMA figura: `core/project/wall-union.ts` (união de todas as paredes − vãos, via `polygon-clipping`); paredes sobrepostas se fundem e um vão corta as duas.
+  - Edição de parede (`core/project/wall-edit.ts`): mover canto, empurrar trecho, comprimento por trecho, criar/remover canto; versões *Linked* levam trechos/cantos coincidentes de outras paredes; `reattachOpenings` reencaixa esquadrias. Store: `editWall`/`editWalls`. Canvas: alças (quadrado = canto, círculo = meio do trecho), duplo clique cria/remove canto.
+  - Piso (schema v4 + migração v3→v4): `Area.floor` (revestimento copiado do catálogo `core/finishes/catalog.ts`); paginação em `core/finishes/layout.ts` (grade/amarração 1/2 e 1/3, ângulo, início centro/canto, juntas recortadas via `clipSegment`); quantidades em `quantities.ts` (m² com perda arredondado p/ cima; rodapé = perímetro − portas na borda); `finishes/budget.ts` (linhas P1… de piso e rodapé no orçamento/legenda/CSV). Preferência "Humanizado" (cor dos pisos, tela e PDF).
+  - Interação estilo CAD: cursor em cruz (`CadCursor`, preferência `cadCursor`), snap de PONTO MÉDIO (`SnapOptions.midpoints`, triângulo), cantos de qualquer parede arrastáveis direto (grip; arrasto pelo deslocamento com snap congelado no início), esquadrias grudam no centro do trecho (`segmentCenterOffset`) com guias (`openingGuides`: marca de centro + cotas livres até as faces, `openingClearances`).
+  - Seleção múltipla: `selected: SelRef[]` no store (`selection` = o único selecionado ou null; `setSel` mantém os dois em sincronia), `selectMany`/`toggleSelect`; mover/excluir agem no grupo (um passo de desfazer). Área de seleção arrastando no vazio: esq.→dir. = janela (inteiro dentro, `shapeInRect` em `core/geometry/bbox.ts`), dir.→esq. = cruzamento (tocou, pegou); Shift soma/alterna, Ctrl+A tudo, Espaço+arrastar move a vista. Painel `MultiSelectionProps` (contagem por tipo, "Manter só", excluir).
+  - Medidas ao editar parede: `wallEditGuides` (feature `geometry.ts`) desenha cotas provisórias dos trechos que mudam ao arrastar canto/empurrar trecho; rodapé mostra o deslocamento (Δ).
+  - **Design system v1.0** (`docs/design-system/`, exportado do Claude Design):
+    - tokens em `frontend/src/app/tokens.css`; fontes self-hosted via `@fontsource` (Instrument Serif nos títulos, Montserrat na interface, Geist Mono nas medidas); ícones `lucide-react` (traço 1,5);
+    - argila (`--clay`) só para seleção e foco; sálvia para cruzamento e alinhado; grafite para a ação principal;
+    - cores da interface SOBRE o desenho em `features/plan-editor/theme.ts` (atributos SVG não aceitam `var()`); o desenho técnico e o PDF não mudam;
+    - layout do editor: Importar planta e Baixar PDF na barra superior (portal `app/topbar-slot.ts`); barra de ferramentas flutuante no rodapé do palco (só ícones; a ativa mostra o rótulo); opções da vista flutuando no topo; rodapé com atalhos (`kbd`) e zoom (100% = 1:50 em tamanho real); "Enquadrar" evita as faixas flutuantes (`FLOAT_TOP`/`FLOAT_BOTTOM`);
+    - controles em `app/ui/` (`Switch`, `Segmented`); avisos em toast; balão do item selecionado em argila (só na tela);
+    - prints em `docs/prints/design-system/`.
+  - DWG: via LibreDWG (`dwg2dxf`) como programa SEPARADO no servidor (GPL-3.0 — não linkar no app nem empacotar no front); depois da Fase 2, junto da importação de DXF.
+  - Prints em `docs/prints/editor/`.
+- Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).
 - Versões fixadas por compatibilidade: TypeScript 5.9 (typescript-eslint e openapi-typescript ainda não suportam TS 6+/7); `@playwright/test` 1.63.0.
-- Pendências: aguardando material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ver ADR 002).
+- Testar sem Docker: `cd frontend && npm ci && npm run dev` (usar `npm ci` para não alterar o lockfile) → `/editor` (Node ≥ 22.12; ver README).
+- Pendências: material adicional do usuário em `docs/material/`; URL pública do S3 para upload pré-assinado (Fase 2, ADR 002); `DimStyle` do `SheetTemplate` (Fase 6); itens pendentes das Fases 4–5 listados na nota da seção 5 do PLANO.
+- Dica de dev: depois de instalar dependências novas no front, reinicie o container `frontend` (o `npm ci` roda só na subida). Em dev, `window.__editor` expõe o store do editor (depuração).
+- Lição: o `polygon-clipping` lança "Unable to complete output ring" com pontos quase iguais (ponto flutuante). `wallsShape` arredonda para 0,01 mm antes da união (resolve 100% num fuzz de 4000 plantas), tenta grades mais grossas e, em último caso, desenha as paredes separadas — nunca lança. Teste em `wall-union.robust.test.ts` + e2e. Todas as rotas têm `ErrorBoundary` (`app/ErrorPage.tsx`: recarregar + baixar o projeto em .json).
+- Lição: o palco do editor tem `user-select: none` (e o pointerdown limpa a seleção de texto); sem isso, arrastar canto/área pinta as cotas de azul como texto de página. Há teste e2e (arrasto em diagonal sobre as cotas).
+- Lição: substituições de texto em scripts devem falhar se não casarem (um `replace` silencioso deixou o PDF sem as esquadrias; há teste de regressão).

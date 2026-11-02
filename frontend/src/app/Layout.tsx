@@ -1,27 +1,34 @@
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
+import { TopbarSlotContext } from './topbar-slot'
 
 const links = [
   { to: '/', label: 'Início', end: true },
-  { to: '/spikes/svg', label: 'Pan/zoom SVG' },
-  { to: '/spikes/pdf', label: 'PDF A3' },
-  { to: '/spikes/3d', label: '3D' },
+  { to: '/editor', label: 'Editor' },
+  { to: '/dev/primitivas', label: 'Primitivas' },
+  { to: '/spikes/3d', label: '3D', tag: 'beta' },
 ]
 
 export default function Layout() {
+  const [slot, setSlot] = useState<HTMLElement | null>(null)
   return (
     <div className="shell">
-      <nav className="topbar">
-        <span className="brand">
-          <img src="/favicon.svg" alt="" width={22} height={22} /> Prancheta
-        </span>
-        {links.map((l) => (
-          <NavLink key={l.to} to={l.to} end={l.end}>
-            {l.label}
-          </NavLink>
-        ))}
-      </nav>
+      <header className="topbar">
+        <span className="brand">Prancheta</span>
+        <nav>
+          {links.map((l) => (
+            <NavLink key={l.to} to={l.to} end={l.end}>
+              {l.label}
+              {l.tag && <span className="tag">{l.tag}</span>}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="topbar__actions" ref={setSlot} />
+      </header>
       <main className="content">
-        <Outlet />
+        <TopbarSlotContext.Provider value={slot}>
+          <Outlet />
+        </TopbarSlotContext.Provider>
       </main>
     </div>
   )

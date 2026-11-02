@@ -142,8 +142,13 @@ O visual segue o design system em [`docs/design-system/`](docs/design-system/).
   porta abre. A parede é recortada. Arraste para deslizar a peça, use R para abrir para o
   outro lado e M para inverter a dobradiça. Há 3 tipos de porta e 5 de janela na seção
   "Esquadrias" do catálogo.
-- **Cotar parede:** com a parede selecionada, gera as cotas em cadeia pela face externa, com
-  os vãos.
+- **Cotar parede:** com a parede selecionada, gera por fora as cotas em cadeia (com os vãos de
+  portas e janelas) e por dentro a **área útil** (de face a face). Elas **acompanham a parede**:
+  mudou a parede, mudou a cota. Dá para afastar ou apagar cada uma.
+- **Cotar posição dos móveis:** no painel do móvel, "Cotar posição" mostra a folga de cada lado
+  até a parede (só os lados que não estão encostados). No painel do ambiente, "Cotar todos os
+  móveis". As cotas acompanham o móvel quando ele anda.
+- **Tapetes** (Estar: retangular e redondo) ficam sempre por baixo dos outros móveis.
 - **Marcadores e legenda:** cada item ganha um balão numerado (marcenaria usa M01, M02…).
   Itens iguais dividem o número e somam a quantidade. Arraste o balão para tirá-lo de cima do
   desenho. A legenda sai na prancha do PDF.

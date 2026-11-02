@@ -1,5 +1,6 @@
 import { current } from 'immer'
 import { COLUMN_DEFAULTS } from '@/core/project/columns'
+import { createItemDims, createWallDims, syncLinkedDims } from '@/core/project/linked-dims'
 import { temporal } from 'zundo'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
@@ -85,6 +86,10 @@ export interface EditorState {
   addColumn: (at: Vec2, rotationDeg?: number) => string
   addArea: (points: Vec2[], name?: string) => string
   addChains: (chains: Omit<ChainDrawing, 'id' | 'kind'>[]) => void
+  /** Cotas ligadas da parede: externas com os vãos + medidas internas (substitui as antigas). */
+  addWallDims: (wallId: string) => void
+  /** Cotas ligadas da posição dos móveis até as paredes (substitui as antigas). */
+  addItemDims: (itemIds: string[]) => void
   /** Ambiente retangular pelas medidas INTERNAS; `corner` = canto interno superior esquerdo. */
   addRoom: (corner: Vec2) => string
   addOpening: (o: Omit<Opening, 'id' | 'widthMm' | 'heightMm' | 'sillMm' | 'hinge'>) => string
@@ -122,7 +127,16 @@ function setSel(s: { selection: Selection; selected: SelRef[] }, sel: Selection)
 
 export const useEditor = create<EditorState>()(
   temporal(
-    immer((set, get) => {
+    immer((rawSet, get) => {
+      /** Toda mudança recalcula as cotas ligadas no MESMO passo (desfazer volta tudo junto). */
+      const set = (fn: (s: EditorState) => void) =>
+        rawSet((s) => {
+          fn(s)
+          for (const e of s.project.environments) {
+            const next = syncLinkedDims(e)
+            if (next !== e.drawings) e.drawings = next
+          }
+        })
       const env = (s: EditorState): Environment =>
         s.project.environments.find((e) => e.id === s.activeEnvId) ?? s.project.environments[0]!
 
@@ -314,6 +328,29 @@ export const useEditor = create<EditorState>()(
           })
           return id
         },
+        addWallDims: (wallId) =>
+          set((s) => {
+            const e = env(s)
+            e.drawings = e.drawings.filter(
+              (d) =>
+                !(
+                  (d.kind === 'chain' || d.kind === 'dimension') &&
+                  d.ref &&
+                  d.ref.kind !== 'item' &&
+                  d.ref.wallId === wallId
+                ),
+            )
+            e.drawings.push(...createWallDims(e, wallId, newId))
+          }),
+        addItemDims: (itemIds) =>
+          set((s) => {
+            const e = env(s)
+            const ids = new Set(itemIds)
+            e.drawings = e.drawings.filter(
+              (d) => !(d.kind === 'dimension' && d.ref?.kind === 'item' && ids.has(d.ref.itemId)),
+            )
+            for (const id of itemIds) e.drawings.push(...createItemDims(e, id, newId))
+          }),
         addChains: (chains) =>
           set((s) => {
             for (const c of chains) {

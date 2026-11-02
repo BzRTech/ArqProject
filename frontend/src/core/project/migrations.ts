@@ -39,6 +39,8 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   3: (p) => ({ ...p, schemaVersion: 4 }),
   // v4 → v5: pilares (novo tipo de desenho; nada a converter).
   4: (p) => ({ ...p, schemaVersion: 5 }),
+  // v5 → v6: cotas ligadas (`ref` opcional nas cotas; nada a converter).
+  5: (p) => ({ ...p, schemaVersion: 6 }),
 }
 
 export class MigrationError extends Error {}

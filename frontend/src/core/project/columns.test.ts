@@ -114,7 +114,7 @@ describe('pilar', () => {
     expect(pillar[0]!.closed).toBe(true)
   })
 
-  it('documento v4 migra para v5 sem mudar nada', () => {
+  it('documento v4 migra para a versão atual sem mudar nada', () => {
     const v4 = {
       schemaVersion: 4,
       name: 'P',
@@ -132,6 +132,6 @@ describe('pilar', () => {
     }
     const p = migrateProject(v4)
     expect(p.schemaVersion).toBe(SCHEMA_VERSION)
-    expect(p.schemaVersion).toBe(5)
+    expect(p.schemaVersion).toBeGreaterThanOrEqual(5)
   })
 })

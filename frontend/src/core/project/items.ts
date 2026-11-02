@@ -33,3 +33,9 @@ export function itemEntities(item: Item): Entity[] {
   const shift = { translate: vec(-w / 2, -d / 2), rotationDeg: 0, mirrorX: false }
   return local.map((e) => placeEntity(placeEntity(e, shift), pl))
 }
+
+/** Ordem de desenho: tapetes (blocos `underlay`) primeiro, depois o resto, mantendo a ordem. */
+export function itemsInDrawOrder<T extends Pick<Item, 'blockId'>>(items: readonly T[]): T[] {
+  const under = (it: T) => !!getBlock(it.blockId).underlay
+  return [...items.filter(under), ...items.filter((it) => !under(it))]
+}

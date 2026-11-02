@@ -27,7 +27,7 @@ import {
 } from '@/core/geometry/viewport'
 import { areaM2Text } from '@/core/project/areas'
 import { columnEntities, columnOutline, COLUMN_DEFAULTS } from '@/core/project/columns'
-import { itemCorners, itemEntities } from '@/core/project/items'
+import { itemCorners, itemEntities, itemsInDrawOrder } from '@/core/project/items'
 import { floorEntities } from '@/core/finishes/layout'
 import { environmentMarkers } from '@/core/project/markers'
 import {
@@ -1445,7 +1445,7 @@ export function PlanCanvas({ fitSignal }: Props) {
             <Compiled entities={floors} role="pisos" />
           </g>
           <g data-testid="items">
-            {env.items.map((it) => (
+            {itemsInDrawOrder(env.items).map((it) => (
               <ItemView key={it.id} item={it} />
             ))}
           </g>

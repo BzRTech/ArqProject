@@ -45,6 +45,50 @@ function openingCut(w: Wall, o: Opening): Polygon | null {
   ]
 }
 
+/**
+ * Grades (divisões por mm) em que as coordenadas são arredondadas antes da união, da mais fina
+ * para a mais grossa. O polygon-clipping falha ("Unable to complete output ring") com pontos
+ * QUASE iguais vindos de contas em ponto flutuante (-599,99999… e -600): no mesmo ponto da
+ * grade eles viram um só. Se ainda falhar, tenta a grade seguinte.
+ */
+const SNAP_GRIDS = [100, 10, 1] as const
+
+const snapPoly = (poly: Polygon, perMm: number): Polygon =>
+  poly.map((ring) =>
+    ring.map(
+      ([x, y]) =>
+        [Math.round(x * perMm) / perMm, Math.round(y * perMm) / perMm] as [number, number],
+    ),
+  )
+
+function combine(solids: Polygon[], cuts: Polygon[], perMm: number): MultiPolygon {
+  const [first, ...rest] = solids.map((p) => snapPoly(p, perMm))
+  const merged = polygonClipping.union(first!, ...rest)
+  return cuts.length
+    ? polygonClipping.difference(merged, ...cuts.map((c) => snapPoly(c, perMm)))
+    : merged
+}
+
+/** Último recurso: cada parede com os seus vãos, sem fundir com as outras (nunca lança). */
+function separateWalls(walls: readonly Wall[], openings: readonly Opening[]): MultiPolygon {
+  return walls.flatMap((w) => {
+    const solid = wallSolid(w)
+    if (!solid.length) return []
+    const cuts = openings.flatMap((o) => {
+      const c = o.wallId === w.id ? openingCut(w, o) : null
+      return c ? [c] : []
+    })
+    for (const perMm of SNAP_GRIDS) {
+      try {
+        return combine(solid, cuts, perMm)
+      } catch {
+        // tenta a próxima grade
+      }
+    }
+    return solid
+  })
+}
+
 export function wallsShape(walls: readonly Wall[], openings: readonly Opening[]): MultiPolygon {
   const solids = walls.flatMap(wallSolid)
   if (!solids.length) return []
@@ -54,9 +98,14 @@ export function wallsShape(walls: readonly Wall[], openings: readonly Opening[])
     const c = w && openingCut(w, o)
     return c ? [c] : []
   })
-  const [first, ...rest] = solids
-  const merged = polygonClipping.union(first!, ...rest)
-  return cuts.length ? polygonClipping.difference(merged, ...cuts) : merged
+  for (const perMm of SNAP_GRIDS) {
+    try {
+      return combine(solids, cuts, perMm)
+    } catch {
+      // tenta a próxima grade
+    }
+  }
+  return separateWalls(walls, openings)
 }
 
 /** Hachura + contornos da figura das paredes. */

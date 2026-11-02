@@ -764,3 +764,78 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   await expect(page.getByTestId('edit-guides')).toHaveCount(0)
   await expect(page.getByTestId('drag-delta')).toHaveCount(0)
 })
+
+test('paredes tortas que se cruzam não derrubam a tela (nem ao reabrir o projeto salvo)', async ({
+  page,
+}) => {
+  await freshEditor(page)
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  // Caso real que fazia o polygon-clipping lançar "Unable to complete output ring"
+  await page.evaluate(() => {
+    type St = {
+      project: { environments: Record<string, unknown>[] }
+      loadProject: (p: unknown) => void
+    }
+    const ed = (window as unknown as { __editor: { getState: () => St } }).__editor
+    const st = ed.getState()
+    const wall = (id: string, pts: number[][], t: number) => ({
+      id,
+      kind: 'wall',
+      points: pts.map(([x, y]) => ({ x, y })),
+      closed: true,
+      thicknessMm: t,
+    })
+    const door = (id: string, wallId: string, segment: number, offsetMm: number, w: number) => ({
+      id,
+      wallId,
+      segment,
+      offsetMm,
+      widthMm: w,
+      heightMm: 2100,
+      sillMm: 0,
+      type: 'porta-abrir',
+      hinge: 'start',
+      side: 'left',
+    })
+    const env = {
+      ...st.project.environments[0],
+      drawings: [
+        wall(
+          'w0',
+          [
+            [1511, 498],
+            [4177, 498],
+            [3642, 2271],
+            [1511, 2127],
+          ],
+          200,
+        ),
+        wall(
+          'w1',
+          [
+            [503, -430],
+            [4862, -861],
+            [5240, 4223],
+            [503, 4223],
+          ],
+          200,
+        ),
+      ],
+      openings: [
+        door('a', 'w0', 2, 1494, 907),
+        door('b', 'w0', 3, 641, 857),
+        door('c', 'w1', 1, 643, 807),
+        door('d', 'w1', 1, 1381, 1082),
+        door('e', 'w1', 2, 1307, 731),
+      ],
+    }
+    st.loadProject({ ...st.project, environments: [env] })
+  })
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '2')
+  await expect(page.getByTestId('save-status')).toContainText('Salvo')
+  await page.reload()
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '2')
+  await expect(page.getByTestId('error-page')).toHaveCount(0)
+  expect(errors).toEqual([])
+})

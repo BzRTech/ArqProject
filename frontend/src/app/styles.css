@@ -1001,6 +1001,10 @@ kbd {
 .canvas.canvas--cad:active {
   cursor: none;
 }
+.canvas.canvas--panning,
+.canvas.canvas--panning:active {
+  cursor: grabbing;
+}
 .statusbar {
   display: flex;
   align-items: center;

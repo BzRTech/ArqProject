@@ -1022,3 +1022,37 @@ test('cotas ligadas: parede (externa + área útil) e posição dos móveis acom
   await page.mouse.move(10, 10)
   await page.screenshot({ path: shot('35-cotas-ligadas') })
 })
+
+test('botão do meio (scroll) arrasta a vista, sem a rolagem automática do navegador', async ({
+  page,
+}) => {
+  await freshEditor(page)
+  const canvas = page.getByTestId('plan-canvas')
+  // No Windows, apertar o botão do meio liga a "rolagem automática" do Chrome/Edge, que toma
+  // conta do mouse: o desenho precisa cancelar essa ação padrão (mousedown e auxclick).
+  const prevented = await canvas.evaluate((el) => {
+    const ev = (type: string) => {
+      const e = new MouseEvent(type, { button: 1, buttons: 4, bubbles: true, cancelable: true })
+      el.dispatchEvent(e)
+      return e.defaultPrevented
+    }
+    return { mousedown: ev('mousedown'), auxclick: ev('auxclick') }
+  })
+  expect(prevented).toEqual({ mousedown: true, auxclick: true })
+
+  // E o arrasto com o botão do meio move a vista (em qualquer ferramenta)
+  await page.getByTestId('tool-wall').click()
+  const before = (await canvas.getAttribute('data-view'))!.split(' ').map(Number)
+  const box = (await canvas.boundingBox())!
+  await page.mouse.move(box.x + 300, box.y + 300)
+  await page.mouse.down({ button: 'middle' })
+  await expect(canvas).toHaveClass(/canvas--panning/)
+  await page.mouse.move(box.x + 420, box.y + 360, { steps: 6 })
+  await page.mouse.up({ button: 'middle' })
+  const after = (await canvas.getAttribute('data-view'))!.split(' ').map(Number)
+  expect(after[1]! - before[1]!).toBeCloseTo(120, 0)
+  expect(after[2]! - before[2]!).toBeCloseTo(60, 0)
+  await expect(canvas).not.toHaveClass(/canvas--panning/)
+  // nenhuma parede foi começada pelo arrasto
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '0')
+})

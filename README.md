@@ -174,6 +174,8 @@ O visual segue o design system em [`docs/design-system/`](docs/design-system/).
 - **Medidas ao arrastar canto/parede:** aparecem cotas provisórias (em cm, pelo eixo) dos trechos
   que estão mudando, e o rodapé mostra o deslocamento (Δx/Δy). Para um valor exato, digite no
   painel "Trechos".
+- **Mover a vista:** arraste com o **botão do meio** (a rodinha), como no LibreCAD, ou com o
+  botão direito, ou segurando **Espaço**. A rodinha girando dá o zoom.
 - **Edição:** R gira, M espelha, Ctrl+D duplica, Del exclui, Ctrl+Z / Ctrl+Shift+Z desfaz e
   refaz, F enquadra.
 - **Importar planta:** carregue uma imagem (botão na barra superior, ou arraste-a até o quadro

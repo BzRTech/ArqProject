@@ -1,6 +1,6 @@
 import { columnEntities } from './columns'
 import type { Entity } from '../drawing/entities'
-import { itemEntities } from './items'
+import { itemEntities, itemsInDrawOrder } from './items'
 import { floorEntities } from '../finishes/layout'
 import { areaEntities } from './areas'
 import { environmentMarkers } from './markers'
@@ -92,7 +92,11 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
       d.kind === 'area' && d.floor ? floorEntities(d.points, d.floor, o.humanized ?? false) : [],
     ),
   })
-  out.push({ kind: 'group', role: 'itens', children: env.items.flatMap(itemEntities) })
+  out.push({
+    kind: 'group',
+    role: 'itens',
+    children: itemsInDrawOrder(env.items).flatMap(itemEntities),
+  })
   const walls = env.drawings.filter((d) => d.kind === 'wall')
   const notes = env.drawings.filter((d) => d.kind !== 'wall')
   // Paredes como UMA figura (união menos vãos) + símbolos das esquadrias.

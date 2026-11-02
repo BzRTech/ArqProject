@@ -3,7 +3,6 @@ import { useState } from 'react'
 import { getBlock } from '@/core/blocks/catalog'
 import { distance } from '@/core/geometry/vec'
 import { areaM2Text, areaPerimeterMm, innerFacePolygon } from '@/core/project/areas'
-import { wallChainDimensions } from '@/core/project/auto-dims'
 import { computeLegend } from '@/core/project/markers'
 import { calibrateBasePlan } from '@/core/project/base-plan'
 import { setSegmentLengthLinked } from '@/core/project/wall-edit'
@@ -90,6 +89,14 @@ function ItemProps({ item }: { item: Item }) {
         </button>
       </div>
       <div className="button-row">
+        <button
+          type="button"
+          onClick={() => s.addItemDims([item.id])}
+          title="Distância de cada lado do móvel até a parede; acompanha quando o móvel anda"
+          data-testid="item-dims"
+        >
+          Cotar posição
+        </button>
         <button type="button" onClick={() => s.duplicateSelection()} title="Ctrl+D">
           Duplicar
         </button>
@@ -149,8 +156,8 @@ function WallProps({ wall }: { wall: Wall }) {
         <button
           type="button"
           data-testid="auto-dims"
-          title="Uma cota em cadeia por trecho, pela face externa, com portas e janelas"
-          onClick={() => s.addChains(wallChainDimensions(wall, env.openings))}
+          title="Por fora: uma cota em cadeia por trecho, com portas e janelas. Por dentro: a medida útil (de face a face). As cotas acompanham a parede quando ela muda."
+          onClick={() => s.addWallDims(wall.id)}
         >
           Cotar parede
         </button>

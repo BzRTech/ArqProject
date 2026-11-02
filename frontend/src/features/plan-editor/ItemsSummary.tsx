@@ -1,4 +1,4 @@
-import { Sheet } from 'lucide-react'
+import { Ruler, Sheet } from 'lucide-react'
 import { floorRows, floorTotalCents } from '@/core/finishes/budget'
 import { budgetSummary, computeLegend } from '@/core/project/markers'
 import type { Environment } from '@/core/project/schema'
@@ -136,6 +136,17 @@ export function ItemsSummary({ env }: { env: Environment }) {
             </dd>
           </dl>
         </>
+      )}
+      {env.items.length > 0 && (
+        <button
+          type="button"
+          onClick={() => useEditor.getState().addItemDims(env.items.map((it) => it.id))}
+          title="Distância de cada móvel até as paredes; as cotas acompanham os móveis"
+          data-testid="all-item-dims"
+        >
+          <Ruler size={15} strokeWidth={1.5} />
+          Cotar todos os móveis
+        </button>
       )}
       <button
         type="button"

@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v5 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v6 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -23,9 +23,23 @@ export const WallSchema = z.object({
   thicknessMm: positiveMm,
 })
 
+/**
+ * Cota LIGADA: lembra o que mede e se recalcula quando a parede ou o móvel mudam
+ * (`linked-dims.ts`). Sem `ref`, a cota é livre.
+ */
+export const DimRefSchema = z.discriminatedUnion('kind', [
+  /** Trecho da parede pela face externa, com os vãos (cota em cadeia). */
+  z.object({ kind: z.literal('wall-outer'), wallId: z.string(), segment: z.number().int() }),
+  /** Medida interna (área útil) do trecho, de face a face. */
+  z.object({ kind: z.literal('wall-inner'), wallId: z.string(), segment: z.number().int() }),
+  /** Distância de um lado do móvel até a parede mais próxima naquela direção. */
+  z.object({ kind: z.literal('item'), itemId: z.string(), side: z.number().int().min(0).max(3) }),
+])
+
 export const DimensionSchema = z.object({
   id,
   kind: z.literal('dimension'),
+  ref: DimRefSchema.optional(),
   p1: Vec2Schema,
   p2: Vec2Schema,
   orientation: z.enum(['aligned', 'horizontal', 'vertical']),
@@ -37,6 +51,7 @@ export const DimensionSchema = z.object({
 export const ChainSchema = z.object({
   id,
   kind: z.literal('chain'),
+  ref: DimRefSchema.optional(),
   points: z.array(Vec2Schema).min(2),
   orientation: z.enum(['aligned', 'horizontal', 'vertical']),
   offsetMm: mm,
@@ -222,6 +237,7 @@ export type TextDrawing = z.infer<typeof TextSchema>
 export type ChainDrawing = z.infer<typeof ChainSchema>
 export type AreaDrawing = z.infer<typeof AreaSchema>
 export type Column = z.infer<typeof ColumnSchema>
+export type DimRef = z.infer<typeof DimRefSchema>
 export type Floor = z.infer<typeof FloorSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>

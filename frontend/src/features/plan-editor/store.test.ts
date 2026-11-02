@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ProjectSchema, newProject } from '@/core/project/schema'
+import { setSegmentLengthLinked } from '@/core/project/wall-edit'
 import { clearHistory, redo, selectActiveEnv, undo, useEditor } from './store'
 
 const S = () => useEditor.getState()
@@ -280,5 +281,44 @@ describe('editor — seleção múltipla', () => {
     expect(env().drawings).toHaveLength(0)
     expect(env().openings).toHaveLength(0)
     expect(env().items).toHaveLength(0)
+  })
+})
+
+describe('editor — cotas ligadas', () => {
+  it('Cotar parede cria externas + área útil que acompanham a parede; desfazer volta tudo junto', () => {
+    const w = S().addRoom({ x: 0, y: 0 })
+    S().addWallDims(w)
+    const dims = () => env().drawings.filter((d) => d.kind === 'chain' || d.kind === 'dimension')
+    expect(dims().filter((d) => d.kind === 'chain')).toHaveLength(4)
+    expect(dims().filter((d) => d.kind === 'dimension')).toHaveLength(2)
+    const inner = () =>
+      dims().find(
+        (d) => d.kind === 'dimension' && d.ref?.kind === 'wall-inner' && d.ref.segment === 0,
+      )
+    const before = JSON.stringify(inner())
+    S().editWalls((ws) => setSegmentLengthLinked(ws, w, 0, 5000))
+    expect(JSON.stringify(inner())).not.toBe(before)
+    undo()
+    expect(JSON.stringify(inner())).toBe(before)
+    // cotar de novo não duplica
+    S().addWallDims(w)
+    expect(dims()).toHaveLength(6)
+  })
+
+  it('Cotar posição do móvel; mover o móvel move as cotas; apagar o móvel apaga as cotas', () => {
+    const w = S().addRoom({ x: 0, y: 0 })
+    const ww = env().drawings.find((d) => d.id === w)!
+    expect(ww.kind).toBe('wall')
+    const it = S().addItem('criado-mudo', { x: 1000, y: 1000 })
+    S().addItemDims([it])
+    const itemDims = () =>
+      env().drawings.filter((d) => d.kind === 'dimension' && d.ref?.kind === 'item')
+    expect(itemDims()).toHaveLength(4)
+    const snap = JSON.stringify(itemDims())
+    S().select({ kind: 'item', id: it })
+    S().moveSelection(100, 0)
+    expect(JSON.stringify(itemDims())).not.toBe(snap)
+    S().deleteSelection()
+    expect(itemDims()).toHaveLength(0)
   })
 })

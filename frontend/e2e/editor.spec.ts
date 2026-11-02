@@ -700,9 +700,12 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
     })
   const before = await drawings()
   const chains = before.filter((k) => k === 'chain').length
-  expect(chains).toBeGreaterThan(1)
+  const inner = before.filter((k) => k === 'dimension').length
+  expect(chains).toBe(4) // por fora, uma cadeia por trecho
+  expect(inner).toBe(2) // por dentro, largura e profundidade úteis
 
-  // Cruzamento (da direita para a esquerda) sobre a parede de cima: pega parede + cota de cima
+  // Cruzamento (da direita para a esquerda) sobre a parede de cima: pega a parede, a cota de
+  // fora e a cota interna de cima (que começa na face da parede)
   const a = await modelToPage(page, 3000, -900)
   const b = await modelToPage(page, 1500, 100)
   await page.mouse.move(a.x, a.y)
@@ -715,13 +718,14 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
   const multi = page.getByTestId('multi-selection')
   await expect(multi).toContainText('Paredes: 1')
-  await expect(multi).toContainText('Cotas: 1')
+  await expect(multi).toContainText('Cotas: 2')
   await page.screenshot({ path: shot('28-varios-selecionados') })
-  await multi.getByRole('button', { name: 'Cotas (1)' }).click()
+  await multi.getByRole('button', { name: 'Cotas (2)' }).click()
   await page.keyboard.press('Delete')
   let after = await drawings()
   expect(after.filter((k) => k === 'wall')).toHaveLength(1) // a parede ficou
   expect(after.filter((k) => k === 'chain')).toHaveLength(chains - 1)
+  expect(after.filter((k) => k === 'dimension')).toHaveLength(inner - 1)
 
   // Janela (da esquerda para a direita) que corta a parede: só pega o que está inteiro dentro
   const c = await modelToPage(page, -900, -300)
@@ -750,12 +754,13 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   await page.mouse.click(w.x, w.y)
   await page.keyboard.up('Shift')
   await expect(multi).toContainText(`${after.length - 1} objetos selecionados`)
+  const beforeDelete = after.length
   await page.keyboard.press('Delete')
   after = await drawings()
   expect(after).toEqual(['wall'])
   // Desfazer devolve tudo de uma vez
   await page.keyboard.press('Control+z')
-  expect((await drawings()).length).toBe(chains)
+  expect((await drawings()).length).toBe(beforeDelete)
 
   // Arrastar um canto em diagonal (passando pelas cotas) não seleciona texto da página
   await moveModel(page, -75, -75)
@@ -942,4 +947,112 @@ test('auxiliar de ângulo reto ao arrastar canto, e pilares no canto e na parede
   expect(Math.round(Number(c[1]!.rotationDeg)) % 180).toBe(90)
   await page.mouse.move(10, 10)
   await page.screenshot({ path: shot('33-pilares') })
+})
+
+test('cotas ligadas: parede (externa + área útil) e posição dos móveis acompanham; tapete por baixo', async ({
+  page,
+}) => {
+  test.setTimeout(90_000)
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await clickModel(page, 2200, -75)
+  await page.getByRole('button', { name: 'Cotar parede' }).click()
+  type D = {
+    kind: string
+    id: string
+    p1?: P
+    p2?: P
+    points?: P[]
+    ref?: { kind: string; segment?: number; side?: number }
+  }
+  const dims = () =>
+    page.evaluate(() => {
+      const st = (window as unknown as EditorWindow).__editor.getState() as unknown as {
+        project: { environments: { drawings: Record<string, unknown>[] }[] }
+      }
+      return st.project.environments[0]!.drawings.filter(
+        (d) => d.kind === 'chain' || d.kind === 'dimension',
+      )
+    }) as Promise<D[]>
+  let ds = await dims()
+  expect(ds.filter((d) => d.ref?.kind === 'wall-outer')).toHaveLength(4)
+  const innerTop = () =>
+    dims().then((x) => x.find((d) => d.ref?.kind === 'wall-inner' && d.ref.segment === 0)!)
+  expect((await innerTop()).p2).toEqual({ x: 4400, y: 0 }) // área útil: 4,40
+
+  // Cama e, DEPOIS, um tapete por baixo dela: o tapete não cobre a cama
+  await page.keyboard.press('Escape')
+  await placeBlock(page, 'cama-casal', 2200, 1100)
+  await placeBlock(page, 'tapete', 2200, 1600)
+  await page.keyboard.press('Escape')
+  await clickModel(page, 2200, 900)
+  await expect(page.getByTestId('item-props')).toContainText('Cama de casal')
+
+  // Cotar a posição da cama: lados com folga até a parede
+  await page.getByTestId('item-dims').click()
+  ds = await dims()
+  const bedDims = ds.filter((d) => d.ref?.kind === 'item')
+  expect(bedDims.length).toBeGreaterThanOrEqual(2)
+  const left = () => dims().then((x) => x.find((d) => d.ref?.kind === 'item' && d.ref.side === 3)!)
+  // cama 158 de largura centrada em x = 2200: lado esquerdo em 1410 → folga 1410
+  expect((await left()).p2!.x).toBe(0)
+  expect((await left()).p1!.x).toBe(1410)
+
+  // Mover a cama 30 cm para a direita: a cota acompanha
+  const from = await modelToPage(page, 2200, 900)
+  const to = await modelToPage(page, 2500, 900)
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(to.x, to.y, { steps: 6 })
+  await page.mouse.up()
+  expect((await left()).p1!.x).toBe(1710)
+
+  // Aumentar o quarto (trecho de cima = 5 m): a cota de fora e a área útil acompanham
+  await clickModel(page, 2200, -75)
+  await setCm(page, 'wall-seg-0', '5')
+  const top = await innerTop()
+  expect(Math.abs(top.p2!.x - top.p1!.x)).toBe(4850) // 5,00 de eixo − 0,15 = 4,85 útil
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('35-cotas-ligadas') })
+})
+
+test('botão do meio (scroll) arrasta a vista, sem a rolagem automática do navegador', async ({
+  page,
+}) => {
+  await freshEditor(page)
+  const canvas = page.getByTestId('plan-canvas')
+  // No Windows, apertar o botão do meio liga a "rolagem automática" do Chrome/Edge, que toma
+  // conta do mouse: o desenho precisa cancelar essa ação padrão (mousedown e auxclick).
+  const prevented = await canvas.evaluate((el) => {
+    const ev = (type: string) => {
+      const e = new MouseEvent(type, { button: 1, buttons: 4, bubbles: true, cancelable: true })
+      el.dispatchEvent(e)
+      return e.defaultPrevented
+    }
+    return { mousedown: ev('mousedown'), auxclick: ev('auxclick') }
+  })
+  expect(prevented).toEqual({ mousedown: true, auxclick: true })
+
+  // E o arrasto com o botão do meio move a vista (em qualquer ferramenta)
+  await page.getByTestId('tool-wall').click()
+  const before = (await canvas.getAttribute('data-view'))!.split(' ').map(Number)
+  const box = (await canvas.boundingBox())!
+  await page.mouse.move(box.x + 300, box.y + 300)
+  await page.mouse.down({ button: 'middle' })
+  await expect(canvas).toHaveClass(/canvas--panning/)
+  await page.mouse.move(box.x + 420, box.y + 360, { steps: 6 })
+  await page.mouse.up({ button: 'middle' })
+  const after = (await canvas.getAttribute('data-view'))!.split(' ').map(Number)
+  expect(after[1]! - before[1]!).toBeCloseTo(120, 0)
+  expect(after[2]! - before[2]!).toBeCloseTo(60, 0)
+  await expect(canvas).not.toHaveClass(/canvas--panning/)
+  // nenhuma parede foi começada pelo arrasto
+  await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '0')
 })

@@ -6,7 +6,7 @@ import { shapeInRect, type BBox, type PickShape } from '@/core/geometry/bbox'
 import { signedArea } from '@/core/geometry/polygon'
 import { cornerAngleDeg } from '@/core/editor/right-angle'
 import { columnOutline, hitColumn } from '@/core/project/columns'
-import { hitItem, itemCorners } from '@/core/project/items'
+import { hitItem, itemCorners, itemsInDrawOrder } from '@/core/project/items'
 import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
 import { computeLegend, markerEntities, markerPosition } from '@/core/project/markers'
 import { hitOpening, openingClearances, openingFrame, openingJambs } from '@/core/project/openings'
@@ -57,8 +57,10 @@ export const wallsOf = (env: Environment): Wall[] =>
 
 /** O que está sob o ponteiro: itens, portas/janelas, textos, cotas e, por fim, paredes. */
 export function hitTest(env: Environment, p: Vec2, tol: number): Selection {
-  for (let i = env.items.length - 1; i >= 0; i--) {
-    const it = env.items[i]!
+  // De cima para baixo, na ordem inversa do desenho (tapete por último).
+  const items = itemsInDrawOrder(env.items)
+  for (let i = items.length - 1; i >= 0; i--) {
+    const it = items[i]!
     if (hitItem(it, p)) return { kind: 'item', id: it.id }
   }
   const walls = new Map(wallsOf(env).map((w) => [w.id, w]))

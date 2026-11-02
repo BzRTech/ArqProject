@@ -20,5 +20,7 @@ export interface BlockDef {
   minSize: { w: number; d: number }
   /** Bloco detalhável no assistente de marcenaria (Fase 8). */
   joinery?: boolean
+  /** Fica POR BAIXO dos outros móveis (tapetes): desenhado primeiro e clicado por último. */
+  underlay?: boolean
   symbol: BlockSymbol
 }

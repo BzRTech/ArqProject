@@ -27,7 +27,7 @@ import {
 } from '@/core/geometry/viewport'
 import { areaM2Text } from '@/core/project/areas'
 import { columnEntities, columnOutline, COLUMN_DEFAULTS } from '@/core/project/columns'
-import { itemCorners, itemEntities } from '@/core/project/items'
+import { itemCorners, itemEntities, itemsInDrawOrder } from '@/core/project/items'
 import { floorEntities } from '@/core/finishes/layout'
 import { environmentMarkers } from '@/core/project/markers'
 import {
@@ -440,6 +440,8 @@ export function PlanCanvas({ fitSignal }: Props) {
   } | null>(null)
   const [dragDelta, setDragDelta] = useState<string | null>(null)
   const spaceDown = useRef(false)
+  /** Movendo a vista (botão do meio/direito ou Espaço): cursor de "mão fechada". */
+  const [panning, setPanning] = useState(false)
   const selected = useEditor((s) => s.selected)
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
@@ -793,7 +795,10 @@ export function PlanCanvas({ fitSignal }: Props) {
     // Uma seleção de texto que já existia (p. ex. arrastando no painel) não pode seguir pelo desenho.
     window.getSelection()?.removeAllRanges()
     if (e.button === 1 || e.button === 2 || spaceDown.current) {
+      // Botão do meio (como no LibreCAD), direito ou Espaço: move a vista.
+      e.preventDefault()
       drag.current = { mode: 'pan', last: sp, start: p, applied: { x: 0, y: 0 } }
+      setPanning(true)
       return
     }
     switch (s.tool) {
@@ -990,7 +995,11 @@ export function PlanCanvas({ fitSignal }: Props) {
       return
     }
     if (d?.mode === 'pan') {
-      setView((v) => pan(v, sp.x - d.last.x, sp.y - d.last.y))
+      // O deslocamento é calculado AGORA: o atualizador do setView roda depois, quando
+      // `d.last` já foi trocado (com ele dentro, o deslocamento dava sempre zero).
+      const dx = sp.x - d.last.x
+      const dy = sp.y - d.last.y
+      setView((v) => pan(v, dx, dy))
       d.last = sp
     } else if (d?.mode === 'vertex' && d.wallEdit && d.vertexSnap) {
       const we = d.wallEdit
@@ -1090,6 +1099,7 @@ export function PlanCanvas({ fitSignal }: Props) {
   }
 
   const onPointerUp = () => {
+    setPanning(false)
     const dd = drag.current
     if (dd?.mode === 'band' && band) {
       const tiny = Math.abs(band.b.x - band.a.x) < 4 && Math.abs(band.b.y - band.a.y) < 4
@@ -1377,12 +1387,21 @@ export function PlanCanvas({ fitSignal }: Props) {
     <div className="plan-canvas">
       <svg
         ref={ref}
-        className={`canvas canvas--${tool} ${cadCursor ? 'canvas--cad' : ''}`}
+        className={`canvas canvas--${tool} ${cadCursor ? 'canvas--cad' : ''} ${panning ? 'canvas--panning' : ''}`}
         data-testid="plan-canvas"
         data-view={`${view.scale} ${view.tx} ${view.ty}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        // No Windows, o botão do meio liga a "rolagem automática" do Chrome/Edge (que toma conta
+        // do mouse) e no Linux cola o texto copiado: o desenho cancela essas ações.
+        onMouseDown={(e) => {
+          if (e.button === 1) e.preventDefault()
+        }}
+        onAuxClick={(e) => {
+          if (e.button === 1) e.preventDefault()
+        }}
         onPointerLeave={() => {
           setCursor(null)
           setCursorScreen(null)
@@ -1445,7 +1464,7 @@ export function PlanCanvas({ fitSignal }: Props) {
             <Compiled entities={floors} role="pisos" />
           </g>
           <g data-testid="items">
-            {env.items.map((it) => (
+            {itemsInDrawOrder(env.items).map((it) => (
               <ItemView key={it.id} item={it} />
             ))}
           </g>
@@ -1539,7 +1558,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           />
         )}
         <CadCursor
-          screen={cadCursor ? cursorScreen : null}
+          screen={cadCursor && !panning ? cursorScreen : null}
           snapAt={
             cursor &&
             (tool === 'wall' ||

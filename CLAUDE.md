@@ -43,7 +43,7 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
 4. atualizar "Estado atual" abaixo.
 
 ## Estado atual
-- Etapa atual: **editor com blocos concluído** (branch `fase-editor-blocos`, empilhada sobre `fase-1-nucleo` → `fase-0-fundacao`). Próxima: Fase 2 (contas, organizações, projetos no servidor) e depois Fase 3 (bancos). Ordem ajustada: ver nota no início da seção 5 do PLANO.
+- Etapa atual: **editor com blocos concluído e na `main`** (PR #4). A branch `fase-editor-blocos` recomeça da `main` a cada rodada de ajustes. Próxima: Fase 2 (contas, organizações, projetos no servidor) e depois Fase 3 (bancos). Ordem ajustada: ver nota no início da seção 5 do PLANO.
 - Fase 0: monorepo + Docker Compose (postgres 16, redis 7, SeaweedFS S3, backend, frontend); Django 5.2 LTS com custom `User` (login por e-mail), DRF, drf-spectacular, `/api/health/`, `ensure_bucket`; front Vite 8 + React 19 + TS 5.9 strict, ESLint, Vitest, Playwright, `gen:api`.
 - Fase 1: núcleo em `frontend/src/core` (units, geometry, drawing/compileView, dimensions com cadeia, sheets), `render/svg` e `render/pdf`; página `/dev/primitivas` (A3 de catálogo). ADR 003.
 - Editor com blocos (`/editor`, `frontend/src/features/plan-editor`):
@@ -69,6 +69,8 @@ Plano completo: `docs/PLANO.md`. Referência de fluxo: `docs/referencia/`. Mater
     - layout do editor: Importar planta e Baixar PDF na barra superior (portal `app/topbar-slot.ts`); barra de ferramentas flutuante no rodapé do palco (só ícones; a ativa mostra o rótulo); opções da vista flutuando no topo; rodapé com atalhos (`kbd`) e zoom (100% = 1:50 em tamanho real); "Enquadrar" evita as faixas flutuantes (`FLOAT_TOP`/`FLOAT_BOTTOM`);
     - controles em `app/ui/` (`Switch`, `Segmented`); avisos em toast; balão do item selecionado em argila (só na tela);
     - prints em `docs/prints/design-system/`.
+  - Auxiliar de ângulo reto (`core/editor/right-angle.ts`): ao arrastar um canto, gruda nas restrições "congeladas" no início do arrasto — círculo de Tales (90° no próprio canto), retas perpendiculares nos vizinhos (90° neles) e horizontais/verticais pelos vizinhos; encontros de duas restrições têm prioridade (`SnapKind` `right`). Marcas (`cornerAngleMarks`): símbolo de ângulo reto em sálvia nos cantos a 90° (tolerância 0,1°) e graus nos demais; com a parede selecionada, mostra os graus dos cantos fora do esquadro.
+  - Pilares (schema v5 + migração v4→v5): `Column` em `drawings` (`kind: 'column'`, centro, retangular/circular, largura × profundidade, rotação); `core/project/columns.ts` (contorno, desenho CHEIO preto = seção de estrutura cortada, por cima das paredes; acerto). Ferramenta Pilar (L): num canto de parede entra centrado no canto; perto de uma parede, centrado no eixo e girado como o trecho (`columnPlacement`). Snap nos cantos, centro e meio dos lados; R gira 90°. Ainda não desconta da área/piso.
   - DWG: via LibreDWG (`dwg2dxf`) como programa SEPARADO no servidor (GPL-3.0 — não linkar no app nem empacotar no front); depois da Fase 2, junto da importação de DXF.
   - Prints em `docs/prints/editor/`.
 - Decisões registradas: backend Django/DRF + PostgreSQL (substituiu Supabase); ADR 001 (PDF), 002 (S3 local: SeaweedFS), 003 (convenções do núcleo), 004 (blocos paramétricos como dados).

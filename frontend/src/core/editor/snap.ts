@@ -1,7 +1,8 @@
 import { distance, type Vec2 } from '../geometry/vec'
 import { roundMm } from '../units'
 
-export type SnapKind = 'endpoint' | 'midpoint' | 'grid' | 'ortho' | 'free'
+/** `right`: auxiliar de ângulo reto (ver right-angle.ts). */
+export type SnapKind = 'endpoint' | 'midpoint' | 'grid' | 'ortho' | 'right' | 'free'
 
 export interface SnapOptions {
   /** Passo da grade em mm (0 = sem grade). */

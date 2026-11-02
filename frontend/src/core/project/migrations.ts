@@ -37,6 +37,8 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   }),
   // v3 → v4: piso opcional nas áreas (nada a converter; documentos v3 continuam válidos).
   3: (p) => ({ ...p, schemaVersion: 4 }),
+  // v4 → v5: pilares (novo tipo de desenho; nada a converter).
+  4: (p) => ({ ...p, schemaVersion: 5 }),
 }
 
 export class MigrationError extends Error {}

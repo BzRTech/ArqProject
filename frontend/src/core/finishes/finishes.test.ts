@@ -3,7 +3,7 @@ import { clipSegment } from '../geometry/polygon'
 import { vec } from '../geometry/vec'
 import { migrateProject } from '../project/migrations'
 import { environmentEntities } from '../project/render'
-import { newProject, type Floor, type Opening, type Wall } from '../project/schema'
+import { newProject, SCHEMA_VERSION, type Floor, type Opening, type Wall } from '../project/schema'
 import { walk } from '../drawing/primitives'
 import { compileView } from '../drawing/compile'
 import { floorRows } from './budget'
@@ -228,8 +228,8 @@ describe('quantidades', () => {
 })
 
 describe('migração v3 → v4', () => {
-  it('documento v3 abre como v4 sem mudar nada', () => {
+  it('documento v3 abre na versão atual sem mudar nada', () => {
     const v3 = { ...newProject('e'), schemaVersion: 3 }
-    expect(migrateProject(v3).schemaVersion).toBe(4)
+    expect(migrateProject(v3).schemaVersion).toBe(SCHEMA_VERSION)
   })
 })

@@ -8,6 +8,7 @@ import {
   Ruler,
   Scan,
   Square,
+  SquareSquare,
   Type,
   Undo2,
   type LucideIcon,
@@ -89,6 +90,14 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
           active={!!openingType?.startsWith('porta')}
           onClick={() => startOpening('porta-abrir')}
           data-testid="tool-door"
+        />
+        <ToolButton
+          icon={SquareSquare}
+          label="Pilar"
+          title="Pilar (L): clique num canto ou numa parede"
+          active={tool === 'column'}
+          onClick={() => setTool('column')}
+          data-testid="tool-column"
         />
         <ToolButton
           icon={AppWindow}

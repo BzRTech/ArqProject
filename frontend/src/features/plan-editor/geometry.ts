@@ -4,6 +4,8 @@ import { textWidth } from '@/core/drawing/text-metrics'
 import { add, distance, dot, leftNormal, scale, sub, vec, type Vec2 } from '@/core/geometry/vec'
 import { shapeInRect, type BBox, type PickShape } from '@/core/geometry/bbox'
 import { signedArea } from '@/core/geometry/polygon'
+import { cornerAngleDeg } from '@/core/editor/right-angle'
+import { columnOutline, hitColumn } from '@/core/project/columns'
 import { hitItem, itemCorners } from '@/core/project/items'
 import { areaLabelCenter, areaM2Text } from '@/core/project/areas'
 import { computeLegend, markerEntities, markerPosition } from '@/core/project/markers'
@@ -11,6 +13,7 @@ import { hitOpening, openingClearances, openingFrame, openingJambs } from '@/cor
 import type {
   ChainDrawing,
   DimensionDrawing,
+  Drawing,
   Environment,
   Opening,
   Wall,
@@ -63,6 +66,11 @@ export function hitTest(env: Environment, p: Vec2, tol: number): Selection {
     const o = env.openings[i]!
     const w = walls.get(o.wallId)
     if (w && hitOpening(w, o, p, tol)) return { kind: 'opening', id: o.id }
+  }
+  // Pilares ficam por cima das paredes: vêm antes delas.
+  for (let i = env.drawings.length - 1; i >= 0; i--) {
+    const d = env.drawings[i]!
+    if (d.kind === 'column' && hitColumn(d, p, tol)) return { kind: 'drawing', id: d.id }
   }
   for (let i = env.drawings.length - 1; i >= 0; i--) {
     const d = env.drawings[i]!
@@ -141,6 +149,10 @@ export function snapPoints(env: Environment): Vec2[] {
       if (o) pts.push(...o.rings.flat())
     } else if (d.kind === 'dimension') pts.push(d.p1, d.p2)
     else if (d.kind === 'area') pts.push(...d.points)
+    else if (d.kind === 'column') {
+      pts.push(d.at)
+      if (d.shape === 'rect') pts.push(...columnOutline(d))
+    }
   }
   for (const o of env.openings) {
     const w = walls.get(o.wallId)
@@ -160,6 +172,11 @@ export function snapMidpoints(env: Environment): Vec2[] {
       const n = leftNormal(s.dir)
       out.push(m, add(m, scale(n, h)), add(m, scale(n, -h)))
     }
+  }
+  for (const d of env.drawings) {
+    if (d.kind !== 'column' || d.shape !== 'rect') continue
+    const o = columnOutline(d)
+    o.forEach((a, i) => out.push(scale(add(a, o[(i + 1) % o.length]!), 0.5)))
   }
   return out
 }
@@ -264,6 +281,8 @@ export function pickShape(env: Environment, ref: SelRef): PickShape | null {
     }
     case 'area':
       return { points: d.points, closed: true }
+    case 'column':
+      return { points: columnOutline(d), closed: true }
     case 'dimension':
     case 'chain': {
       const [a, b] = dimensionLine(d)
@@ -307,9 +326,15 @@ export function refKindLabel(env: Environment, ref: SelRef): string {
   if (ref.kind === 'opening') return 'Portas e janelas'
   const d = env.drawings.find((x) => x.id === ref.id)
   if (!d) return 'Outros'
-  return { wall: 'Paredes', dimension: 'Cotas', chain: 'Cotas', text: 'Textos', area: 'Áreas' }[
-    d.kind
-  ]
+  const labels: Record<Drawing['kind'], string> = {
+    wall: 'Paredes',
+    dimension: 'Cotas',
+    chain: 'Cotas',
+    text: 'Textos',
+    area: 'Áreas',
+    column: 'Pilares',
+  }
+  return labels[d.kind]
 }
 
 // --- Medidas ao editar parede -------------------------------------------------------
@@ -370,4 +395,104 @@ export function selectedMarkerEntities(
       return e
     })
   })
+}
+
+// --- Ângulos dos cantos ---------------------------------------------------------------
+
+/** Tolerância (graus) para considerar um canto em esquadro. */
+export const RIGHT_ANGLE_TOL = 0.1
+
+/**
+ * Marcas de ângulo nos cantos `indices` da parede: o símbolo de ângulo reto (sálvia) quando o
+ * canto está em 90°, ou o valor em graus (cor `color`) quando não está. `onlyOff` = só os
+ * cantos fora do esquadro.
+ */
+export function cornerAngleMarks(
+  w: Wall,
+  indices: number[],
+  color: string,
+  okColor: string,
+  onlyOff = false,
+): Entity[] {
+  const pts = w.points
+  const n = pts.length
+  const out: Entity[] = []
+  for (const i of new Set(indices)) {
+    if (!w.closed && (i <= 0 || i >= n - 1)) continue
+    const k = ((i % n) + n) % n
+    const v = pts[k]!
+    const a = pts[(k - 1 + n) % n]!
+    const b = pts[(k + 1) % n]!
+    const la = distance(a, v)
+    const lb = distance(b, v)
+    if (la < 1 || lb < 1) continue
+    const u = scale(sub(a, v), 1 / la)
+    const e = scale(sub(b, v), 1 / lb)
+    const deg = cornerAngleDeg(a, v, b)
+    if (Math.abs(deg - 90) <= RIGHT_ANGLE_TOL) {
+      if (onlyOff) continue
+      const sz = Math.min(4 * DISPLAY_SCALE, la / 3, lb / 3)
+      out.push({
+        kind: 'polyline',
+        points: [
+          add(v, scale(u, sz)),
+          add(add(v, scale(u, sz)), scale(e, sz)),
+          add(v, scale(e, sz)),
+        ],
+        closed: false,
+        style: { color: okColor, weight: 0.25 },
+      })
+      continue
+    }
+    const bis = add(u, e)
+    const bl = Math.hypot(bis.x, bis.y)
+    const dir = bl > 1e-6 ? scale(bis, 1 / bl) : leftNormal(u)
+    out.push({
+      kind: 'text',
+      at: add(v, scale(dir, 9 * DISPLAY_SCALE)),
+      text: `${deg.toFixed(1).replace('.', ',')}°`,
+      size: 2.2,
+      anchor: 'middle',
+      vAlign: 'middle',
+      color,
+    })
+  }
+  return out
+}
+
+// --- Pilar: onde ele entra ao clicar -------------------------------------------------
+
+/**
+ * Posição do pilar novo: num canto de parede, centrado no canto e alinhado à parede; perto de
+ * uma parede, centrado no eixo dela e girado como o trecho; senão, livre.
+ */
+export function columnPlacement(
+  env: Environment,
+  p: Vec2,
+  tol: number,
+): { at: Vec2; rotationDeg: number; snapped: 'corner' | 'wall' | null } {
+  const walls = wallsOf(env)
+  const corner = nearestWallVertex(env, p, tol)
+  if (corner) {
+    const w = walls.find((x) => x.id === corner.wallId)!
+    const seg = wallSegments(w).find(
+      (s) => distance(s.a, corner.at) < 1 || distance(s.b, corner.at) < 1,
+    )
+    const rot = seg ? (Math.atan2(seg.dir.y, seg.dir.x) * 180) / Math.PI : 0
+    return { at: corner.at, rotationDeg: rot, snapped: 'corner' }
+  }
+  for (const w of walls) {
+    for (const s of wallSegments(w)) {
+      const t = Math.max(0, Math.min(s.length, dot(sub(p, s.a), s.dir)))
+      const q = add(s.a, scale(s.dir, t))
+      if (distance(p, q) <= w.thicknessMm / 2 + tol) {
+        return {
+          at: { x: Math.round(q.x), y: Math.round(q.y) },
+          rotationDeg: (Math.atan2(s.dir.y, s.dir.x) * 180) / Math.PI,
+          snapped: 'wall',
+        }
+      }
+    }
+  }
+  return { at: { x: Math.round(p.x), y: Math.round(p.y) }, rotationDeg: 0, snapped: null }
 }

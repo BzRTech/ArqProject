@@ -1,3 +1,4 @@
+import { columnEntities } from './columns'
 import type { Entity } from '../drawing/entities'
 import { itemEntities } from './items'
 import { floorEntities } from '../finishes/layout'
@@ -49,6 +50,8 @@ export function drawingEntities(
       ]
     case 'text':
       return [{ kind: 'text', at: d.at, text: d.text, size: d.sizeMm, vAlign: 'middle' }]
+    case 'column':
+      return columnEntities(d)
   }
 }
 

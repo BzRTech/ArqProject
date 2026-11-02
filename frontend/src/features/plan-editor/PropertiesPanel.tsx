@@ -18,6 +18,7 @@ import {
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { BudgetFields } from './BudgetFields'
+import { ColumnProps } from './ColumnProps'
 import { importBasePlan } from './base-plan-import'
 import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
@@ -377,6 +378,7 @@ function DrawingProps({ d }: { d: Drawing }) {
   const u = useUnits()
   const s = useEditor.getState()
   if (d.kind === 'wall') return <WallProps wall={d} />
+  if (d.kind === 'column') return <ColumnProps d={d} />
   if (d.kind === 'chain') {
     return (
       <section>

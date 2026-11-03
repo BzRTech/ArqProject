@@ -25,6 +25,7 @@ export async function exportProjectPdf(
       dateText: date,
       basePlanHref: href,
       humanized: options.humanized,
+      rules: currentRuleProfile(),
     })
     scales.push(sheet.scale)
     pages.push({

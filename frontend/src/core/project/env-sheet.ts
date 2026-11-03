@@ -1,5 +1,6 @@
 import { floorRows } from '../finishes/budget'
 import { joinerySummary } from '../joinery/finish'
+import type { RuleProfile } from '../joinery/rules'
 import { buildPlanSheet, type LegendLine, type PlanSheet } from '../sheets/plan-sheet'
 import { formatQty } from '../units'
 import { computeLegend } from './markers'
@@ -31,7 +32,7 @@ export function environmentLegend(env: Environment): LegendLine[] {
 export function environmentSheet(
   project: Pick<Project, 'name'>,
   env: Environment,
-  o: { dateText?: string; basePlanHref?: string; humanized?: boolean } = {},
+  o: { dateText?: string; basePlanHref?: string; humanized?: boolean; rules?: RuleProfile } = {},
 ): PlanSheet {
   return buildPlanSheet({
     title: env.name,
@@ -39,6 +40,11 @@ export function environmentSheet(
     dateText: o.dateText,
     legend: environmentLegend(env),
     build: (scale) =>
-      environmentEntities(env, { scale, basePlanHref: o.basePlanHref, humanized: o.humanized }),
+      environmentEntities(env, {
+        scale,
+        basePlanHref: o.basePlanHref,
+        humanized: o.humanized,
+        rules: o.rules,
+      }),
   })
 }

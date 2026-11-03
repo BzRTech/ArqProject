@@ -26,7 +26,10 @@ export function PranchasPanel({ env }: { env: Environment }) {
       specs: joinerySpecs(solved, detailItem.joinery, rules),
     }
   }, [project, env, detailItem, rules])
-  const scale = useMemo(() => environmentSheet(project, env).scale, [project, env])
+  const scale = useMemo(
+    () => environmentSheet(project, env, { rules }).scale,
+    [project, env, rules],
+  )
   const legend = environmentLegend(env)
   if (detail && detailItem)
     return (

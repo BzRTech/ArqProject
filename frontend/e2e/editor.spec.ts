@@ -1163,8 +1163,8 @@ test('detalhamento da marcenaria: módulos, avisos, vistas cotadas e prancha de 
   await page.keyboard.press('Escape')
   await page.keyboard.press('f')
 
-  // Rack de 3,18 m na aba Marcenaria, detalhado pelo passo a passo
-  await placeBlock(page, 'rack', 2000, 3200)
+  // Rack de 3,18 m na aba Marcenaria (fundo na parede de cima), detalhado pelo passo a passo
+  await placeBlock(page, 'rack', 2000, 260)
   await setCm(page, 'item-w', '318')
   await expect(page.getByTestId('step-detail')).toHaveAttribute('data-done', 'false')
   await page.getByTestId('step-action-detail').click()
@@ -1201,6 +1201,11 @@ test('detalhamento da marcenaria: módulos, avisos, vistas cotadas e prancha de 
   // De volta à planta; na aba Pranchas a prancha de detalhe aparece na lista
   await page.getByTestId('detail-toggle').click()
   await expect(page.getByTestId('plan-canvas')).toBeVisible()
+  // Na planta, o rack mostra os módulos e o giro das 8 portas do detalhamento
+  await expect(page.getByTestId('items').locator('path')).toHaveCount(8)
+  await page.keyboard.press('f')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('42-planta-ligada-ao-detalhe') })
   await openStage(page, 'pranchas')
   await page.getByTestId('sheets-panel').getByText('Rack / painel de TV · detalhe').click()
   await expect(page.getByTestId('sheet')).toContainText('VISTA INTERNA (SEM AS FRENTES)')

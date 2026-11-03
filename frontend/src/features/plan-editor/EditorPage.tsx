@@ -18,6 +18,7 @@ import { ViewOptions } from './ViewOptions'
 export default function EditorPage() {
   const status = useLocalPersistence()
   const stage = useEditor((s) => s.stage)
+  const detailOpen = useEditor((s) => s.detailItemId !== null)
   const [fitSignal, setFitSignal] = useState(0)
   const fit = () => setFitSignal((n) => n + 1)
   useEffect(() => {
@@ -40,7 +41,7 @@ export default function EditorPage() {
         ) : (
           <CatalogPanel />
         )}
-        {stage === 'pranchas' ? (
+        {stage === 'pranchas' || (stage === 'marcenaria' && detailOpen) ? (
           <div className="stage">
             <SheetPreview />
           </div>

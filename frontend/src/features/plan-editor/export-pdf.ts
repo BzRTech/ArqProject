@@ -1,3 +1,4 @@
+import { joinerySheet } from '@/core/joinery/sheet'
 import { environmentSheet } from '@/core/project/env-sheet'
 import type { Project } from '@/core/project/schema'
 import { svgPagesToPdf } from '@/render/pdf/exportPdf'
@@ -5,6 +6,7 @@ import { loadPdfFonts, registerWebFonts } from '@/render/pdf/fonts'
 import { toMarkup } from '@/render/svg/markup'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { getAsset } from './persistence'
+import { currentRuleProfile } from './rules'
 
 /** Uma prancha A3 por ambiente com conteúdo; escala automática (maior que couber). */
 export async function exportProjectPdf(
@@ -36,6 +38,22 @@ export async function exportProjectPdf(
       widthMm: sheet.widthMm,
       heightMm: sheet.heightMm,
     })
+    for (const item of env.items) {
+      const d = joinerySheet(project, env, item, currentRuleProfile(), { dateText: date })
+      if (!d) continue
+      scales.push(d.scale)
+      pages.push({
+        svgMarkup: toMarkup(
+          primitivesToSvg(d.primitives, {
+            widthMm: d.widthMm,
+            heightMm: d.heightMm,
+            background: '#ffffff',
+          }),
+        ),
+        widthMm: d.widthMm,
+        heightMm: d.heightMm,
+      })
+    }
   }
   const doc = await svgPagesToPdf(pages, await loadPdfFonts())
   const slug =

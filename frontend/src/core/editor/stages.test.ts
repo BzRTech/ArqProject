@@ -98,6 +98,7 @@ describe('passo a passo de cada aba', () => {
     const parcial = item('r', 'rack', { joinery: applyFinish(undefined, ['frentes'], freijo) })
     expect(done(env({ items: [parcial] }), 'marcenaria')).toEqual([
       'joinery:✓',
+      'detail:·',
       'finishes:·',
       'notes:·',
     ])
@@ -106,6 +107,7 @@ describe('passo a passo de cada aba', () => {
     })
     expect(done(env({ items: [completo] }), 'marcenaria')).toEqual([
       'joinery:✓',
+      'detail:·',
       'finishes:✓',
       'notes:✓',
     ])

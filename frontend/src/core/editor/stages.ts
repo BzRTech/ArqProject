@@ -72,7 +72,13 @@ export type StepAction =
   | {
       kind: 'command'
       command:
-        'wall-dims' | 'item-dims' | 'area-from-walls' | 'select-area' | 'select-joinery' | 'pdf'
+        | 'wall-dims'
+        | 'item-dims'
+        | 'area-from-walls'
+        | 'select-area'
+        | 'select-joinery'
+        | 'open-detail'
+        | 'pdf'
     }
 
 export interface ChecklistStep {
@@ -193,6 +199,14 @@ export function stageChecklist(env: Environment, stage: Stage): ChecklistStep[] 
           label: 'Insira o móvel planejado',
           hint: 'Guarda-roupa, rack… do catálogo à esquerda. Ajuste L × P no painel.',
           done: joinery.length > 0,
+        },
+        {
+          id: 'detail',
+          label: 'Detalhe os módulos',
+          hint: 'Altura, base, módulos, portas, gavetas e prateleiras. Gera as vistas cotadas e a prancha de detalhe.',
+          done: joinery.length > 0 && joinery.every((it) => !!it.joinery?.design),
+          action: { kind: 'command', command: 'open-detail' },
+          actionLabel: 'Detalhar',
         },
         {
           id: 'finishes',

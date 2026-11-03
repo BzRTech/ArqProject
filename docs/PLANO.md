@@ -330,6 +330,7 @@ Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fase
 ### Fase 7 — Motor de marcenaria (núcleo, TDD) (5–7 dias)
 - `joinery/model, rules (lê RuleProfile do banco), solve, validate, specs` + 3 vistas cotadas.
 - Caso de teste do vídeo: rack 3180 × 450 × 400 suspenso 100 mm, módulos 909/909/909/303, 7 portas, fecho toque, fundo recuado → vãos 882/891, portas 452/451/101, aviso de módulo < 100 mm, especificações 1–12.
+  > **Nota (03/11/2026, implementado):** os números acima misturam duas telas do vídeo (uma com canto curvo R15 e módulos 90,9/90,9/90,9/30,3 = 303; outra com canto R20 e porta de 10,1). Cantos curvos são pós-MVP, então o caso de aceite ficou, com as regras da seção 4.6: rack 3180 × 450 × 400 suspenso 100, módulos 909/909/909/453 → vãos 882/891/891/426, portas 452/451 (×3) + 450, 14 dobradiças, emenda de tampo/base/fundo sobre a divisória a 2727 mm; módulo de 112 → vão 85 → erro "não dá para montar"; portas 452 × 224 → aviso + "igualar portas" (4 × 795). Ver `frontend/src/core/joinery/*.test.ts`.
 
 ### Fase 8 — Assistente de detalhamento (UI) (5–7 dias)
 Os 6 passos da seção 1.2, com **modelos prontos do banco** (`JoineryPreset`), puxadores e ferragens do banco, avisos com ações, geração/atualização das pranchas de detalhe e inserção de blocos do **banco de detalhes**.

@@ -4,6 +4,7 @@ import type { Entity } from '../drawing/entities'
 import type { Primitive } from '../drawing/primitives'
 import { PEN } from '../drawing/styles'
 import { expand, height, isEmpty, width } from '../geometry/bbox'
+import { textWidth } from '../drawing/text-metrics'
 import { vec } from '../geometry/vec'
 import { STANDARD_SCALES } from './fit'
 import { graphicScale } from './graphic-scale'
@@ -21,6 +22,10 @@ export interface PlanSheetInput {
   dateText?: string
   /** Linhas da legenda (marcador, descrição, quantidade já formatada). */
   legend?: LegendLine[]
+  /** Título da coluna (padrão "LEGENDA"; detalhe de marcenaria usa "ESPECIFICAÇÕES"). */
+  legendTitle?: string
+  /** Escalas candidatas (padrão: as da planta). */
+  scales?: readonly number[]
 }
 
 export interface LegendLine {
@@ -33,14 +38,57 @@ export interface LegendLine {
 
 const LEGEND_W = 82
 const LEGEND_ROW = 5.6
-/** Altura extra de uma linha com detalhe. */
+/** Corpo do texto da legenda e do detalhe (mm de papel). */
+const MAIN_SIZE = 2.2
+const DETAIL_SIZE = 1.7
+/** Entrelinhas: texto principal quebrado, 1ª linha de detalhe, demais linhas de detalhe. */
+const MAIN_LINE = 3
 const LEGEND_DETAIL = 3.2
-const rowH = (l: LegendLine) => LEGEND_ROW + (l.detail ? LEGEND_DETAIL : 0)
+const DETAIL_LINE = 2.6
+
+/** Quebra o texto em linhas que caibam em `maxW` (mm de papel), por palavras. */
+export function wrapText(text: string, size: number, maxW: number): string[] {
+  const out: string[] = []
+  let cur = ''
+  for (const word of text.split(' ')) {
+    const next = cur ? `${cur} ${word}` : word
+    if (cur && textWidth(next, size) > maxW) {
+      out.push(cur)
+      cur = word
+    } else cur = next
+  }
+  if (cur) out.push(cur)
+  return out.length ? out : ['']
+}
+
+interface LegendRow {
+  line: LegendLine
+  main: string[]
+  detail: string[]
+  h: number
+}
+
+function layoutRow(l: LegendLine): LegendRow {
+  const qtyW = l.qty ? textWidth(l.qty, MAIN_SIZE) + 3 : 0
+  const main = wrapText(l.text, MAIN_SIZE, LEGEND_W - 10 - qtyW)
+  const detail = l.detail ? wrapText(l.detail, DETAIL_SIZE, LEGEND_W - 10) : []
+  const h =
+    LEGEND_ROW +
+    (main.length - 1) * MAIN_LINE +
+    (detail.length ? LEGEND_DETAIL + (detail.length - 1) * DETAIL_LINE : 0)
+  return { line: l, main, detail, h }
+}
 
 /** Coluna da legenda: título, balões (círculo ou etiqueta de marcenaria), descrição e qtd. */
-function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number): Entity[] {
+function legendEntities(
+  lines: LegendLine[],
+  x: number,
+  y: number,
+  maxH: number,
+  title = 'LEGENDA',
+): Entity[] {
   const out: Entity[] = [
-    { kind: 'text', at: vec(x, y + 3), text: 'LEGENDA', size: 2.6, weight: 'bold' },
+    { kind: 'text', at: vec(x, y + 3), text: title, size: 2.6, weight: 'bold' },
     {
       kind: 'line',
       a: vec(x, y + 4.6),
@@ -48,19 +96,20 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
       style: { weight: PEN.fine },
     },
   ]
-  // Quantas linhas cabem (as com detalhe ocupam mais); sobrando, a última vira "… e mais".
+  const rows = lines.map(layoutRow)
+  // Quantas linhas cabem (as quebradas ocupam mais); sobrando, a última vira "… e mais".
   const fits = (n: number) =>
-    lines.slice(0, n).reduce((h, l) => h + rowH(l), 0) <=
-    maxH - 8 - (n < lines.length ? LEGEND_ROW : 0)
-  let count = lines.length
+    rows.slice(0, n).reduce((h, r) => h + r.h, 0) <= maxH - 8 - (n < rows.length ? LEGEND_ROW : 0)
+  let count = rows.length
   while (count > 1 && !fits(count)) count--
-  const shown = lines.slice(0, count)
+  const shown = rows.slice(0, count)
   let rowY = y + 9
-  shown.forEach((l) => {
+  shown.forEach((r) => {
+    const l = r.line
     const cy = rowY
-    rowY += rowH(l)
+    rowY += r.h
     const cx = x + 4
-    // Marcenaria (M01) e revestimentos (P1) em etiqueta; móveis em círculo.
+    // Marcenaria (M01) e revestimentos (P1) em etiqueta; móveis e especificações em círculo.
     if (/^[MP]\d/.test(l.label)) {
       out.push({
         kind: 'rect',
@@ -73,44 +122,50 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
     } else {
       out.push({ kind: 'circle', center: vec(cx, cy), radius: 2.4, style: { weight: PEN.fine } })
     }
-    out.push(
-      {
+    out.push({
+      kind: 'text',
+      at: vec(cx, cy),
+      text: l.label,
+      size: 1.9,
+      anchor: 'middle',
+      vAlign: 'middle',
+      weight: 'bold',
+    })
+    r.main.forEach((text, i) =>
+      out.push({
         kind: 'text',
-        at: vec(cx, cy),
-        text: l.label,
-        size: 1.9,
-        anchor: 'middle',
+        at: vec(x + 10, cy + i * MAIN_LINE),
+        text,
+        size: MAIN_SIZE,
         vAlign: 'middle',
-        weight: 'bold',
-      },
-      { kind: 'text', at: vec(x + 10, cy), text: l.text, size: 2.2, vAlign: 'middle' },
-      ...(l.detail
-        ? [
-            {
-              kind: 'text' as const,
-              at: vec(x + 10, cy + LEGEND_DETAIL),
-              text: l.detail,
-              size: 1.7,
-              vAlign: 'middle' as const,
-              color: '#4a4741',
-            },
-          ]
-        : []),
-      {
+      }),
+    )
+    const dy = cy + (r.main.length - 1) * MAIN_LINE + LEGEND_DETAIL
+    r.detail.forEach((text, i) =>
+      out.push({
+        kind: 'text',
+        at: vec(x + 10, dy + i * DETAIL_LINE),
+        text,
+        size: DETAIL_SIZE,
+        vAlign: 'middle',
+        color: '#4a4741',
+      }),
+    )
+    if (l.qty)
+      out.push({
         kind: 'text',
         at: vec(x + LEGEND_W, cy),
         text: l.qty,
-        size: 2.2,
+        size: MAIN_SIZE,
         anchor: 'end',
         vAlign: 'middle',
-      },
-    )
+      })
   })
-  if (shown.length < lines.length) {
+  if (shown.length < rows.length) {
     out.push({
       kind: 'text',
       at: vec(x + 10, rowY),
-      text: `… e mais ${lines.length - shown.length} item(ns) — ver memorial`,
+      text: `… e mais ${rows.length - shown.length} item(ns) — ver memorial`,
       size: 2,
       vAlign: 'middle',
       color: '#59626d',
@@ -156,8 +211,8 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
   }
   const scale =
     input.scale ??
-    [...STANDARD_SCALES].sort((a, b) => a - b).find(fits) ??
-    Math.max(...STANDARD_SCALES)
+    [...(input.scales ?? STANDARD_SCALES)].sort((a, b) => a - b).find(fits) ??
+    Math.max(...(input.scales ?? STANDARD_SCALES))
   const entities = input.build(scale)
   const bbox = entitiesBBox(entities, scale)
   const bb = isEmpty(bbox) ? { minX: 0, minY: 0, maxX: 0, maxY: 0 } : expand(bbox, 0)
@@ -228,6 +283,7 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
                   frame.x + frame.w - 7 - LEGEND_W,
                   frame.y + HEADER_H + 4,
                   sy - (frame.y + HEADER_H + 4) - 6,
+                  input.legendTitle,
                 ),
                 PAPER_VIEW,
               ),

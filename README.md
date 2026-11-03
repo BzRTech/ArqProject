@@ -120,8 +120,14 @@ leva à ferramenta certa. A aba ganha um ✓ quando os passos obrigatórios est�
    móvel inteiro; depois dá para trocar uma parte só. Escolha o sentido do veio e escreva as
    observações para o marceneiro (uma por linha). Com **Humanizado** ligado, o móvel aparece
    com a cor do MDF na planta e no PDF, e o acabamento sai na legenda e na planilha.
-5. **Pranchas:** a folha A3 do ambiente, igual à do PDF, com a escala e a legenda. Baixe o PDF
-   daqui ou do botão no topo.
+   **Detalhar** (passo a passo ou "Detalhar este móvel"): altura, base (piso, suspenso ou
+   rodapé), **módulos** com largura eixo a eixo, frente (aberto, 1 ou 2 portas, gavetas) e
+   prateleiras, e o puxador. O sistema calcula vãos, portas, dobradiças e emendas e avisa o que
+   não dá para montar (vão menor que 10 cm) ou o que está desigual ("Igualar portas"). **Ver
+   vistas** mostra a prancha de detalhe: vista frontal, vista interna e planta, cotadas, com as
+   especificações numeradas. A lista de peças fica no painel.
+5. **Pranchas:** a folha A3 de cada ambiente e a de detalhe de cada móvel de marcenaria, iguais
+   às do PDF. Baixe o PDF daqui ou do botão no topo.
 
 Os atalhos de teclado levam à aba da ferramenta (W na aba Layout abre a Planta com a Parede).
 

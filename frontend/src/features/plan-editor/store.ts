@@ -1,6 +1,7 @@
 import { current } from 'immer'
 import { COLUMN_DEFAULTS } from '@/core/project/columns'
 import { innerFacePolygon } from '@/core/project/areas'
+import { defaultDesign } from '@/core/joinery/sheet'
 import { STAGES, STAGE_TOOLS, type Stage } from '@/core/editor/stages'
 import { createItemDims, createWallDims, syncLinkedDims } from '@/core/project/linked-dims'
 import { temporal } from 'zundo'
@@ -11,6 +12,7 @@ import type { Vec2 } from '@/core/geometry/vec'
 import { openingDef } from '@/core/project/openings'
 import { reattachOpenings } from '@/core/project/wall-edit'
 import {
+  type JoineryDesign,
   ITEM_DEFAULTS,
   newEnvironment,
   newProject,
@@ -53,6 +55,13 @@ export interface EditorState {
   tool: Tool
   /** Aba de trabalho do ambiente (Planta, Layout, Piso, Marcenaria, Pranchas). */
   stage: Stage
+  /** Móvel de marcenaria aberto no detalhamento (vistas no lugar da planta). */
+  detailItemId: string | null
+  /** Abre o detalhamento (cria o desenho inicial se o móvel ainda não tiver). */
+  openDetail: (itemId: string) => void
+  closeDetail: () => void
+  /** Troca o desenho (módulos, base, puxador) do móvel. */
+  setJoineryDesign: (itemId: string, design: JoineryDesign) => void
   setStage: (stage: Stage) => void
   /** Cria a área de cada parede fechada que ainda não tem (pelas faces internas). */
   addAreasFromWalls: () => void
@@ -153,15 +162,45 @@ export const useEditor = create<EditorState>()(
         selected: [],
         tool: 'select',
         stage: 'planta',
+        detailItemId: null,
         placeBlockId: null,
         placeOpeningType: null,
         wallThicknessMm: 150,
         roomSize: { w: 3000, d: 3000 },
         calibration: [],
 
+        openDetail: (itemId) =>
+          set((s) => {
+            const it = env(s).items.find((i) => i.id === itemId)
+            if (!it) return
+            const j = it.joinery ?? { finishes: {}, grain: 'vertical' as const }
+            if (!j.design) it.joinery = { ...j, design: defaultDesign(it) }
+            s.detailItemId = itemId
+            setSel(s, { kind: 'item', id: itemId })
+          }),
+        closeDetail: () => set((s) => void (s.detailItemId = null)),
+        setJoineryDesign: (itemId, design) =>
+          set((s) => {
+            const it = env(s).items.find((i) => i.id === itemId)
+            if (!it) return
+            const j = it.joinery ?? { finishes: {}, grain: 'vertical' as const }
+            it.joinery = {
+              ...j,
+              design: {
+                ...design,
+                heightMm: Math.max(100, roundMm(design.heightMm)),
+                base: { ...design.base, heightMm: Math.max(0, roundMm(design.base.heightMm)) },
+                modules: design.modules.map((m) => ({
+                  ...m,
+                  widthMm: Math.max(1, roundMm(m.widthMm)),
+                })),
+              },
+            }
+          }),
         setStage: (stage) =>
           set((s) => {
             s.stage = stage
+            s.detailItemId = null
             s.tool = 'select'
             s.placeBlockId = null
             s.placeOpeningType = null
@@ -250,6 +289,7 @@ export const useEditor = create<EditorState>()(
         setActiveEnv: (id) =>
           set((s) => {
             s.activeEnvId = id
+            s.detailItemId = null
             setSel(s, null)
           }),
 

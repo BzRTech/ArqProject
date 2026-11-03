@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "apps.assets",
     "apps.projects",
     "apps.library",
+    "apps.exports",
 ]
 
 MIDDLEWARE = [

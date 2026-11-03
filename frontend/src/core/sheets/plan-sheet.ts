@@ -8,7 +8,7 @@ import { textWidth } from '../drawing/text-metrics'
 import { vec } from '../geometry/vec'
 import { STANDARD_SCALES } from './fit'
 import { graphicScale } from './graphic-scale'
-import { nbrMargins, paperSize, type PaperFormat } from './paper'
+import { nbrMargins, paperSize, type Orientation, type PaperFormat } from './paper'
 
 export interface PlanSheetInput {
   /** Entidades do modelo; serão escaladas para caber. */
@@ -16,6 +16,13 @@ export interface PlanSheetInput {
   title: string
   subtitle: string
   format?: PaperFormat
+  orientation?: Orientation
+  /** Margem (mm) em cima, à direita e embaixo; a esquerda é sempre 25 mm (NBR 10068). */
+  marginMm?: number
+  /** Marca do escritório no carimbo ("Minha marca"). */
+  brand?: SheetBrand
+  /** Notas do carimbo (do modelo de folha). */
+  notes?: string[]
   /** Força uma escala; senão escolhe a maior que couber. */
   scale?: number
   /** Texto de data já formatado (o núcleo não lê relógio). */
@@ -27,6 +34,20 @@ export interface PlanSheetInput {
   /** Escalas candidatas (padrão: as da planta). */
   scales?: readonly number[]
 }
+
+export interface SheetBrand {
+  name: string
+  /** Contato e registro (telefone, e-mail, site, CAU…), uma linha cada. */
+  lines: string[]
+  /** Logo já carregado (data URL) e a proporção largura/altura. */
+  logo?: { href: string; aspect: number }
+}
+
+/** Notas quando o modelo de folha não traz as dele. */
+export const DEFAULT_SHEET_NOTES = [
+  'Medidas em centímetros, salvo indicação.',
+  'As medidas devem ser conferidas no local.',
+]
 
 export interface LegendLine {
   label: string
@@ -68,10 +89,10 @@ interface LegendRow {
   h: number
 }
 
-function layoutRow(l: LegendLine): LegendRow {
+function layoutRow(l: LegendLine, w: number): LegendRow {
   const qtyW = l.qty ? textWidth(l.qty, MAIN_SIZE) + 3 : 0
-  const main = wrapText(l.text, MAIN_SIZE, LEGEND_W - 10 - qtyW)
-  const detail = l.detail ? wrapText(l.detail, DETAIL_SIZE, LEGEND_W - 10) : []
+  const main = wrapText(l.text, MAIN_SIZE, w - 10 - qtyW)
+  const detail = l.detail ? wrapText(l.detail, DETAIL_SIZE, w - 10) : []
   const h =
     LEGEND_ROW +
     (main.length - 1) * MAIN_LINE +
@@ -86,17 +107,18 @@ function legendEntities(
   y: number,
   maxH: number,
   title = 'LEGENDA',
+  w = LEGEND_W,
 ): Entity[] {
   const out: Entity[] = [
     { kind: 'text', at: vec(x, y + 3), text: title, size: 2.6, weight: 'bold' },
     {
       kind: 'line',
       a: vec(x, y + 4.6),
-      b: vec(x + LEGEND_W, y + 4.6),
+      b: vec(x + w, y + 4.6),
       style: { weight: PEN.fine },
     },
   ]
-  const rows = lines.map(layoutRow)
+  const rows = lines.map((l) => layoutRow(l, w))
   // Quantas linhas cabem (as quebradas ocupam mais); sobrando, a última vira "… e mais".
   const fits = (n: number) =>
     rows.slice(0, n).reduce((h, r) => h + r.h, 0) <= maxH - 8 - (n < rows.length ? LEGEND_ROW : 0)
@@ -154,7 +176,7 @@ function legendEntities(
     if (l.qty)
       out.push({
         kind: 'text',
-        at: vec(x + LEGEND_W, cy),
+        at: vec(x + w, cy),
         text: l.qty,
         size: MAIN_SIZE,
         anchor: 'end',
@@ -181,27 +203,140 @@ export interface PlanSheet {
   primitives: Primitive[]
 }
 
-const STAMP_H = 30
+const STAMP_H = 32
 const HEADER_H = 14
+/** Largura mínima do desenho para a legenda ir ao lado (senão vai embaixo). */
+const MIN_DRAWING_W = 150
 
-/** Prancha simples: moldura, título, desenho centralizado em escala, escala gráfica e carimbo. */
+/** Altura que a legenda ocuparia (para a faixa de baixo nas folhas estreitas). */
+function legendHeight(lines: LegendLine[], w: number): number {
+  return 10 + lines.map((l) => layoutRow(l, w)).reduce((h, r) => h + r.h, 0)
+}
+
+/** Carimbo: marca do escritório | projeto, título e notas | escala, folha e data. */
+function stampEntities(
+  input: PlanSheetInput,
+  box: { x: number; y: number; w: number; h: number },
+  scale: number,
+  format: PaperFormat,
+): Entity[] {
+  const t = (
+    x: number,
+    y: number,
+    text: string,
+    size: number,
+    bold = false,
+    color?: string,
+  ): Entity => ({
+    kind: 'text',
+    at: vec(x, y),
+    text,
+    size,
+    weight: bold ? 'bold' : 'normal',
+    ...(color ? { color } : {}),
+  })
+  const brand = input.brand
+  const brandW = brand ? Math.min(62, box.w * 0.34) : 0
+  const scaleW = 36
+  const projX = box.x + brandW
+  const projW = box.w - brandW - scaleW
+  const scaleX = box.x + box.w - scaleW
+  const out: Entity[] = [
+    {
+      kind: 'rect',
+      x: box.x,
+      y: box.y,
+      width: box.w,
+      height: box.h,
+      style: { weight: PEN.medium },
+    },
+    {
+      kind: 'line',
+      a: vec(scaleX, box.y),
+      b: vec(scaleX, box.y + box.h),
+      style: { weight: PEN.fine },
+    },
+  ]
+  if (brand) {
+    out.push({
+      kind: 'line',
+      a: vec(projX, box.y),
+      b: vec(projX, box.y + box.h),
+      style: { weight: PEN.fine },
+    })
+    let y = box.y + 3
+    if (brand.logo && brand.logo.aspect > 0) {
+      const maxW = brandW - 6
+      const h = Math.min(11, maxW / brand.logo.aspect)
+      out.push({
+        kind: 'image',
+        x: box.x + 3,
+        y,
+        width: h * brand.logo.aspect,
+        height: h,
+        href: brand.logo.href,
+      })
+      y += h + 3.2
+    } else y += 3
+    out.push(t(box.x + 3, y, brand.name, 2.6, true))
+    y += 3.4
+    const room = Math.max(0, Math.floor((box.y + box.h - 1.5 - y) / 2.4))
+    for (const line of brand.lines.slice(0, room)) {
+      out.push(t(box.x + 3, y, line, 1.7, false, '#4a4741'))
+      y += 2.4
+    }
+  }
+  out.push(t(projX + 3, box.y + 6, input.subtitle, 2.2, true))
+  const title = wrapText(input.title, 3.5, projW - 6)[0]!
+  out.push(t(projX + 3, box.y + 13, title, 3.5, true))
+  let ny = box.y + 19.5
+  for (const note of input.notes ?? DEFAULT_SHEET_NOTES)
+    for (const line of wrapText(note, 1.9, projW - 6)) {
+      if (ny > box.y + box.h - 1.5) break
+      out.push(t(projX + 3, ny, line, 1.9))
+      ny += 2.7
+    }
+  out.push(t(scaleX + 3, box.y + 6, 'ESCALA', 2))
+  out.push(t(scaleX + 3, box.y + 13, `1:${scale}`, 4, true))
+  out.push(t(scaleX + 3, box.y + 20, `FOLHA ${format}`, 2))
+  if (input.dateText) out.push(t(scaleX + 3, box.y + 25, input.dateText, 2))
+  return out
+}
+
+/**
+ * Prancha: moldura, título, desenho centralizado em escala, escala gráfica, legenda (ao lado
+ * ou, em folha estreita, embaixo) e carimbo com a marca do escritório. A4 a A1, paisagem ou
+ * retrato. Tudo em mm de papel.
+ */
 export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
-  const paper = paperSize(input.format ?? 'A3', 'landscape')
-  const m = nbrMargins(paper.format)
+  const paper = paperSize(input.format ?? 'A3', input.orientation ?? 'landscape')
+  const nbr = nbrMargins(paper.format)
+  const mg = input.marginMm ?? nbr.top
+  const m = { top: mg, right: mg, bottom: mg, left: nbr.left }
   const frame = {
     x: m.left,
     y: m.top,
     w: paper.widthMm - m.left - m.right,
     h: paper.heightMm - m.top - m.bottom,
   }
-  // Área útil do desenho. A caixa do desenho já inclui as cotas; a folga é só respiro.
+  const stampW = Math.min(190, frame.w)
+  const sx = frame.x + frame.w - stampW
+  const sy = frame.y + frame.h - STAMP_H
+  // Escala gráfica ao lado do carimbo, se couber; senão logo acima dele.
+  const scaleBeside = sx - frame.x >= 105
+  const scaleBandH = scaleBeside ? 0 : 12
+
   const pad = 8
-  const hasLegend = !!input.legend?.length
+  const lines = input.legend ?? []
+  const hasLegend = lines.length > 0
+  const side = hasLegend && frame.w - 2 * pad - (LEGEND_W + 10) >= MIN_DRAWING_W
+  const bottomW = frame.w - 14
+  const bandH = hasLegend && !side ? Math.min(legendHeight(lines, bottomW), frame.h * 0.32) : 0
   const area = {
     x: frame.x + pad,
     y: frame.y + HEADER_H + pad,
-    w: frame.w - 2 * pad - (hasLegend ? LEGEND_W + 10 : 0),
-    h: frame.h - HEADER_H - STAMP_H - 2 * pad,
+    w: frame.w - 2 * pad - (side ? LEGEND_W + 10 : 0),
+    h: sy - scaleBandH - (bandH ? bandH + 4 : 0) - pad - (frame.y + HEADER_H + pad),
   }
 
   // Testa cada escala com o desenho montado nela (afastamentos de cota dependem da escala).
@@ -221,15 +356,6 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     area.y + (area.h - height(bb) / scale) / 2 - bb.minY / scale,
   )
 
-  const sx = frame.x + frame.w - 170
-  const sy = frame.y + frame.h - STAMP_H
-  const t = (x: number, y: number, text: string, size: number, bold = false): Entity => ({
-    kind: 'text',
-    at: vec(x, y),
-    text,
-    size,
-    weight: bold ? 'bold' : 'normal',
-  })
   const paperEntities: Entity[] = [
     {
       kind: 'rect',
@@ -239,31 +365,24 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
       height: frame.h,
       style: { weight: PEN.thick },
     },
-    t(frame.x + 7, frame.y + 10, input.title.toUpperCase(), 4.5, true),
+    {
+      kind: 'text',
+      at: vec(frame.x + 7, frame.y + 10),
+      text: input.title.toUpperCase(),
+      size: 4.5,
+      weight: 'bold',
+    },
     {
       kind: 'line',
       a: vec(frame.x + 7, frame.y + 13),
       b: vec(frame.x + frame.w - 7, frame.y + 13),
       style: { weight: PEN.medium },
     },
-    { kind: 'rect', x: sx, y: sy, width: 170, height: STAMP_H, style: { weight: PEN.medium } },
-    {
-      kind: 'line',
-      a: vec(sx + 120, sy),
-      b: vec(sx + 120, sy + STAMP_H),
-      style: { weight: PEN.fine },
-    },
-    t(sx + 3, sy + 6, input.subtitle, 2.2, true),
-    t(sx + 3, sy + 13, input.title, 3.5, true),
-    t(sx + 3, sy + 20, 'Medidas em centímetros.', 2),
-    t(sx + 3, sy + 25, 'As medidas devem ser conferidas no local.', 2),
-    t(sx + 123, sy + 6, 'ESCALA', 2),
-    t(sx + 123, sy + 13, `1:${scale}`, 4, true),
-    t(sx + 123, sy + 20, `FOLHA ${paper.format}`, 2),
-    ...(input.dateText ? [t(sx + 123, sy + 25, input.dateText, 2)] : []),
+    ...stampEntities(input, { x: sx, y: sy, w: stampW, h: STAMP_H }, scale, paper.format),
   ]
 
   const meters = Math.max(1, Math.min(5, Math.floor((90 * scale) / 1000)))
+  const legendTop = frame.y + HEADER_H + 4
   return {
     widthMm: paper.widthMm,
     heightMm: paper.heightMm,
@@ -271,20 +390,33 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     primitives: [
       ...compileView(paperEntities, PAPER_VIEW),
       { kind: 'group', role: 'vista', children: compileView(entities, { scale, origin }) },
-      graphicScale({ at: vec(frame.x + 7, sy + 14), scale, meters }),
+      graphicScale({
+        at: scaleBeside ? vec(frame.x + 7, sy + 14) : vec(frame.x + 7, sy - 8),
+        scale,
+        meters,
+      }),
       ...(hasLegend
         ? [
             {
               kind: 'group' as const,
               role: 'legenda',
               children: compileView(
-                legendEntities(
-                  input.legend!,
-                  frame.x + frame.w - 7 - LEGEND_W,
-                  frame.y + HEADER_H + 4,
-                  sy - (frame.y + HEADER_H + 4) - 6,
-                  input.legendTitle,
-                ),
+                side
+                  ? legendEntities(
+                      lines,
+                      frame.x + frame.w - 7 - LEGEND_W,
+                      legendTop,
+                      sy - legendTop - 6,
+                      input.legendTitle,
+                    )
+                  : legendEntities(
+                      lines,
+                      frame.x + 7,
+                      sy - scaleBandH - bandH - 2,
+                      bandH,
+                      input.legendTitle,
+                      bottomW,
+                    ),
                 PAPER_VIEW,
               ),
             },

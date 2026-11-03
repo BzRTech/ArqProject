@@ -1,4 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { projectReport } from '@/core/project/report'
 import type { Project } from '@/core/project/schema'
 import { api, errorText, type Schemas } from './client'
 
@@ -37,8 +38,9 @@ function useInvalidateList() {
 }
 
 export async function createProject(data: Project, clientName = ''): Promise<ProjectDetail> {
+  // O relatório do memorial é calculado pelo núcleo e vai junto (o servidor só guarda).
   const { data: created, error } = await api.POST('/api/projects/', {
-    body: { data, client_name: clientName },
+    body: { data, client_name: clientName, report: projectReport(data) },
   })
   if (!created) throw new Error(errorText(error, 'Não foi possível criar o projeto.'))
   return created
@@ -166,7 +168,7 @@ export type SaveResult =
   | { kind: 'invalid'; message: string }
   | { kind: 'forbidden'; message: string }
 
-/** PUT com If-Match. Erro de rede vira exceção (o autosave tenta de novo). */
+/** PUT com If-Match (documento + relatório do memorial). Erro de rede vira exceção. */
 export async function saveProjectRemote(
   id: string,
   doc: Project,
@@ -174,7 +176,7 @@ export async function saveProjectRemote(
 ): Promise<SaveResult> {
   const { data, error, response } = await api.PUT('/api/projects/{id}/', {
     params: { path: { id }, header: { 'If-Match': `"${revision}"` } },
-    body: { data: doc },
+    body: { data: doc, report: projectReport(doc) },
   })
   if (data) return { kind: 'saved', revision: data.revision }
   if (response.status === 409) return { kind: 'conflict', conflict: error as unknown as Conflict }

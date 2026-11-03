@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import Project, ProjectItemIndex, ProjectVersion
-from .validation import document_errors
+from .validation import document_errors, report_errors
 
 AUTO_VERSIONS_KEPT = 50
 
@@ -33,13 +33,57 @@ def validate_document(data: object) -> dict:
     return data
 
 
+def validate_report(report: object) -> dict:
+    errors = report_errors(report)
+    if errors:
+        raise InvalidDocument([f"relatório: {e}" for e in errors])
+    assert isinstance(report, dict)
+    return report
+
+
 def _document_name(data: dict) -> str:
     return str(data.get("name") or "Projeto sem nome")[:200]
 
 
+def _index_from_report(project: Project) -> list[ProjectItemIndex]:
+    rows = []
+    for env in project.report.get("environments", []):
+        for line in env.get("lines", []):
+            size = line.get("sizeMm") or {}
+            item_ids = line.get("itemIds") or []
+            rows.append(
+                ProjectItemIndex(
+                    project=project,
+                    environment_id=str(env.get("id", ""))[:64],
+                    environment_name=str(env.get("name", ""))[:200],
+                    item_id=str(item_ids[0] if item_ids else "")[:64],
+                    marker_no=str(line.get("label", ""))[:12],
+                    discipline=str(line.get("discipline", ""))[:20],
+                    name=str(line.get("name", ""))[:300],
+                    detail=str(line.get("detail", "")),
+                    qty=Decimal(str(line.get("qty", 0))).quantize(Decimal("0.001")),
+                    unit=str(line.get("unit", ""))[:10],
+                    size_w_mm=size.get("w"),
+                    size_d_mm=size.get("d"),
+                    size_h_mm=size.get("h"),
+                    unit_price_cents=line.get("unitPriceCents"),
+                    supplier=str(line.get("supplier") or "")[:200],
+                    brand_model=str(line.get("brandModel") or "")[:300],
+                    approved=bool(line.get("approved")),
+                    existing=bool(line.get("existing")),
+                    in_legend=True,
+                )
+            )
+    return rows
+
+
 def rebuild_item_index(project: Project) -> None:
-    """Refaz as linhas do índice a partir do documento (mesma transação do save)."""
+    """Refaz as linhas do índice (mesma transação do save): do relatório enviado pelo front;
+    sem relatório, uma linha por item do documento."""
     ProjectItemIndex.objects.filter(project=project).delete()
+    if project.report.get("environments"):
+        ProjectItemIndex.objects.bulk_create(_index_from_report(project))
+        return
     rows = []
     for env in project.data.get("environments", []):
         for item in env.get("items", []):
@@ -99,9 +143,16 @@ def _maybe_auto_version(project: Project, user) -> None:
 
 @transaction.atomic
 def create_project(
-    *, organization, user, data: object, client_name: str = "", status: str = Project.Status.DRAFT
+    *,
+    organization,
+    user,
+    data: object,
+    client_name: str = "",
+    status: str = Project.Status.DRAFT,
+    report: object | None = None,
 ) -> Project:
     doc = validate_document(data)
+    rep = validate_report(report) if report else {}
     project = Project.objects.create(
         organization=organization,
         name=_document_name(doc),
@@ -109,6 +160,7 @@ def create_project(
         status=status,
         schema_version=doc["schemaVersion"],
         data=doc,
+        report=rep,
         created_by=user,
         updated_by=user,
     )
@@ -118,12 +170,21 @@ def create_project(
 
 
 @transaction.atomic
-def save_project(project: Project, user, *, data: object, expected_revision: int) -> Project:
-    """Grava o documento se `expected_revision` for a atual; senão, RevisionConflict."""
+def save_project(
+    project: Project,
+    user,
+    *,
+    data: object,
+    expected_revision: int,
+    report: object | None = None,
+) -> Project:
+    """Grava o documento (e o relatório do memorial, se veio) se `expected_revision` for a
+    atual; senão, RevisionConflict. Sem relatório, o antigo sai (ficaria desatualizado)."""
     locked = Project.objects.select_for_update().get(pk=project.pk)
     if locked.revision != expected_revision:
         raise RevisionConflict(locked)
     doc = validate_document(data)
+    locked.report = validate_report(report) if report else {}
     locked.data = doc
     locked.name = _document_name(doc)
     locked.schema_version = doc["schemaVersion"]
@@ -153,6 +214,7 @@ def restore_version(
     if version.schema_version == locked.schema_version:
         validate_document(version.data)
     locked.data = version.data
+    locked.report = {}  # o editor recalcula ao abrir
     locked.name = _document_name(version.data)
     locked.schema_version = version.schema_version
     locked.revision += 1
@@ -173,6 +235,7 @@ def duplicate_project(project: Project, user) -> Project:
         status=Project.Status.DRAFT,
         schema_version=project.schema_version,
         data=data,
+        report=project.report,
         created_by=user,
         updated_by=user,
     )

@@ -1,4 +1,4 @@
-import { Archive, ArchiveRestore, Copy, History, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Copy, History, ScrollText, Trash2 } from 'lucide-react'
 import { Link } from 'react-router'
 import {
   STATUS_LABEL,
@@ -52,6 +52,16 @@ export function ProjectCard({
             ))}
           </select>
         )}
+        <a
+          className="icon-link"
+          href={`/api/projects/${p.id}/memorial.pdf`}
+          target="_blank"
+          rel="noreferrer"
+          title="Memorial (PDF)"
+          data-testid="project-memorial"
+        >
+          <ScrollText size={15} strokeWidth={1.5} />
+        </a>
         <button type="button" className="icon" onClick={onVersions} title="Versões">
           <History size={15} strokeWidth={1.5} />
         </button>

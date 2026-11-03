@@ -264,6 +264,27 @@ modelos prontos, as regras de marcenaria, as folhas e os textos padrão vêm ago
 
 Prints em [`docs/prints/fase-3/`](docs/prints/fase-3/).
 
+## Pranchas, Minha marca e memorial (Fase 6)
+
+- **Minha marca** (clique no nome do escritório, na barra superior): nome, logo, telefone,
+  e-mail, site, endereço, registro profissional (CAU/CREA) e cor. Só o dono altera. A prévia
+  mostra o carimbo como ele sai nas pranchas.
+- **Folhas A4, A3, A2 e A1**, paisagem ou retrato. Na aba **Pranchas**: o modelo de folha do
+  projeto (do banco: tamanho, margem e notas do carimbo) e, se quiser, outra folha só para o
+  ambiente. A escala continua automática (a maior que couber); em folha estreita (A4 em pé) a
+  legenda vai para baixo do desenho. Toda prancha tem escala gráfica, que serve para conferir a
+  impressão.
+- **Baixar só esta prancha** ou todas (botão da barra superior). O carimbo leva a marca do
+  escritório.
+- **Memorial (PDF)**: na aba Pranchas e no cartão do projeto. Gerado no servidor, com os itens
+  por ambiente e disciplina, marcador, especificação (acabamento, marca/modelo), fornecedor,
+  quantidade, preço, totais e o ✓ dos aprovados. Os números e as quantidades são os mesmos da
+  planta (o editor envia o relatório junto com cada save).
+- Depois de atualizar o código, rode `docker compose up --build`: a imagem do backend ganhou as
+  bibliotecas do WeasyPrint (Pango).
+
+Prints em [`docs/prints/fase-6/`](docs/prints/fase-6/).
+
 ## Núcleo de geometria (Fase 1)
 
 `frontend/src/core` é TypeScript puro: unidades, geometria, primitivas de desenho, cotas e

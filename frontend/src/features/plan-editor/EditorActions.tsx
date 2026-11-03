@@ -76,7 +76,7 @@ export function EditorActions({
         onClick={() => void pdf()}
         disabled={busy}
         data-testid="export-pdf"
-        title="Uma prancha A3 por ambiente, na maior escala que couber"
+        title="Uma prancha por ambiente (folha do modelo ou a escolhida), na maior escala que couber"
       >
         <FileDown size={15} strokeWidth={1.5} />
         {busy ? 'Gerando…' : 'Baixar PDF'}

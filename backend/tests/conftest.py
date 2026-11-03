@@ -94,6 +94,7 @@ def make_document(name: str = "Casa Silva", items: list | None = None) -> dict:
         "librarySnapshots": {
             "blocks": {"sofa@1": seed_entry("items", "sofa")},
             "rules": seed_entry("rules", "padrao"),
+            "sheetTemplate": seed_entry("sheet-templates", "a3-paisagem"),
         },
         "schemaVersion": current_schema_version(),
         "name": name,
@@ -114,3 +115,61 @@ def make_document(name: str = "Casa Silva", items: list | None = None) -> dict:
 @pytest.fixture
 def document() -> dict:
     return make_document()
+
+
+def make_report(doc: dict | None = None) -> dict:
+    """Relatório do memorial como o editor envia (uma linha por marcador + piso)."""
+    return {
+        "version": 1,
+        "totalCents": 1379700,
+        "environments": [
+            {
+                "id": "e1",
+                "name": "Sala",
+                "totalCents": 1379700,
+                "lines": [
+                    {
+                        "label": "1",
+                        "discipline": "layout",
+                        "name": "Sofá 3 lugares",
+                        "qty": 2,
+                        "unit": "un",
+                        "sizeMm": {"w": 2100, "d": 900},
+                        "supplier": "Loja X",
+                        "brandModel": "Modelo Lina",
+                        "unitPriceCents": 459900,
+                        "totalCents": 919800,
+                        "existing": False,
+                        "approved": True,
+                        "itemIds": ["i1", "i2"],
+                    },
+                    {
+                        "label": "M01",
+                        "discipline": "marcenaria",
+                        "name": "Rack",
+                        "detail": "Frentes: Freijó (veio vertical) · Corpo: Branco",
+                        "qty": 1,
+                        "unit": "un",
+                        "sizeMm": {"w": 1800, "d": 450, "h": 400},
+                        "unitPriceCents": 459900,
+                        "totalCents": 459900,
+                        "existing": False,
+                        "approved": False,
+                        "itemIds": ["i3"],
+                    },
+                    {
+                        "label": "P1",
+                        "discipline": "revestimentos",
+                        "name": "Porcelanato 90x90",
+                        "detail": "Quantidade já com a perda.",
+                        "qty": 18.5,
+                        "unit": "m²",
+                        "totalCents": 0,
+                        "existing": False,
+                        "approved": False,
+                        "itemIds": [],
+                    },
+                ],
+            }
+        ],
+    }

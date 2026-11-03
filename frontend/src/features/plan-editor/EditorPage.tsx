@@ -13,6 +13,7 @@ import { usePersistence, type ProjectSource } from './hooks'
 import { ConflictBanner } from './ConflictBanner'
 import { LibraryUpdatesBanner } from '@/features/library/LibraryUpdatesBanner'
 import { useEditorLibrary } from '@/features/library/use-editor-library'
+import { useLoadSheetBrand } from '@/features/brand/sheet-brand'
 import { PlanCanvas } from './PlanCanvas'
 import { PropertiesPanel } from './PropertiesPanel'
 import { StageTitle } from './StageTitle'
@@ -25,6 +26,7 @@ const LOCAL: ProjectSource = { kind: 'local' }
 export default function EditorPage({ source = LOCAL }: { source?: ProjectSource }) {
   const persistence = usePersistence(source)
   useEditorLibrary(source)
+  useLoadSheetBrand(source.kind === 'server')
   const { status } = persistence
   const stage = useEditor((s) => s.stage)
   const detailOpen = useEditor((s) => s.detailItemId !== null)

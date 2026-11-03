@@ -5,6 +5,7 @@ import type { Project } from '@/core/project/schema'
 import { setAssetTarget } from './asset-target'
 import { getAsset, loadProject, saveBackupSync, saveProject } from './persistence'
 import { ServerSync, type SyncState } from './server-sync'
+import { useEditorSession } from './session'
 import { clearHistory, useEditor } from './store'
 
 export type SaveStatus = 'carregando' | SyncState['status']
@@ -182,12 +183,15 @@ function useServerPersistence(id: string | null): Omit<Persistence, 'source'> {
           detail.revision,
         )
         syncRef.current = sync
+        useEditorSession.setState({ projectId: id, flush: () => sync.flush() })
         setState({ status: 'salvo' })
         unsubscribe = useEditor.subscribe((s, prev) => {
           if (s.project !== prev.project) sync.markDirty()
         })
-        // Cópia local mais nova que o servidor, ou formato convertido: envia.
-        if (useBackup || doc.schemaVersion !== detail.schema_version) sync.markDirty()
+        // Cópia local mais nova que o servidor, formato convertido ou sem relatório do
+        // memorial (projeto antigo ou versão restaurada): envia.
+        if (useBackup || doc.schemaVersion !== detail.schema_version || !detail.has_report)
+          sync.markDirty()
       })
       .catch((e: unknown) => {
         if (!cancelled) setLoadError(e instanceof Error ? e.message : String(e))
@@ -198,6 +202,7 @@ function useServerPersistence(id: string | null): Omit<Persistence, 'source'> {
       leave()
       syncRef.current?.dispose()
       syncRef.current = null
+      useEditorSession.setState({ projectId: null, flush: async () => undefined })
       unsubscribe?.()
       window.removeEventListener('pagehide', leave)
       document.removeEventListener('visibilitychange', onHide)

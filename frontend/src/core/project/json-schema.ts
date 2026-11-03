@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { ProjectReportSchema } from './report'
 import { ProjectSchema, SCHEMA_VERSION } from './schema'
 
 /**
@@ -18,3 +19,11 @@ export function projectJsonSchema(): Record<string, unknown> {
 
 /** Texto do arquivo exportado (estável: mesma entrada → mesmo texto). */
 export const projectJsonSchemaText = () => JSON.stringify(projectJsonSchema(), null, 2) + '\n'
+
+/** JSON Schema do relatório do memorial (enviado junto com o save). */
+export function reportJsonSchema(): Record<string, unknown> {
+  return {
+    ...z.toJSONSchema(ProjectReportSchema, { target: 'draft-2020-12', io: 'input' }),
+    title: 'Relatório do projeto (memorial)',
+  }
+}

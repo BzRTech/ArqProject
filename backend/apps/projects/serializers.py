@@ -41,11 +41,17 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
             "revision",
             "schema_version",
             "data",
+            "has_report",
             "created_at",
             "updated_at",
             "updated_by_name",
         ]
         read_only_fields = fields
+
+    has_report = serializers.SerializerMethodField()
+
+    def get_has_report(self, obj: Project) -> bool:
+        return bool(obj.report.get("environments"))
 
     def get_updated_by_name(self, obj: Project) -> str | None:
         u = obj.updated_by
@@ -54,6 +60,9 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
 
 class ProjectCreateSerializer(serializers.Serializer):
     data = serializers.JSONField(help_text="Documento completo (formato atual).")
+    report = serializers.JSONField(
+        required=False, help_text="Relatório do memorial (calculado pelo editor)."
+    )
     client_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
     status = serializers.ChoiceField(choices=Project.Status.choices, required=False)
 
@@ -62,6 +71,9 @@ class ProjectSaveSerializer(serializers.Serializer):
     """PUT: o documento inteiro. Exige o cabeçalho `If-Match: <revision>`."""
 
     data = serializers.JSONField()
+    report = serializers.JSONField(
+        required=False, help_text="Relatório do memorial (calculado pelo editor)."
+    )
 
 
 class ProjectMetaSerializer(serializers.ModelSerializer):

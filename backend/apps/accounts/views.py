@@ -15,9 +15,9 @@ from .models import Membership
 from .permissions import IsOrganizationOwner
 from .selectors import active_membership, memberships_of
 from .serializers import (
+    BrandSerializer,
     LoginSerializer,
     MeSerializer,
-    OrganizationSerializer,
     SignUpSerializer,
     SwitchOrganizationSerializer,
 )
@@ -101,18 +101,19 @@ class MeView(APIView):
 
 
 class CurrentOrganizationView(APIView):
-    """Escritório ativo. Só o dono altera (a "Minha marca" completa vem na Fase 6)."""
+    """Escritório ativo com a "Minha marca" (logo, cor, contato). Só o dono altera."""
 
     permission_classes = [IsAuthenticated, IsOrganizationOwner]
 
-    @extend_schema(responses=OrganizationSerializer, tags=["orgs"])
+    @extend_schema(responses=BrandSerializer, tags=["orgs"])
     def get(self, request: Request) -> Response:
-        return Response(OrganizationSerializer(active_membership(request).organization).data)
+        org = active_membership(request).organization
+        return Response(BrandSerializer(org, context={"request": request}).data)
 
-    @extend_schema(request=OrganizationSerializer, responses=OrganizationSerializer, tags=["orgs"])
+    @extend_schema(request=BrandSerializer, responses=BrandSerializer, tags=["orgs"])
     def patch(self, request: Request) -> Response:
         org = active_membership(request).organization
-        s = OrganizationSerializer(org, data=request.data, partial=True)
+        s = BrandSerializer(org, data=request.data, partial=True, context={"request": request})
         s.is_valid(raise_exception=True)
         s.save()
         return Response(s.data)

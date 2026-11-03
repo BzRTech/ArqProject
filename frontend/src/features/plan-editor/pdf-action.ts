@@ -1,13 +1,13 @@
 import { create } from 'zustand'
-import { exportProjectPdf } from './export-pdf'
+import { exportProjectPdf, type SheetRef } from './export-pdf'
 import { useEditor } from './store'
 import { useUnits } from './units-pref'
 
 interface PdfState {
   busy: boolean
   toast: { text: string; error?: boolean } | null
-  /** Gera o PDF (uma prancha A3 por ambiente) e avisa no toast. */
-  run: () => Promise<void>
+  /** Gera o PDF (todas as pranchas, ou só `only`) e avisa no toast. */
+  run: (only?: SheetRef) => Promise<void>
   dismiss: () => void
   /** Aviso avulso no mesmo toast (ex.: erro ao importar a planta). */
   notify: (text: string, error?: boolean) => void
@@ -19,11 +19,12 @@ export const usePdf = create<PdfState>()((set) => ({
   toast: null,
   dismiss: () => set({ toast: null }),
   notify: (text, error) => set({ toast: { text, error } }),
-  run: async () => {
+  run: async (only) => {
     set({ busy: true, toast: null })
     try {
       const r = await exportProjectPdf(useEditor.getState().project, {
         humanized: useUnits.getState().humanized,
+        only,
       })
       set({
         toast: {

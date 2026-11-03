@@ -29,6 +29,13 @@ export const router = createBrowserRouter([
             }),
           },
           {
+            path: 'escritorio',
+            ErrorBoundary: ErrorPage,
+            lazy: async () => ({
+              Component: (await import('@/features/brand/BrandPage')).default,
+            }),
+          },
+          {
             path: 'banco',
             ErrorBoundary: ErrorPage,
             lazy: async () => ({

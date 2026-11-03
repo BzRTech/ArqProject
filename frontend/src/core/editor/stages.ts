@@ -231,7 +231,7 @@ export function stageChecklist(env: Environment, stage: Stage): ChecklistStep[] 
         {
           id: 'pdf',
           label: 'Confira a folha e baixe o PDF',
-          hint: 'A prévia é a mesma folha do PDF: uma prancha A3 por ambiente.',
+          hint: 'A prévia é a mesma folha do PDF: uma prancha por ambiente, na folha escolhida.',
           done: false,
           action: { kind: 'command', command: 'pdf' },
           actionLabel: 'Baixar PDF',

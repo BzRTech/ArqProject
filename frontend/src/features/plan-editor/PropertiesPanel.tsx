@@ -16,7 +16,12 @@ import {
 } from '@/core/project/openings'
 import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/core/project/schema'
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
+import { isJoineryBlock } from '@/core/joinery/finish'
 import { BudgetFields } from './BudgetFields'
+import { JoineryFinishPanel } from './JoineryFinishPanel'
+import { JoineryList } from './JoineryList'
+import { PranchasPanel } from './PranchasPanel'
+import { StageChecklist } from './StageChecklist'
 import { ColumnProps } from './ColumnProps'
 import { importBasePlan } from './base-plan-import'
 import { LengthField, TextField } from './fields'
@@ -110,12 +115,6 @@ function ItemProps({ item }: { item: Item }) {
           Excluir
         </button>
       </div>
-      {block.joinery && (
-        <p className="note">
-          Na Fase 8 este bloco abre o <strong>detalhamento de marcenaria</strong> (módulos, portas,
-          puxadores) e gera as pranchas de detalhe.
-        </p>
-      )}
     </section>
   )
 }
@@ -633,15 +632,30 @@ export function PropertiesPanel() {
     selection?.kind === 'opening' ? env.openings.find((o) => o.id === selection.id) : undefined
   const drawing =
     selection?.kind === 'drawing' ? env.drawings.find((d) => d.id === selection.id) : undefined
+  const stage = useEditor((s) => s.stage)
+  const nothing = !many && !item && !drawing && !opening
+  const joineryItem = item && stage === 'marcenaria' && isJoineryBlock(item.blockId)
   return (
     <aside className="panel panel--props" data-testid="properties">
+      <StageChecklist />
       <ToolOptions />
       {many && <MultiSelectionProps env={env} />}
+      {joineryItem && <JoineryFinishPanel key={`f-${item.id}`} item={item} />}
       {item && <ItemWithBudget key={item.id} item={item} env={env} />}
       {opening && <OpeningProps key={opening.id} opening={opening} env={env} />}
       {drawing && <DrawingProps key={drawing.id} d={drawing} />}
-      {!many && !item && !drawing && !opening && <ItemsSummary env={env} />}
-      <BasePlanProps env={env} />
+      {nothing && stage === 'layout' && <ItemsSummary env={env} />}
+      {nothing && stage === 'marcenaria' && <JoineryList env={env} />}
+      {nothing && stage === 'pranchas' && <PranchasPanel env={env} />}
+      {nothing && stage === 'piso' && (
+        <>
+          <p className="muted small">
+            Selecione uma área (à esquerda ou na planta) para escolher o piso.
+          </p>
+          <ItemsSummary env={env} />
+        </>
+      )}
+      {stage === 'planta' && <BasePlanProps env={env} />}
     </aside>
   )
 }

@@ -1,11 +1,7 @@
-import { floorRows } from '@/core/finishes/budget'
-import { computeLegend } from '@/core/project/markers'
-import { environmentEntities } from '@/core/project/render'
+import { environmentSheet } from '@/core/project/env-sheet'
 import type { Project } from '@/core/project/schema'
-import { buildPlanSheet } from '@/core/sheets/plan-sheet'
 import { svgPagesToPdf } from '@/render/pdf/exportPdf'
 import { loadPdfFonts, registerWebFonts } from '@/render/pdf/fonts'
-import { formatQty } from '@/core/units'
 import { toMarkup } from '@/render/svg/markup'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { getAsset } from './persistence'
@@ -23,24 +19,10 @@ export async function exportProjectPdf(
   const scales: number[] = []
   for (const env of list) {
     const href = env.basePlan?.visible ? await getAsset(env.basePlan.assetId) : undefined
-    const sheet = buildPlanSheet({
-      title: env.name,
-      subtitle: project.name.toUpperCase(),
+    const sheet = environmentSheet(project, env, {
       dateText: date,
-      legend: [
-        ...computeLegend(env).rows.map((r) => ({
-          label: r.label,
-          text: r.existing ? `${r.name} (existente)` : r.name,
-          qty: `${formatQty(r.qty)} ${r.unit}`,
-        })),
-        ...floorRows(env).map((r) => ({
-          label: r.label,
-          text: r.name,
-          qty: `${formatQty(r.qty)} ${r.unit}`,
-        })),
-      ],
-      build: (scale) =>
-        environmentEntities(env, { scale, basePlanHref: href, humanized: options.humanized }),
+      basePlanHref: href,
+      humanized: options.humanized,
     })
     scales.push(sheet.scale)
     pages.push({

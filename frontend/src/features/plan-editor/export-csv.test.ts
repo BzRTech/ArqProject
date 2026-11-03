@@ -26,8 +26,39 @@ describe('planilha de itens (CSV pt-BR)', () => {
     const csv = projectItemsCsv(p)
     expect(csv.startsWith('﻿Ambiente;Marcador;Item;Qtd')).toBe(true)
     const lines = csv.trim().split('\r\n')
-    expect(lines[1]).toBe('Jantar;1;Cadeira;6;un;45;50;;"Loja; Centro";459,90;2759,40;não;não;')
+    expect(lines[1]).toBe('Jantar;1;Cadeira;6;un;45;50;;"Loja; Centro";459,90;2759,40;não;não;;')
     expect(lines[2]).toContain('Jantar;M01;Rack;1;un;318;45')
     expect(lines.at(-1)).toContain('TOTAL;;;;;;;;15259,40')
+  })
+})
+
+describe('planilha — marcenaria', () => {
+  it('coluna de acabamento e observações do marceneiro', async () => {
+    const { newProject } = await import('@/core/project/schema')
+    const { applyFinish } = await import('@/core/joinery/finish')
+    const { getMaterial } = await import('@/core/joinery/materials')
+    const p = newProject('e')
+    p.environments[0]!.items.push({
+      id: 'r',
+      blockId: 'rack',
+      blockVersion: 1,
+      name: 'Rack',
+      position: { x: 0, y: 0 },
+      rotationDeg: 0,
+      mirrored: false,
+      sizeMm: { w: 1800, d: 450 },
+      qty: 1,
+      unit: 'un',
+      showMarker: true,
+      inLegend: true,
+      existing: false,
+      approved: false,
+      joinery: { ...applyFinish(undefined, 'all', getMaterial('grafite')!), notes: 'Puxador cava' },
+    })
+    const [head, row] = projectItemsCsv(p).replace('﻿', '').split('\r\n')
+    expect(head!.split(';').at(-1)).toBe('Acabamento (marcenaria)')
+    const cells = row!.split(';')
+    expect(cells.at(-1)).toBe('Frentes: Grafite · Corpo: Grafite · Tamponamento: Grafite')
+    expect(cells.at(-2)).toBe('Puxador cava')
   })
 })

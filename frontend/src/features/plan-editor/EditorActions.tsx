@@ -1,11 +1,9 @@
 import { CircleAlert, Check, FileDown, ImageUp, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTopbarSlot } from '@/app/topbar-slot'
-import { exportProjectPdf } from './export-pdf'
 import { importBasePlan } from './base-plan-import'
-import { useEditor } from './store'
-import { useUnits } from './units-pref'
+import { usePdf } from './pdf-action'
 
 const STATUS_LABEL = {
   carregando: 'Carregando…',
@@ -19,34 +17,14 @@ export type SaveStatus = keyof typeof STATUS_LABEL
 /** Ações do editor na barra superior: estado do salvamento, importar planta e baixar PDF. */
 export function EditorActions({ status, onFit }: { status: SaveStatus; onFit: () => void }) {
   const slot = useTopbarSlot()
-  const humanized = useUnits((u) => u.humanized)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [busy, setBusy] = useState(false)
-  const [toast, setToast] = useState<{ text: string; error?: boolean } | null>(null)
+  const { busy, toast, run: pdf, dismiss } = usePdf()
 
   useEffect(() => {
     if (!toast || toast.error) return
-    const t = window.setTimeout(() => setToast(null), 6000)
+    const t = window.setTimeout(dismiss, 6000)
     return () => window.clearTimeout(t)
-  }, [toast])
-
-  async function pdf() {
-    setBusy(true)
-    setToast(null)
-    try {
-      const r = await exportProjectPdf(useEditor.getState().project, { humanized })
-      setToast({
-        text: `Planta exportada em PDF · ${r.pages} prancha(s) · escala ${r.scales.map((s) => `1:${s}`).join(', ')}`,
-      })
-    } catch (e) {
-      setToast({
-        text: `Erro ao gerar PDF: ${e instanceof Error ? e.message : String(e)}`,
-        error: true,
-      })
-    } finally {
-      setBusy(false)
-    }
-  }
+  }, [toast, dismiss])
 
   const actions = (
     <>
@@ -77,7 +55,7 @@ export function EditorActions({ status, onFit }: { status: SaveStatus; onFit: ()
       <button
         type="button"
         className="primary sm"
-        onClick={pdf}
+        onClick={() => void pdf()}
         disabled={busy}
         data-testid="export-pdf"
         title="Uma prancha A3 por ambiente, na maior escala que couber"
@@ -103,7 +81,7 @@ export function EditorActions({ status, onFit }: { status: SaveStatus; onFit: ()
             <Check size={15} strokeWidth={1.5} />
           )}
           {toast.text}
-          <button type="button" onClick={() => setToast(null)} aria-label="Fechar aviso">
+          <button type="button" onClick={dismiss} aria-label="Fechar aviso">
             <X size={14} strokeWidth={1.5} />
           </button>
         </div>

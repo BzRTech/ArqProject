@@ -6,6 +6,7 @@ import { entitiesBBox } from '@/core/drawing/bounds'
 import type { Entity } from '@/core/drawing/entities'
 import { rightAngleSnap, vertexConstraints, type AngleConstraint } from '@/core/editor/right-angle'
 import { snapPoint, type SnapKind } from '@/core/editor/snap'
+import { stageEnv } from '@/core/editor/stages'
 import { expand, isEmpty, rectFromCorners } from '@/core/geometry/bbox'
 import {
   add,
@@ -98,9 +99,20 @@ const SCALE_100 = 96 / 25.4 / DISPLAY_SCALE
 type Hint = string | { k?: string; t: string }[]
 const GRID_DRAW = 50 // mm — passo da grade ao desenhar
 
-const ItemView = memo(function ItemView({ item }: { item: Item }) {
-  const entities = useMemo(() => itemEntities(item), [item])
-  return <Compiled entities={entities} role="item" />
+/** Opacidade do que está fora da aba (aparece como referência, sem clique). */
+const DIMMED = 0.3
+
+const ItemView = memo(function ItemView({
+  item,
+  humanized,
+  dim,
+}: {
+  item: Item
+  humanized: boolean
+  dim: boolean
+}) {
+  const entities = useMemo(() => itemEntities(item, { humanized }), [item, humanized])
+  return <Compiled entities={entities} role="item" opacity={dim ? DIMMED : undefined} />
 })
 
 const NO_OPENINGS: Opening[] = []
@@ -112,12 +124,16 @@ const CENTER_SNAP_PX = 14
 const DrawingView = memo(function DrawingView({
   d,
   openings,
+  dim,
 }: {
   d: Drawing
   openings: Opening[]
+  dim?: boolean
 }) {
   const entities = useMemo(() => drawingEntities(d, DISPLAY_SCALE, openings), [d, openings])
-  return <Compiled entities={entities} role={`drawing-${d.kind}`} />
+  return (
+    <Compiled entities={entities} role={`drawing-${d.kind}`} opacity={dim ? DIMMED : undefined} />
+  )
 })
 
 /** Todas as paredes do ambiente como UMA figura (paredes encostadas se fundem). */
@@ -443,6 +459,13 @@ export function PlanCanvas({ fitSignal }: Props) {
   /** Movendo a vista (botão do meio/direito ou Espaço): cursor de "mão fechada". */
   const [panning, setPanning] = useState(false)
   const selected = useEditor((s) => s.selected)
+  const stage = useEditor((s) => s.stage)
+  /** O ambiente só com o que esta aba edita: clique, área de seleção e cantos usam ele. */
+  const editEnv = useMemo(() => stageEnv(env, stage), [env, stage])
+  const editable = useMemo(
+    () => new Set([...editEnv.items, ...editEnv.drawings, ...editEnv.openings].map((o) => o.id)),
+    [editEnv],
+  )
   const [wallDraft, setWallDraft] = useState<Vec2[]>([])
   const [dimDraft, setDimDraft] = useState<Vec2[]>([])
   const [areaDraft, setAreaDraft] = useState<Vec2[]>([])
@@ -652,7 +675,7 @@ export function PlanCanvas({ fitSignal }: Props) {
       }
       if (mod && key === 'a') {
         e.preventDefault()
-        s.selectMany(allRefs(selectActiveEnv(s)))
+        s.selectMany(allRefs(stageEnv(selectActiveEnv(s), s.stage)))
         return
       }
       if (mod && key === 'd') {
@@ -805,7 +828,7 @@ export function PlanCanvas({ fitSignal }: Props) {
       case 'select': {
         // Canto de QUALQUER parede sob o mouse: arrasta direto (como os grips do CAD).
         const grip = nearestWallVertex(
-          env,
+          editEnv,
           p,
           8 * px,
           s.selection?.kind === 'drawing' ? s.selection.id : undefined,
@@ -856,7 +879,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           }
         }
         // Balões e rótulos de área têm prioridade: arrastá-los não mexe no item/área.
-        const handle = hitHandle(env, p, 4 * px)
+        const handle = hitHandle(editEnv, p, 4 * px)
         if (handle) {
           const id = handle.kind === 'marker' ? handle.itemId : handle.areaId
           s.select({ kind: handle.kind === 'marker' ? 'item' : 'drawing', id })
@@ -877,7 +900,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           }
           break
         }
-        const hit = hitTest(env, p, 6 * px)
+        const hit = hitTest(editEnv, p, 6 * px)
         if (hit && e.shiftKey) {
           s.toggleSelect(hit)
           break
@@ -986,7 +1009,7 @@ export function PlanCanvas({ fitSignal }: Props) {
     const d = drag.current
     setCursorScreen(sp)
     if (s.tool === 'select' && !d) {
-      setHoverGrip(nearestWallVertex(env, p, 8 * px)?.at ?? null)
+      setHoverGrip(nearestWallVertex(editEnv, p, 8 * px)?.at ?? null)
     } else if (hoverGrip) {
       setHoverGrip(null)
     }
@@ -1109,7 +1132,7 @@ export function PlanCanvas({ fitSignal }: Props) {
       } else {
         const r = rectFromCorners(screenToWorld(view, band.a), screenToWorld(view, band.b))
         const mode = band.b.x >= band.a.x ? 'window' : 'crossing'
-        st.selectMany(refsInRect(env, r, mode), dd.additive)
+        st.selectMany(refsInRect(editEnv, r, mode), dd.additive)
       }
       setBand(null)
       drag.current = null
@@ -1465,7 +1488,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           </g>
           <g data-testid="items">
             {itemsInDrawOrder(env.items).map((it) => (
-              <ItemView key={it.id} item={it} />
+              <ItemView key={it.id} item={it} humanized={humanized} dim={!editable.has(it.id)} />
             ))}
           </g>
           <g data-testid="drawings">
@@ -1473,10 +1496,20 @@ export function PlanCanvas({ fitSignal }: Props) {
             {env.drawings
               .filter((d) => d.kind !== 'wall')
               .map((d) => (
-                <DrawingView key={d.id} d={d} openings={NO_OPENINGS} />
+                <DrawingView
+                  key={d.id}
+                  d={d}
+                  openings={NO_OPENINGS}
+                  // Pilares são estrutura: sempre aparecem inteiros, como as paredes.
+                  dim={d.kind !== 'column' && !editable.has(d.id)}
+                />
               ))}
           </g>
-          <Compiled entities={markers} role="marcadores" />
+          <Compiled
+            entities={markers}
+            role="marcadores"
+            opacity={stage === 'layout' || stage === 'marcenaria' ? undefined : DIMMED}
+          />
           <Compiled entities={selectedMarkers} role="marcador-selecionado" />
           <g data-testid={editGuide ? 'edit-guides' : 'draft'}>
             <Compiled entities={draftEntities} opacity={tool === 'place' ? 0.55 : 0.85} />

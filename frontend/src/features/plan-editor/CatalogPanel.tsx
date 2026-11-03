@@ -11,6 +11,7 @@ import { drawingEntities } from '@/core/project/render'
 import { formatLength, UNIT_LABEL } from '@/core/units'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { SvgNodeView } from '@/render/svg/SvgNodeView'
+import { stageBlockFilter } from '@/core/editor/stages'
 import { useEditor } from './store'
 import { useUnits } from './units-pref'
 
@@ -84,8 +85,6 @@ const OpeningThumb = memo(function OpeningThumb({ def }: { def: OpeningDef }) {
   )
 })
 
-const OPENINGS = 'Esquadrias'
-
 function OpeningsSection({ query }: { query: string }) {
   const unit = useUnits((u) => u.item)
   const placing = useEditor((s) => (s.tool === 'opening' ? s.placeOpeningType : null))
@@ -132,13 +131,19 @@ export function CatalogPanel() {
   const unit = useUnits((u) => u.item)
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<string | null>(null)
-  const categories = useMemo(() => [...new Set(CATALOG.map((b) => b.category))], [])
+  const stage = useEditor((s) => s.stage)
+  const openingsOnly = stage === 'planta'
+  const inStage = useMemo(() => {
+    const ok = stageBlockFilter(stage)
+    return CATALOG.filter((b) => ok(b.id))
+  }, [stage])
+  const categories = useMemo(() => [...new Set(inStage.map((b) => b.category))], [inStage])
   const placing = useEditor((s) => (s.tool === 'place' ? s.placeBlockId : null))
   const startPlacing = useEditor((s) => s.startPlacing)
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const list = CATALOG.filter(
+    const list = inStage.filter(
       (b) =>
         (!category || b.category === category) &&
         (!q || b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q)),
@@ -146,11 +151,16 @@ export function CatalogPanel() {
     const map = new Map<string, BlockDef[]>()
     for (const b of list) map.set(b.category, [...(map.get(b.category) ?? []), b])
     return [...map.entries()]
-  }, [query, category])
+  }, [query, category, inStage])
 
   return (
     <aside className="panel panel--catalog" data-testid="catalog">
-      <h2>Blocos</h2>
+      <h2>{openingsOnly ? 'Esquadrias' : stage === 'marcenaria' ? 'Marcenaria' : 'Móveis'}</h2>
+      {stage === 'marcenaria' && (
+        <p className="muted small">
+          Móveis planejados. Insira na planta e escolha os acabamentos no painel da direita.
+        </p>
+      )}
       <label className="search">
         <Search size={14} strokeWidth={1.5} />
         <input
@@ -161,21 +171,23 @@ export function CatalogPanel() {
           aria-label="Buscar bloco"
         />
       </label>
-      <div className="chips" role="group" aria-label="Filtrar por categoria">
-        {[null, OPENINGS, ...categories].map((c) => (
-          <button
-            key={c ?? 'todos'}
-            type="button"
-            className="chip"
-            aria-pressed={category === c}
-            onClick={() => setCategory(category === c ? null : c)}
-          >
-            {c ?? 'Todos'}
-          </button>
-        ))}
-      </div>
-      {(!category || category === OPENINGS) && <OpeningsSection query={query} />}
-      {category !== OPENINGS &&
+      {!openingsOnly && categories.length > 1 && (
+        <div className="chips" role="group" aria-label="Filtrar por categoria">
+          {[null, ...categories].map((c) => (
+            <button
+              key={c ?? 'todos'}
+              type="button"
+              className="chip"
+              aria-pressed={category === c}
+              onClick={() => setCategory(category === c ? null : c)}
+            >
+              {c ?? 'Todos'}
+            </button>
+          ))}
+        </div>
+      )}
+      {openingsOnly && <OpeningsSection query={query} />}
+      {!openingsOnly &&
         groups.map(([cat, blocks]) => (
           <section key={cat}>
             <h3>{cat}</h3>

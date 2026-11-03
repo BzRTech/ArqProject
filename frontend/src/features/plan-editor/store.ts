@@ -1,5 +1,7 @@
 import { current } from 'immer'
 import { COLUMN_DEFAULTS } from '@/core/project/columns'
+import { innerFacePolygon } from '@/core/project/areas'
+import { STAGES, STAGE_TOOLS, type Stage } from '@/core/editor/stages'
 import { createItemDims, createWallDims, syncLinkedDims } from '@/core/project/linked-dims'
 import { temporal } from 'zundo'
 import { create } from 'zustand'
@@ -49,6 +51,11 @@ export interface EditorState {
   /** Tudo o que está selecionado (1 ou vários). */
   selected: SelRef[]
   tool: Tool
+  /** Aba de trabalho do ambiente (Planta, Layout, Piso, Marcenaria, Pranchas). */
+  stage: Stage
+  setStage: (stage: Stage) => void
+  /** Cria a área de cada parede fechada que ainda não tem (pelas faces internas). */
+  addAreasFromWalls: () => void
   placeBlockId: string | null
   placeOpeningType: OpeningType | null
   wallThicknessMm: number
@@ -145,14 +152,60 @@ export const useEditor = create<EditorState>()(
         selection: null,
         selected: [],
         tool: 'select',
+        stage: 'planta',
         placeBlockId: null,
         placeOpeningType: null,
         wallThicknessMm: 150,
         roomSize: { w: 3000, d: 3000 },
         calibration: [],
 
+        setStage: (stage) =>
+          set((s) => {
+            s.stage = stage
+            s.tool = 'select'
+            s.placeBlockId = null
+            s.placeOpeningType = null
+            s.calibration = []
+            setSel(s, null)
+          }),
+        addAreasFromWalls: () =>
+          set((s) => {
+            const e = env(s)
+            const areas = e.drawings.filter((d) => d.kind === 'area')
+            const samePoly = (a: Vec2[], b: Vec2[]) =>
+              a.length === b.length && a.every((p, i) => p.x === b[i]!.x && p.y === b[i]!.y)
+            let n = areas.length
+            let first: string | null = null
+            for (const w of e.drawings.filter((d): d is Wall => d.kind === 'wall')) {
+              const poly = innerFacePolygon(w)
+              if (!poly || areas.some((a) => a.kind === 'area' && samePoly(a.points, poly)))
+                continue
+              const id = newId()
+              e.drawings.push({
+                id,
+                kind: 'area',
+                points: poly,
+                name: n ? `${e.name} ${n + 1}` : e.name,
+              })
+              n++
+              first ??= id
+            }
+            if (first) setSel(s, { kind: 'drawing', id: first })
+          }),
         setTool: (tool) =>
           set((s) => {
+            // Atalho de uma ferramenta de outra aba (W na aba Layout…): vai para a aba dela.
+            if (
+              !STAGE_TOOLS[s.stage].includes(tool) &&
+              !['select', 'place', 'calibrate'].includes(tool)
+            ) {
+              const home =
+                tool === 'opening' ? 'planta' : STAGES.find((st) => STAGE_TOOLS[st].includes(tool))
+              if (home && home !== s.stage) {
+                s.stage = home
+                setSel(s, null)
+              }
+            }
             s.tool = tool
             s.placeBlockId = tool === 'place' ? s.placeBlockId : null
             s.placeOpeningType = tool === 'opening' ? s.placeOpeningType : null

@@ -29,7 +29,19 @@ async function setCm(page: Page, testId: string, value: string) {
   await input.press('Enter')
 }
 
+/** Abre a aba de trabalho (Planta, Layout, Piso, Marcenaria, Pranchas), se ainda não estiver nela. */
+async function openStage(
+  page: Page,
+  stage: 'planta' | 'layout' | 'piso' | 'marcenaria' | 'pranchas',
+) {
+  const tab = page.getByTestId(`stage-${stage}`)
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click()
+}
+
+const JOINERY_BLOCKS = new Set(['rack', 'guarda-roupa'])
+
 async function placeBlock(page: Page, blockId: string, x: number, y: number) {
+  await openStage(page, JOINERY_BLOCKS.has(blockId) ? 'marcenaria' : 'layout')
   await page.getByTestId(`block-${blockId}`).click()
   await moveModel(page, x, y)
   await clickModel(page, x, y)
@@ -134,12 +146,14 @@ test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfa
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('10-editor-quarto') })
 
-  // Porta selecionada (painel da esquadria)
+  // Porta selecionada (painel da esquadria): esquadrias são da aba Planta
+  await openStage(page, 'planta')
   await clickModel(page, 1100, 3600)
   await expect(page.getByTestId('opening-props')).toBeVisible()
   await page.screenshot({ path: shot('14-editor-porta-selecionada') })
 
-  // Cama selecionada
+  // Cama selecionada (aba Layout)
+  await openStage(page, 'layout')
   await clickModel(page, 3200, 1900)
   await expect(page.getByTestId('item-props')).toContainText('Cama de casal')
   await page.screenshot({ path: shot('11-editor-cama-selecionada') })
@@ -158,6 +172,7 @@ test('monta um quarto com blocos, porta e janela na parede, cotas e texto; desfa
 
   // Segundo ambiente: paredes DIGITANDO os comprimentos (5,00 × 4,00 m pelo eixo)
   await page.getByTestId('add-env').click()
+  await openStage(page, 'planta')
   await page.getByTestId('tool-wall').click()
   await moveModel(page, 0, 0)
   await clickModel(page, 0, 0)
@@ -321,8 +336,9 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   const markers = page.getByTestId('plan-canvas').locator('g[data-role="marcadores"] text')
   await expect(markers).toHaveText(['1', '2', '3', '3', 'M01'])
 
-  // Balão do tapete (1) estava colado no da cama: arrasta para um lugar livre.
+  // Balão do tapete (1) estava colado no da cama: arrasta para um lugar livre (aba Layout).
   // O tapete em si não pode sair do lugar.
+  await openStage(page, 'layout')
   const rugBefore = await page.evaluate(() => {
     const st = (window as unknown as EditorWindow).__editor.getState()
     return st.project.environments[0].items[0].position
@@ -340,7 +356,8 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   })
   expect(rugAfter.position).toEqual(rugBefore)
   expect(rugAfter.markerOffset).toEqual({ x: 0, y: 750 })
-  // Rótulo QUARTO para o canto livre
+  // Rótulo QUARTO para o canto livre (a área é da aba Piso)
+  await openStage(page, 'piso')
   const lab = await modelToPage(page, 2200, 1900)
   const labTo = await modelToPage(page, 1300, 900)
   await page.mouse.move(lab.x, lab.y)
@@ -350,7 +367,8 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   await expect(page.getByTestId('area-props')).toBeVisible()
   await page.keyboard.press('Escape')
 
-  // Resumo do ambiente: legenda agrupada e totais
+  // Resumo do ambiente (aba Layout): legenda agrupada e totais
+  await openStage(page, 'layout')
   const rows = page.getByTestId('legend-row')
   await expect(rows).toHaveCount(4)
   await expect(rows.nth(2)).toContainText('2 un')
@@ -367,7 +385,8 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   await page.screenshot({ path: shot('16-editor-item-orcamento') })
   await page.keyboard.press('Escape')
 
-  // Ferramenta Área: um "closet" de 1,50 × 1,00 m no canto
+  // Ferramenta Área (aba Piso): um "closet" de 1,50 × 1,00 m no canto
+  await openStage(page, 'piso')
   await page.getByTestId('tool-area').click()
   for (const [x, y] of [
     [600, 2800],
@@ -385,7 +404,8 @@ test('marcadores, legenda, orçamento, área, planilha e PDF com legenda', async
   await page.mouse.move(0, 0)
   await page.screenshot({ path: shot('17-editor-areas') })
 
-  // Planilha (CSV) com todos os itens
+  // Planilha (CSV) com todos os itens (painel da aba Layout)
+  await openStage(page, 'layout')
   const [csvDl] = await Promise.all([
     page.waitForEvent('download'),
     page.getByTestId('export-csv').click(),
@@ -589,6 +609,7 @@ test('piso: revestimento com paginação, perda, rodapé sem a porta, orçamento
   await setCm(page, 'skirting-price', '35')
   await page.keyboard.press('Escape')
   await page.keyboard.press('f')
+  await openStage(page, 'piso')
 
   // Resumo: P1 piso e P1 rodapé; total do ambiente
   await expect(page.getByTestId('floor-row')).toHaveCount(2)
@@ -688,7 +709,7 @@ test('seleção por área (janela e cruzamento), manter só cotas, Ctrl+A e medi
   await clickModel(page, 0, 0)
   await page.keyboard.press('Escape')
   await clickModel(page, 2200, -75)
-  await page.getByRole('button', { name: 'Cotar parede' }).click()
+  await page.getByTestId('auto-dims').click()
   await page.keyboard.press('Escape')
   await page.keyboard.press('f')
   const drawings = () =>
@@ -961,7 +982,7 @@ test('cotas ligadas: parede (externa + área útil) e posição dos móveis acom
   await clickModel(page, 0, 0)
   await page.keyboard.press('Escape')
   await clickModel(page, 2200, -75)
-  await page.getByRole('button', { name: 'Cotar parede' }).click()
+  await page.getByTestId('auto-dims').click()
   type D = {
     kind: string
     id: string
@@ -1012,7 +1033,8 @@ test('cotas ligadas: parede (externa + área útil) e posição dos móveis acom
   await page.mouse.up()
   expect((await left()).p1!.x).toBe(1710)
 
-  // Aumentar o quarto (trecho de cima = 5 m): a cota de fora e a área útil acompanham
+  // Aumentar o quarto (trecho de cima = 5 m, aba Planta): a cota de fora e a área útil acompanham
+  await openStage(page, 'planta')
   await clickModel(page, 2200, -75)
   await setCm(page, 'wall-seg-0', '5')
   const top = await innerTop()
@@ -1055,4 +1077,75 @@ test('botão do meio (scroll) arrasta a vista, sem a rolagem automática do nave
   await expect(canvas).not.toHaveClass(/canvas--panning/)
   // nenhuma parede foi começada pelo arrasto
   await expect(page.getByTestId('walls-layer')).toHaveAttribute('data-count', '0')
+})
+
+test('abas por etapa com passo a passo, acabamento da marcenaria e prévia da prancha', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  await freshEditor(page)
+  // Começa na aba Planta, passo 1 ainda por fazer
+  await expect(page.getByTestId('stage-planta')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('step-walls')).toHaveAttribute('data-done', 'false')
+  await page.getByTestId('step-action-walls').click() // leva à ferramenta Ambiente
+  await setCm(page, 'room-w', '4,40')
+  await setCm(page, 'room-d', '3,80')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+  await expect(page.getByTestId('step-walls')).toHaveAttribute('data-done', 'true')
+  await page.getByTestId('step-action-wall-dims').click()
+  await expect(page.getByTestId('step-wall-dims')).toHaveAttribute('data-done', 'true')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('36-abas-planta-passo-a-passo') })
+
+  // Layout: a parede não é clicável aqui (só móveis)
+  await openStage(page, 'layout')
+  await clickModel(page, 2200, -75)
+  await expect(page.getByTestId('wall-props')).toHaveCount(0)
+  await placeBlock(page, 'cama-casal', 2200, 1100)
+  // Atalho de outra aba: W vai para a Planta com a ferramenta Parede
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('w')
+  await expect(page.getByTestId('stage-planta')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByTestId('tool-wall')).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('Escape')
+
+  // Marcenaria: rack com frentes e tamponamento em freijó, corpo branco, veio horizontal
+  await placeBlock(page, 'rack', 2200, 3550)
+  await expect(page.getByTestId('joinery-finish')).toBeVisible()
+  await page.getByTestId('mdf-freijo').click() // "Tudo"
+  await page.getByTestId('part-corpo').click()
+  await page.getByTestId('mdf-branco').click()
+  await page.getByTestId('grain-horizontal').click()
+  await page.getByTestId('joinery-notes').fill('Puxador cava 45°')
+  await page.getByTestId('joinery-notes').blur()
+  await expect(page.getByTestId('joinery-summary')).toHaveText(
+    'Na legenda: Frentes: Freijó (veio horizontal) · Corpo: Branco · Tamponamento: Freijó',
+  )
+  await expect(page.getByTestId('step-finishes')).toHaveAttribute('data-done', 'true')
+  await expect(page.getByTestId('step-notes')).toHaveAttribute('data-done', 'true')
+  // Humanizado: o rack aparece com a cor do MDF na planta
+  await expect(page.getByTestId('items').locator('[fill="#b88a5a"]').first()).toBeAttached()
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('37-marcenaria-acabamento') })
+
+  // Piso: criar a área pelo passo a passo
+  await openStage(page, 'piso')
+  await page.getByTestId('step-action-area').click()
+  await expect(page.getByTestId('area-props')).toBeVisible()
+
+  // Pranchas: a mesma folha do PDF, com o acabamento na legenda
+  await openStage(page, 'pranchas')
+  await expect(page.getByTestId('sheet-preview')).toBeVisible()
+  await expect(page.getByTestId('pranchas-panel')).toContainText('Corpo: Branco')
+  await expect(page.getByTestId('sheet')).toContainText('Frentes: Freijó (veio horizontal)')
+  await page.screenshot({ path: shot('38-pranchas-previa') })
+  const [dl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('sheet-pdf').click(),
+  ])
+  await dl.saveAs('test-results/abas.pdf')
+  expect((await readFile('test-results/abas.pdf')).subarray(0, 5).toString()).toBe('%PDF-')
 })

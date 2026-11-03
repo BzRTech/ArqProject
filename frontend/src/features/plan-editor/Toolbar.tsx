@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useStore } from 'zustand'
 import { formatCm, parseCm } from '@/core/units'
+import { STAGE_TOOLS } from '@/core/editor/stages'
 import { redo, undo, useEditor, type Tool } from './store'
 
 const TOOLS: { id: Tool; label: string; key: string; icon: LucideIcon }[] = [
@@ -64,13 +65,15 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
   const startOpening = useEditor((s) => s.startOpening)
   const thickness = useEditor((s) => s.wallThicknessMm)
   const setThickness = useEditor((s) => s.setWallThickness)
+  const stage = useEditor((s) => s.stage)
+  const has = (id: string) => STAGE_TOOLS[stage].includes(id)
   const canUndo = useStore(useEditor.temporal, (s) => s.pastStates.length > 0)
   const canRedo = useStore(useEditor.temporal, (s) => s.futureStates.length > 0)
 
   return (
     <div className="editor-toolbar float" role="toolbar" aria-label="Ferramentas">
       <div className="tool-group">
-        {TOOLS.map((t) => (
+        {TOOLS.filter((t) => has(t.id)).map((t) => (
           <ToolButton
             key={t.id}
             icon={t.icon}
@@ -82,32 +85,34 @@ export function Toolbar({ onFit }: { onFit: () => void }) {
           />
         ))}
       </div>
-      <div className="tool-group">
-        <ToolButton
-          icon={DoorOpen}
-          label="Porta"
-          title="Porta (P): clique sobre uma parede"
-          active={!!openingType?.startsWith('porta')}
-          onClick={() => startOpening('porta-abrir')}
-          data-testid="tool-door"
-        />
-        <ToolButton
-          icon={SquareSquare}
-          label="Pilar"
-          title="Pilar (L): clique num canto ou numa parede"
-          active={tool === 'column'}
-          onClick={() => setTool('column')}
-          data-testid="tool-column"
-        />
-        <ToolButton
-          icon={AppWindow}
-          label="Janela"
-          title="Janela (J): clique sobre uma parede"
-          active={!!openingType?.startsWith('janela')}
-          onClick={() => startOpening('janela-correr-2')}
-          data-testid="tool-window"
-        />
-      </div>
+      {(has('door') || has('window') || has('column')) && (
+        <div className="tool-group">
+          <ToolButton
+            icon={DoorOpen}
+            label="Porta"
+            title="Porta (P): clique sobre uma parede"
+            active={!!openingType?.startsWith('porta')}
+            onClick={() => startOpening('porta-abrir')}
+            data-testid="tool-door"
+          />
+          <ToolButton
+            icon={SquareSquare}
+            label="Pilar"
+            title="Pilar (L): clique num canto ou numa parede"
+            active={tool === 'column'}
+            onClick={() => setTool('column')}
+            data-testid="tool-column"
+          />
+          <ToolButton
+            icon={AppWindow}
+            label="Janela"
+            title="Janela (J): clique sobre uma parede"
+            active={!!openingType?.startsWith('janela')}
+            onClick={() => startOpening('janela-correr-2')}
+            data-testid="tool-window"
+          />
+        </div>
+      )}
       {tool === 'wall' && (
         <div className="tool-group">
           <label className="inline-field">

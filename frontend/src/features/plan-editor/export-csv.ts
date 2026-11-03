@@ -1,4 +1,5 @@
 import { floorRows } from '@/core/finishes/budget'
+import { joineryNotes, joinerySummary } from '@/core/joinery/finish'
 import { computeLegend, itemTotalCents } from '@/core/project/markers'
 import type { Project } from '@/core/project/schema'
 import { formatCm, formatDecimal } from '@/core/units'
@@ -31,6 +32,7 @@ export function projectItemsCsv(project: Project): string {
     'Existente',
     'Aprovado',
     'Observação',
+    'Acabamento (marcenaria)',
   ]
   const lines = [header]
   let total = 0
@@ -53,7 +55,8 @@ export function projectItemsCsv(project: Project): string {
         it.existing ? '' : money(it.unitPriceCents === undefined ? undefined : t),
         it.existing ? 'sim' : 'não',
         it.approved ? 'sim' : 'não',
-        it.notes ?? '',
+        [it.notes, ...joineryNotes(it.joinery)].filter(Boolean).join(' · '),
+        joinerySummary(it.joinery),
       ])
     }
     for (const r of floorRows(env)) {
@@ -73,10 +76,11 @@ export function projectItemsCsv(project: Project): string {
         'não',
         'não',
         r.unit === 'm²' ? 'quantidade já com perda' : 'descontadas as portas',
+        '',
       ])
     }
   }
-  lines.push(['', '', 'TOTAL', '', '', '', '', '', '', '', money(total), '', '', ''])
+  lines.push(['', '', 'TOTAL', '', '', '', '', '', '', '', money(total), '', '', '', ''])
   return '﻿' + lines.map((l) => l.map(cell).join(';')).join('\r\n') + '\r\n'
 }
 

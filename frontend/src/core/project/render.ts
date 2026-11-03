@@ -95,7 +95,9 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
   out.push({
     kind: 'group',
     role: 'itens',
-    children: itemsInDrawOrder(env.items).flatMap(itemEntities),
+    children: itemsInDrawOrder(env.items).flatMap((it) =>
+      itemEntities(it, { humanized: o.humanized }),
+    ),
   })
   const walls = env.drawings.filter((d) => d.kind === 'wall')
   const notes = env.drawings.filter((d) => d.kind !== 'wall')

@@ -1492,3 +1492,258 @@ h2 .marker-chip {
 .panel section > button[data-testid='all-item-dims'] {
   margin-bottom: var(--s-2);
 }
+
+/* --- Abas de etapa do ambiente ------------------------------------------------ */
+.stage-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: var(--s-1);
+  height: 44px;
+  flex: none;
+  padding: 0 var(--s-5);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.stage-tab {
+  height: auto;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 var(--s-3);
+  color: var(--muted);
+  font-weight: 500;
+}
+.stage-tab:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: transparent;
+  border-bottom-color: var(--line-strong);
+}
+.stage-tab.is-active,
+.stage-tab.is-active:hover:not(:disabled) {
+  color: var(--ink);
+  border-bottom-color: var(--clay);
+}
+.stage-tab__num {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.stage-tab.is-active .stage-tab__num {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.stage-tab__num.is-done {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: var(--white);
+}
+
+/* --- Passo a passo ------------------------------------------------------------ */
+.checklist {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--white);
+  padding: var(--s-3) var(--s-4);
+}
+.checklist__head {
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  justify-content: space-between;
+  color: var(--muted);
+}
+.checklist__head:hover:not(:disabled) {
+  border: 0;
+  color: var(--ink);
+}
+.checklist p {
+  margin: var(--s-1) 0 var(--s-3);
+}
+.checklist__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.checklist__steps li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: var(--s-2);
+  align-items: start;
+}
+.checklist__steps li > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 13px;
+}
+.checklist__steps strong {
+  font-weight: 500;
+}
+.checklist__mark {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  color: var(--white);
+}
+.checklist__steps li.is-done strong {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--line-strong);
+}
+.checklist__steps li.is-done .checklist__mark {
+  background: var(--sage);
+  border-color: var(--sage);
+}
+.checklist__steps li.is-next .checklist__mark {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 3px var(--clay-soft);
+}
+
+/* --- Listas dos painéis (áreas, pranchas, marcenaria) --------------------------- */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.list__row {
+  width: 100%;
+  height: auto;
+  padding: var(--s-2) 10px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  justify-content: space-between;
+  text-align: left;
+  white-space: normal;
+  font-weight: 400;
+}
+.list__row > span:first-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.list__row strong {
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.list__row:hover:not(:disabled) {
+  background: var(--canvas);
+  border-color: transparent;
+}
+.list__row.is-selected,
+.list__row.is-selected:hover:not(:disabled) {
+  background: var(--clay-soft);
+  border-color: var(--clay-soft);
+}
+
+/* --- Acabamento de marcenaria ------------------------------------------------- */
+.part-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: var(--s-2);
+}
+.swatch {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 4px;
+  border: 1px solid rgba(28, 27, 25, 0.15);
+}
+.swatch--wood {
+  background-image: repeating-linear-gradient(
+    100deg,
+    rgba(0, 0, 0, 0.12) 0 1px,
+    transparent 1px 4px,
+    rgba(0, 0, 0, 0.06) 4px 5px,
+    transparent 5px 9px
+  );
+}
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.swatch-btn {
+  height: 32px;
+  padding: 0 var(--s-2);
+  justify-content: flex-start;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 400;
+}
+.swatch-btn span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.swatch-btn.is-on,
+.swatch-btn.is-on:hover:not(:disabled) {
+  border-color: var(--clay);
+  box-shadow: 0 0 0 2px var(--clay-soft);
+}
+.finish-list {
+  list-style: none;
+  margin: 0 0 var(--s-3);
+  padding: 0;
+}
+.finish-list__val {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* --- Pranchas ----------------------------------------------------------------- */
+.sheet-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+.sheet-stage .viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.legend-preview {
+  list-style: none;
+  margin: 0 0 var(--s-4);
+  padding: 0;
+  font-size: 12px;
+}
+.legend-preview li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: var(--s-2);
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}

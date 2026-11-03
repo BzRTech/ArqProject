@@ -6,7 +6,7 @@ import { loadPdfFonts, registerWebFonts } from '@/render/pdf/fonts'
 import { toMarkup } from '@/render/svg/markup'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { buildCatalogSheet, MEASURE_CHECKS, PAPER } from './catalog-sheet'
-import { SheetViewer } from './SheetViewer'
+import { SheetViewer } from '@/app/ui/SheetViewer'
 
 export default function PrimitivesPage() {
   const sheet = useMemo(

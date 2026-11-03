@@ -1,0 +1,41 @@
+import { create } from 'zustand'
+import { exportProjectPdf } from './export-pdf'
+import { useEditor } from './store'
+import { useUnits } from './units-pref'
+
+interface PdfState {
+  busy: boolean
+  toast: { text: string; error?: boolean } | null
+  /** Gera o PDF (uma prancha A3 por ambiente) e avisa no toast. */
+  run: () => Promise<void>
+  dismiss: () => void
+}
+
+/** Baixar PDF: usado pela barra superior, pelo passo a passo e pela aba Pranchas. */
+export const usePdf = create<PdfState>()((set) => ({
+  busy: false,
+  toast: null,
+  dismiss: () => set({ toast: null }),
+  run: async () => {
+    set({ busy: true, toast: null })
+    try {
+      const r = await exportProjectPdf(useEditor.getState().project, {
+        humanized: useUnits.getState().humanized,
+      })
+      set({
+        toast: {
+          text: `Planta exportada em PDF · ${r.pages} prancha(s) · escala ${r.scales.map((s) => `1:${s}`).join(', ')}`,
+        },
+      })
+    } catch (e) {
+      set({
+        toast: {
+          text: `Erro ao gerar PDF: ${e instanceof Error ? e.message : String(e)}`,
+          error: true,
+        },
+      })
+    } finally {
+      set({ busy: false })
+    }
+  },
+}))

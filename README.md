@@ -102,6 +102,30 @@ Em **http://localhost:5173/editor**:
 
 O visual segue o design system em [`docs/design-system/`](docs/design-system/).
 
+### Passo a passo: as 5 abas de cada ambiente
+
+Cada ambiente tem **5 abas numeradas**, na ordem de trabalho. Todas mostram a mesma planta, mas
+cada uma só deixa mexer no que é dela; o resto aparece mais claro e não responde ao clique. No
+painel da direita, o **passo a passo** da aba marca sozinho o que já foi feito e tem um botão que
+leva à ferramenta certa. A aba ganha um ✓ quando os passos obrigatórios estão feitos.
+
+1. **Planta:** desenhe o ambiente (ferramenta Ambiente: medidas internas), coloque portas,
+   janelas e pilares e **cote as paredes** (por fora, com os vãos; por dentro, a área útil).
+2. **Layout:** insira os móveis do catálogo, preencha marca e preço (legenda e orçamento) e, se
+   quiser, cote a posição dos móveis até as paredes.
+3. **Piso:** crie a área do ambiente, escolha o revestimento e ajuste paginação e rodapé.
+4. **Marcenaria:** insira os móveis planejados (guarda-roupa, rack…) e escolha os
+   **acabamentos**: MDF liso ou madeirado para as **frentes** (portas e gavetas), o **corpo**
+   (caixa por dentro) e o **tamponamento** (laterais, tampo e base aparentes). "Tudo" pinta o
+   móvel inteiro; depois dá para trocar uma parte só. Escolha o sentido do veio e escreva as
+   observações para o marceneiro (uma por linha). Com **Humanizado** ligado, o móvel aparece
+   com a cor do MDF na planta e no PDF, e o acabamento sai na legenda e na planilha.
+5. **Pranchas:** a folha A3 do ambiente, igual à do PDF, com a escala e a legenda. Baixe o PDF
+   daqui ou do botão no topo.
+
+Os atalhos de teclado levam à aba da ferramenta (W na aba Layout abre a Planta com a Parede).
+
+
 - **Onde fica cada coisa:**
   - **Barra superior:** "Importar planta" e "Baixar PDF".
   - **Rodapé da área de desenho:** barra de ferramentas (passe o mouse sobre um ícone para ver o

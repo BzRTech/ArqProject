@@ -27,10 +27,15 @@ export interface LegendLine {
   label: string
   text: string
   qty: string
+  /** Segunda linha, menor (ex.: acabamento da marcenaria). */
+  detail?: string
 }
 
 const LEGEND_W = 82
 const LEGEND_ROW = 5.6
+/** Altura extra de uma linha com detalhe. */
+const LEGEND_DETAIL = 3.2
+const rowH = (l: LegendLine) => LEGEND_ROW + (l.detail ? LEGEND_DETAIL : 0)
 
 /** Coluna da legenda: título, balões (círculo ou etiqueta de marcenaria), descrição e qtd. */
 function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number): Entity[] {
@@ -43,10 +48,17 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
       style: { weight: PEN.fine },
     },
   ]
-  const capacity = Math.max(1, Math.floor((maxH - 8) / LEGEND_ROW))
-  const shown = lines.length > capacity ? lines.slice(0, capacity - 1) : lines
-  shown.forEach((l, i) => {
-    const cy = y + 9 + i * LEGEND_ROW
+  // Quantas linhas cabem (as com detalhe ocupam mais); sobrando, a última vira "… e mais".
+  const fits = (n: number) =>
+    lines.slice(0, n).reduce((h, l) => h + rowH(l), 0) <=
+    maxH - 8 - (n < lines.length ? LEGEND_ROW : 0)
+  let count = lines.length
+  while (count > 1 && !fits(count)) count--
+  const shown = lines.slice(0, count)
+  let rowY = y + 9
+  shown.forEach((l) => {
+    const cy = rowY
+    rowY += rowH(l)
     const cx = x + 4
     // Marcenaria (M01) e revestimentos (P1) em etiqueta; móveis em círculo.
     if (/^[MP]\d/.test(l.label)) {
@@ -72,6 +84,18 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
         weight: 'bold',
       },
       { kind: 'text', at: vec(x + 10, cy), text: l.text, size: 2.2, vAlign: 'middle' },
+      ...(l.detail
+        ? [
+            {
+              kind: 'text' as const,
+              at: vec(x + 10, cy + LEGEND_DETAIL),
+              text: l.detail,
+              size: 1.7,
+              vAlign: 'middle' as const,
+              color: '#4a4741',
+            },
+          ]
+        : []),
       {
         kind: 'text',
         at: vec(x + LEGEND_W, cy),
@@ -85,7 +109,7 @@ function legendEntities(lines: LegendLine[], x: number, y: number, maxH: number)
   if (shown.length < lines.length) {
     out.push({
       kind: 'text',
-      at: vec(x + 10, y + 9 + shown.length * LEGEND_ROW),
+      at: vec(x + 10, rowY),
       text: `… e mais ${lines.length - shown.length} item(ns) — ver memorial`,
       size: 2,
       vAlign: 'middle',

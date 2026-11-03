@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v6 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v7 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -171,6 +171,30 @@ export const OpeningSchema = z.object({
 export const ITEM_UNITS = ['un', 'pç', 'cj', 'm', 'm²'] as const
 export type ItemUnit = (typeof ITEM_UNITS)[number]
 
+/** Acabamento de uma parte do móvel: cópia (snapshot) do MDF escolhido. */
+export const JoineryFinishSchema = z.object({
+  materialId: z.string(),
+  name: z.string(),
+  kind: z.enum(['liso', 'madeirado']),
+  hex: z.string(),
+})
+
+export const JOINERY_PARTS = ['frentes', 'corpo', 'tamponamento'] as const
+export type JoineryPart = (typeof JOINERY_PARTS)[number]
+
+/** Detalhamento de marcenaria do item (v7: acabamento; módulos e vistas vêm depois). */
+export const JoinerySchema = z.object({
+  finishes: z.object({
+    frentes: JoineryFinishSchema.optional(),
+    corpo: JoineryFinishSchema.optional(),
+    tamponamento: JoineryFinishSchema.optional(),
+  }),
+  /** Sentido do veio nas frentes (madeirados). */
+  grain: z.enum(['vertical', 'horizontal']),
+  /** Observações para o marceneiro, uma por linha (saem na especificação). */
+  notes: z.string().optional(),
+})
+
 export const ItemSchema = z.object({
   id,
   /** Referência ao bloco do catálogo (vira libraryRef {kind,id,version} na Fase 3). */
@@ -199,6 +223,8 @@ export const ItemSchema = z.object({
   unitPriceCents: z.number().int().nonnegative().optional(),
   brandModel: z.string().optional(),
   supplier: z.string().optional(),
+  // --- Marcenaria (v7)
+  joinery: JoinerySchema.optional(),
 })
 
 export const BasePlanSchema = z.object({
@@ -238,6 +264,8 @@ export type ChainDrawing = z.infer<typeof ChainSchema>
 export type AreaDrawing = z.infer<typeof AreaSchema>
 export type Column = z.infer<typeof ColumnSchema>
 export type DimRef = z.infer<typeof DimRefSchema>
+export type Joinery = z.infer<typeof JoinerySchema>
+export type JoineryFinish = z.infer<typeof JoineryFinishSchema>
 export type Floor = z.infer<typeof FloorSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>

@@ -1,0 +1,37 @@
+[
+  {
+    "id": "padrao",
+    "name": "Padrão",
+    "version": 1,
+    "sheet": {
+      "lengthMm": 2750,
+      "widthMm": 1840
+    },
+    "bodyThicknessMm": 18,
+    "back": {
+      "thicknessMm": 6,
+      "recessMm": 10
+    },
+    "front": {
+      "thicknessMm": 18,
+      "gapMm": 3
+    },
+    "shelfFrontSetbackMm": 20,
+    "hinges": [
+      {
+        "maxDoorHeightMm": 900,
+        "count": 2
+      },
+      {
+        "maxDoorHeightMm": 1600,
+        "count": 3
+      },
+      {
+        "maxDoorHeightMm": null,
+        "count": 4
+      }
+    ],
+    "minClearWidthMm": 100,
+    "doorWidthToleranceMm": 2
+  }
+]

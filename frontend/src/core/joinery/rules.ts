@@ -30,8 +30,8 @@ export interface RuleProfile {
 }
 
 export const DEFAULT_RULE_PROFILE: RuleProfile = {
-  id: 'global-padrao',
-  name: 'Padrão (PLANO 4.6)',
+  id: 'padrao',
+  name: 'Padrão',
   version: 1,
   sheet: { lengthMm: 2750, widthMm: 1840 },
   bodyThicknessMm: 18,

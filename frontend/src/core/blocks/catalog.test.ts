@@ -1,8 +1,17 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { entitiesBBox } from '../drawing/bounds'
 import { compileView } from '../drawing/compile'
 import type { Entity } from '../drawing/entities'
-import { CATALOG, getBlock } from './catalog'
+import {
+  CATALOG,
+  CATALOG_BY_ID,
+  catalogBlocks,
+  getBlock,
+  latestBlock,
+  registerSnapshot,
+  setCatalog,
+  setSnapshots,
+} from './catalog'
 import { buildSymbol } from './symbol'
 
 const count = (es: Entity[], kind: Entity['kind']) => es.filter((e) => e.kind === kind).length
@@ -62,5 +71,41 @@ describe('parametria', () => {
     expect(seats(1500)).toBe(2)
     expect(seats(2100)).toBe(3)
     expect(seats(3000)).toBe(4)
+  })
+})
+
+describe('registro de blocos (banco + cópias do projeto)', () => {
+  afterEach(() => {
+    setCatalog(null)
+    setSnapshots([])
+  })
+
+  it('sem banco usa o embutido; com banco, o painel lista o banco', () => {
+    expect(catalogBlocks()).toBe(CATALOG)
+    const custom = { ...CATALOG_BY_ID.get('sofa')!, id: 'sofa-ilha', name: 'Sofá ilha' }
+    setCatalog([custom])
+    expect(catalogBlocks().map((b) => b.id)).toEqual(['sofa-ilha'])
+    expect(getBlock('sofa-ilha').name).toBe('Sofá ilha')
+    // Bloco fora do banco continua resolvendo pelo embutido
+    expect(getBlock('cama-casal').id).toBe('cama-casal')
+  })
+
+  it('o item é desenhado pela cópia da versão dele, não pela mais nova do banco', () => {
+    const v1 = { ...CATALOG_BY_ID.get('sofa')!, name: 'Sofá v1 (cópia do projeto)' }
+    const v2 = { ...CATALOG_BY_ID.get('sofa')!, version: 2, name: 'Sofá v2 (banco)' }
+    setCatalog([v2])
+    setSnapshots([v1])
+    expect(getBlock('sofa', 1).name).toBe('Sofá v1 (cópia do projeto)')
+    expect(getBlock('sofa', 2).name).toBe('Sofá v2 (banco)')
+    expect(getBlock('sofa').name).toBe('Sofá v2 (banco)')
+    expect(latestBlock('sofa')!.version).toBe(2)
+  })
+
+  it('bloco que só existe na cópia do projeto (excluído do banco) ainda resolve', () => {
+    const own = { ...CATALOG_BY_ID.get('sofa')!, id: 'sofa-do-escritorio', version: 3 }
+    registerSnapshot(own)
+    expect(getBlock('sofa-do-escritorio', 3)).toBe(own)
+    expect(getBlock('sofa-do-escritorio')).toBe(own)
+    expect(() => getBlock('nao-existe')).toThrow('Bloco desconhecido')
   })
 })

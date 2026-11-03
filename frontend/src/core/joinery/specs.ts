@@ -55,8 +55,13 @@ export function joinerySpecs(
     )
   }
   if (s.drawers.length) out.push(`${s.drawers.length} gaveta(s) com corrediça telescópica.`)
-  if (fronts)
-    out.push(`${HANDLE_TEXT[s.handle]}${s.handle === 'touch' ? ` (${s.touchLatches} un)` : ''}.`)
+  if (fronts) {
+    const h = j?.design?.handleItem
+    const name = h
+      ? `Puxador: ${h.name}${h.finish ? `, ${h.finish}` : ''}${h.code ? ` (cód. ${h.code})` : ''}`
+      : HANDLE_TEXT[s.handle]
+    out.push(`${name}${s.handle === 'touch' ? ` (${s.touchLatches} un)` : ''}.`)
+  }
   const shelves = s.modules.reduce((a, m) => a + m.shelvesZ.length, 0)
   if (shelves)
     out.push(

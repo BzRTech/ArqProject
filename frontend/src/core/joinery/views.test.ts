@@ -4,7 +4,8 @@ import { ITEM_DEFAULTS, type Environment, type Item, type JoineryDesign } from '
 import { dimensionDirection } from '../dimensions/layout'
 import { add, leftNormal, scale } from '../geometry/vec'
 import { DEFAULT_RULE_PROFILE as R } from './rules'
-import { defaultDesign, joinerySheet } from './sheet'
+import { JOINERY_TYPE_SEED, PRESET_SEED } from '../library/seed'
+import { defaultDesign, designFromPreset, joinerySheet } from './sheet'
 import { solveJoinery } from './solve'
 import { frontExternalView, frontInternalView, planView } from './views'
 
@@ -111,17 +112,43 @@ describe('prancha de detalhe', () => {
     expect(texts.some((t) => t.startsWith('VISTA FRONTAL · ESC. 1:20'))).toBe(true)
   })
 
-  it('desenho inicial: módulos de ~90 cm somando a largura; rack suspenso com fecho toque', () => {
-    const d = defaultDesign({ blockId: 'rack', sizeMm: { w: 1800, d: 450, h: 400 } })
+  it('desenho inicial pelo tipo de móvel: rack suspenso com fecho toque; roupeiro com perfil', () => {
+    const type = (id: string) => JOINERY_TYPE_SEED.find((t) => t.id === id)!
+    const d = defaultDesign({ blockId: 'rack', sizeMm: { w: 1800, d: 450, h: 400 } }, type('rack'))
     expect(d.modules.map((m) => m.widthMm)).toEqual([900, 900])
     expect(d).toMatchObject({
       heightMm: 400,
       base: { kind: 'suspended', heightMm: 100 },
       handle: 'touch',
     })
-    const g = defaultDesign({ blockId: 'guarda-roupa', sizeMm: { w: 1500, d: 600 } })
+    const g = defaultDesign(
+      { blockId: 'guarda-roupa', sizeMm: { w: 1500, d: 600 } },
+      type('roupeiro'),
+    )
     expect(g.modules.map((m) => m.widthMm)).toEqual([750, 750])
     expect(g.heightMm).toBe(2400)
     expect(g.modules[0]!.shelves).toBe(3)
+    expect(g.handle).toBe('profile')
+    // Cozinha: módulos de 60 cm com 1 porta e cava
+    const k = defaultDesign(
+      { blockId: 'armario-cozinha', sizeMm: { w: 2400, d: 600 } },
+      type('cozinha'),
+    )
+    expect(k.modules.map((m) => [m.widthMm, m.front])).toEqual(Array(4).fill([600, 'door1']))
+    expect(k).toMatchObject({
+      handle: 'cava',
+      base: { kind: 'plinth', heightMm: 150 },
+      heightMm: 900,
+    })
+  })
+
+  it('modelo pronto: frações viram módulos inteiros que somam a largura', () => {
+    const preset = PRESET_SEED.find((p) => p.id === 'rack-nicho-central')!
+    const d = designFromPreset({ blockId: 'rack', sizeMm: { w: 2000, d: 450, h: 450 } }, preset)
+    expect(d.modules.map((m) => m.widthMm)).toEqual([500, 1000, 500])
+    expect(d.modules.map((m) => m.front)).toEqual(['door1', 'open', 'door1'])
+    expect(d.heightMm).toBe(450)
+    const odd = designFromPreset({ blockId: 'rack', sizeMm: { w: 1801, d: 450 } }, preset)
+    expect(odd.modules.map((m) => m.widthMm)).toEqual([450, 900, 451])
   })
 })

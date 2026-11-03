@@ -1,0 +1,14 @@
+[
+  {
+    "id": "a3-paisagem",
+    "version": 1,
+    "name": "A3 paisagem",
+    "paper": "A3",
+    "orientation": "landscape",
+    "marginMm": 10,
+    "notes": [
+      "Medidas em centímetros, salvo indicação.",
+      "Conferir todas as medidas no local antes da execução."
+    ]
+  }
+]

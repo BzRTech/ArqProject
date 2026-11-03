@@ -4,6 +4,8 @@ import { useCreateProject } from '@/api/projects'
 import { newProject } from '@/core/project/schema'
 import { Dialog } from '@/app/ui/Dialog'
 import { newId } from '@/features/plan-editor/store'
+import { officeRules } from '@/core/library/bundle'
+import { useLibrary } from '@/features/library/library-store'
 
 /** Novo projeto: nome, cliente e o primeiro ambiente. */
 export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -18,6 +20,10 @@ export function NewProjectDialog({ open, onClose }: { open: boolean; onClose: ()
     const doc = newProject(newId())
     doc.name = name.trim() || 'Projeto sem nome'
     doc.environments[0]!.name = env.trim() || 'Ambiente 1'
+    // Regras de marcenaria do escritório (se o banco já carregou).
+    const lib = useLibrary.getState()
+    const rules = lib.source !== 'embutido' ? officeRules(lib.lib) : undefined
+    if (rules) doc.librarySnapshots.rules = rules
     create.mutate(
       { data: doc, clientName: client.trim() },
       { onSuccess: (p) => navigate(`/projetos/${p.id}`) },

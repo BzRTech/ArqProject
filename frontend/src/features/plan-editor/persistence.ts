@@ -146,3 +146,10 @@ export function imageSize(dataUrl: string): Promise<{ width: number; height: num
     img.src = dataUrl
   })
 }
+
+/** Chave/valor genérico no IndexedDB (ex.: cache do bundle dos bancos). */
+export const kvGet = <T>(key: string) =>
+  tx<T | undefined>(KV, 'readonly', (s) => s.get(key) as IDBRequest<T | undefined>)
+
+export const kvSet = (key: string, value: unknown) =>
+  tx(KV, 'readwrite', (s) => s.put(value, key)).then(() => undefined)

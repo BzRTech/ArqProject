@@ -1,3 +1,5 @@
+import { blockKey, CATALOG_BY_ID } from '../blocks/catalog'
+import { DEFAULT_RULE_PROFILE } from '../joinery/rules'
 import { ProjectSchema, SCHEMA_VERSION, type Project } from './schema'
 
 /**
@@ -45,6 +47,21 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   6: (p) => ({ ...p, schemaVersion: 7 }),
   // v7 → v8: desenho do móvel (módulos) opcional no detalhamento (nada a converter).
   7: (p) => ({ ...p, schemaVersion: 8 }),
+  // v8 → v9: cópias do banco no documento. Até a v8 só existiam os blocos embutidos (v1) e as
+  // regras padrão: copia os blocos usados e as regras padrão.
+  8: (p) => {
+    const blocks: Record<string, unknown> = {}
+    for (const e of (p.environments as Raw[]) ?? [])
+      for (const it of (e.items as Raw[]) ?? []) {
+        const def = CATALOG_BY_ID.get(String(it.blockId))
+        if (def) blocks[blockKey(def.id, Number(it.blockVersion ?? def.version))] = def
+      }
+    return {
+      ...p,
+      schemaVersion: 9,
+      librarySnapshots: { blocks, rules: DEFAULT_RULE_PROFILE },
+    }
+  },
 }
 
 export class MigrationError extends Error {}

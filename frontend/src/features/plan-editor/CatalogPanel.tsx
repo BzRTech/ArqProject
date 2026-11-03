@@ -1,17 +1,14 @@
 import { Search } from 'lucide-react'
 import { memo, useMemo, useState } from 'react'
-import { CATALOG } from '@/core/blocks/catalog'
-import { buildSymbol } from '@/core/blocks/symbol'
+import { useLibrary } from '@/features/library/library-store'
 import type { BlockDef } from '@/core/blocks/types'
-import { entitiesBBox } from '@/core/drawing/bounds'
-import { compileView } from '@/core/drawing/compile'
-import type { Entity } from '@/core/drawing/entities'
 import { OPENING_DEFS, type OpeningDef } from '@/core/project/openings'
 import { drawingEntities } from '@/core/project/render'
 import { formatLength, UNIT_LABEL } from '@/core/units'
-import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { SvgNodeView } from '@/render/svg/SvgNodeView'
 import { stageBlockFilter } from '@/core/editor/stages'
+import { BlockThumb } from './BlockThumb'
+import { thumbNode } from './thumb-node'
 import { useEditor } from './store'
 import { useUnits } from './units-pref'
 
@@ -22,33 +19,6 @@ const DISCIPLINE_LABEL: Record<BlockDef['discipline'], string> = {
   revestimentos: 'Revestimentos',
   hidraulica: 'Hidráulica',
 }
-
-/** Miniatura (SVG em "mm" de miniatura) de entidades quaisquer, enquadradas. */
-function thumbNode(es: Entity[]) {
-  {
-    const bb = entitiesBBox(es)
-    const size = 44
-    const scale = Math.max(bb.maxX - bb.minX, bb.maxY - bb.minY) / (size - 6)
-    const prims = compileView(es, {
-      scale,
-      origin: {
-        x: (size - (bb.maxX - bb.minX) / scale) / 2 - bb.minX / scale,
-        y: (size - (bb.maxY - bb.minY) / scale) / 2 - bb.minY / scale,
-      },
-    })
-    return primitivesToSvg(prims, { widthMm: size, heightMm: size })
-  }
-}
-
-/** Miniatura gerada pelo mesmo núcleo que desenha a planta e o PDF. */
-const BlockThumb = memo(function BlockThumb({ block }: { block: BlockDef }) {
-  const node = useMemo(() => thumbNode(buildSymbol(block.symbol, block.defaultSize)), [block])
-  return (
-    <span className="block__thumb">
-      <SvgNodeView node={node} width={50} height={50} />
-    </span>
-  )
-})
 
 /** Miniatura de esquadria: um trecho de parede com o vão. */
 const OpeningThumb = memo(function OpeningThumb({ def }: { def: OpeningDef }) {
@@ -133,10 +103,12 @@ export function CatalogPanel() {
   const [category, setCategory] = useState<string | null>(null)
   const stage = useEditor((s) => s.stage)
   const openingsOnly = stage === 'planta'
+  // Catálogo do banco em uso (escritório) ou o embutido (rascunho local).
+  const blocks = useLibrary((l) => l.lib.items)
   const inStage = useMemo(() => {
     const ok = stageBlockFilter(stage)
-    return CATALOG.filter((b) => ok(b.id))
-  }, [stage])
+    return blocks.filter((b) => ok(b.id))
+  }, [stage, blocks])
   const categories = useMemo(() => [...new Set(inStage.map((b) => b.category))], [inStage])
   const placing = useEditor((s) => (s.tool === 'place' ? s.placeBlockId : null))
   const startPlacing = useEditor((s) => s.startPlacing)

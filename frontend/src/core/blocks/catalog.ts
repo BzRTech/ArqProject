@@ -1,9 +1,11 @@
+import { CATALOG_EXTRA } from './catalog-extra'
 import type { BlockSymbol } from './symbol'
 import type { BlockDef } from './types'
 
 /**
- * Catálogo inicial de blocos (desenhos próprios). Só dados: na Fase 3 isto vira o seed do
- * banco (`CatalogItem`). Convenção: encosto/parede em y = 0; `d` cresce para o ambiente.
+ * Catálogo EMBUTIDO de blocos (desenhos próprios, só dados). É o seed do banco global
+ * (`CatalogItem`, exportado por `npm run export:schema`) e o catálogo do rascunho local sem
+ * servidor. Convenção: encosto/parede em y = 0; `d` cresce para o ambiente.
  */
 
 const WHITE = '#ffffff'
@@ -42,7 +44,7 @@ const bed: BlockSymbol = {
   ],
 }
 
-export const CATALOG: BlockDef[] = [
+const BASE: BlockDef[] = [
   // --- Dormitório -----------------------------------------------------------
   {
     id: 'cama-casal',
@@ -87,6 +89,7 @@ export const CATALOG: BlockDef[] = [
     category: 'Dormitório',
     discipline: 'marcenaria',
     joinery: true,
+    joineryType: 'roupeiro',
     defaultSize: { w: 1800, d: 600, h: 2400 },
     minSize: { w: 600, d: 450 },
     symbol: {
@@ -142,6 +145,7 @@ export const CATALOG: BlockDef[] = [
     category: 'Estar',
     discipline: 'marcenaria',
     joinery: true,
+    joineryType: 'rack',
     defaultSize: { w: 1800, d: 450, h: 400 },
     minSize: { w: 400, d: 300 },
     symbol: {
@@ -487,10 +491,58 @@ export const CATALOG: BlockDef[] = [
   },
 ]
 
+/** Catálogo embutido completo (16 blocos iniciais + os do seed do banco). */
+export const CATALOG: BlockDef[] = [...BASE, ...CATALOG_EXTRA]
+
 export const CATALOG_BY_ID: ReadonlyMap<string, BlockDef> = new Map(CATALOG.map((b) => [b.id, b]))
 
-export function getBlock(id: string): BlockDef {
-  const b = CATALOG_BY_ID.get(id)
-  if (!b) throw new Error(`Bloco desconhecido: ${id}`)
-  return b
+// --- Registro em uso -----------------------------------------------------------------------
+// O catálogo vem do BANCO quando há servidor (`setCatalog`) e os itens do projeto são
+// desenhados pela CÓPIA guardada no documento (`registerSnapshots`, chave id@versão). Assim
+// mudar o banco não muda projetos antigos sem aviso (ver `core/library/updates.ts`).
+
+export const blockKey = (id: string, version: number) => `${id}@${version}`
+
+let bank: Map<string, BlockDef> | null = null
+const snapshots = new Map<string, BlockDef>()
+
+/** Catálogo do banco (mais recente por id). `null` volta ao embutido. */
+export function setCatalog(defs: readonly BlockDef[] | null) {
+  bank = defs ? new Map(defs.map((b) => [b.id, b])) : null
+}
+
+/** Blocos oferecidos no painel do catálogo. */
+export const catalogBlocks = (): readonly BlockDef[] => (bank ? [...bank.values()] : CATALOG)
+
+/** Troca as cópias registradas pelas do projeto aberto. */
+export function setSnapshots(defs: Iterable<BlockDef>) {
+  snapshots.clear()
+  for (const d of defs) snapshots.set(blockKey(d.id, d.version), d)
+}
+
+export function registerSnapshot(def: BlockDef) {
+  snapshots.set(blockKey(def.id, def.version), def)
+}
+
+/** Versão mais nova disponível do bloco (banco, embutido). */
+export function latestBlock(id: string): BlockDef | undefined {
+  return bank?.get(id) ?? CATALOG_BY_ID.get(id)
+}
+
+/**
+ * Definição do bloco. Com `version`: a cópia do projeto dessa versão (ou o banco/embutido, se
+ * for a mesma versão). Sem versão (ou sem cópia): a mais nova conhecida.
+ */
+export function getBlock(id: string, version?: number): BlockDef {
+  if (version !== undefined) {
+    const snap = snapshots.get(blockKey(id, version))
+    if (snap) return snap
+  }
+  const latest = latestBlock(id)
+  if (latest) return latest
+  let best: BlockDef | undefined
+  for (const s of snapshots.values())
+    if (s.id === id && (!best || s.version > best.version)) best = s
+  if (best) return best
+  throw new Error(`Bloco desconhecido: ${id}`)
 }

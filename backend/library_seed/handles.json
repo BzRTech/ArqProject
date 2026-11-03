@@ -1,0 +1,75 @@
+[
+  {
+    "id": "fecho-toque",
+    "version": 1,
+    "name": "Fecho toque",
+    "kind": "touch"
+  },
+  {
+    "id": "perfil-aluminio-natural",
+    "version": 1,
+    "name": "Perfil de alumínio natural",
+    "kind": "profile",
+    "finish": "Alumínio natural"
+  },
+  {
+    "id": "perfil-aluminio-preto",
+    "version": 1,
+    "name": "Perfil de alumínio preto",
+    "kind": "profile",
+    "finish": "Preto fosco"
+  },
+  {
+    "id": "cava-45",
+    "version": 1,
+    "name": "Cava usinada 45°",
+    "kind": "cava"
+  },
+  {
+    "id": "cava-perfil-j",
+    "version": 1,
+    "name": "Cava com perfil J",
+    "kind": "cava",
+    "finish": "Alumínio"
+  },
+  {
+    "id": "barra-128",
+    "version": 1,
+    "name": "Barra 128 mm",
+    "kind": "bar",
+    "lengthMm": 160,
+    "finish": "Inox escovado"
+  },
+  {
+    "id": "barra-256",
+    "version": 1,
+    "name": "Barra 256 mm",
+    "kind": "bar",
+    "lengthMm": 300,
+    "finish": "Inox escovado"
+  },
+  {
+    "id": "barra-preta-320",
+    "version": 1,
+    "name": "Barra preta 320 mm",
+    "kind": "bar",
+    "lengthMm": 350,
+    "finish": "Preto fosco"
+  },
+  {
+    "id": "botao-redondo",
+    "version": 1,
+    "name": "Botão redondo",
+    "kind": "knob",
+    "lengthMm": 30,
+    "finish": "Latão escovado"
+  },
+  {
+    "id": "botao-couro",
+    "version": 1,
+    "name": "Botão com alça de couro",
+    "kind": "knob",
+    "lengthMm": 35,
+    "finish": "Couro natural"
+  }
+]

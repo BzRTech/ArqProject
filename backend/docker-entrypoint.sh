@@ -3,4 +3,5 @@
 set -e
 python manage.py migrate --noinput
 python manage.py ensure_bucket
+python manage.py seed_library
 exec "$@"

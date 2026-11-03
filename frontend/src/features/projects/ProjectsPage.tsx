@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useMe } from '@/api/auth'
 import { useProjects } from '@/api/projects'
+import { useLibrary } from '@/features/library/library-store'
 import { importJsonFile, importLocalDraft, localDraftName, type ImportResult } from './import-local'
 import { NewProjectDialog } from './NewProjectDialog'
 import { ProjectCard } from './ProjectCard'
@@ -28,6 +29,12 @@ export default function ProjectsPage() {
   const [versionsOf, setVersionsOf] = useState<string | null>(null)
   const projects = useProjects(query, status)
   const navigate = useNavigate()
+
+  // Banco do escritório (cache local): regras para projetos novos e editor mais rápido.
+  const orgId = me?.organization?.id ?? null
+  useEffect(() => {
+    if (orgId !== null) void useLibrary.getState().load(orgId)
+  }, [orgId])
 
   // Busca com pequeno atraso (não consulta a cada tecla).
   useEffect(() => {

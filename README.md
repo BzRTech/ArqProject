@@ -242,6 +242,28 @@ Há prints em [`docs/prints/editor/`](docs/prints/editor/).
 
 Prints em [`docs/prints/fase-2/`](docs/prints/fase-2/).
 
+## Banco do escritório (Fase 3)
+
+O catálogo de blocos, os MDFs, os pisos, os puxadores, as ferragens, os tipos de móvel, os
+modelos prontos, as regras de marcenaria, as folhas e os textos padrão vêm agora do **banco**:
+
+- **Banco global** (do sistema): carregado na subida do backend (`manage.py seed_library`) e
+  curado no Django Admin (`/admin/`, só staff).
+- **Banco do escritório** (menu **Banco**): **Personalizar** cria uma cópia de uma entrada global
+  que passa a valer só no seu escritório (ex.: o "Padrão" das regras de marcenaria com a sua
+  folga de portas); **Novo** cria um MDF, piso, puxador etc.; no catálogo, **Duplicar** cria um
+  bloco a partir de um parecido. Desativar uma entrada esconde ela do editor.
+- **Importar planilha** (MDF, pisos, puxadores, ferragens, textos): CSV ou XLSX com cabeçalho; a
+  tela mostra as colunas, confere antes e lista os erros por linha. Pela linha de comando:
+  `docker compose exec backend python manage.py import_library --kind materials arquivo.xlsx
+  --org <escritorio>` (sem `--org` vai para o banco global).
+- **Projetos não mudam sozinhos:** cada projeto guarda uma cópia do que usa. Quando o banco tem
+  versão nova de um bloco ou das regras, o editor avisa ("Há versões novas no banco") e você
+  escolhe atualizar item a item ou tudo.
+- O rascunho local (`/editor`, sem conta) usa o banco embutido.
+
+Prints em [`docs/prints/fase-3/`](docs/prints/fase-3/).
+
 ## Núcleo de geometria (Fase 1)
 
 `frontend/src/core` é TypeScript puro: unidades, geometria, primitivas de desenho, cotas e

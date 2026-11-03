@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "material": {
+      "type": "string",
+      "enum": [
+        "porcelanato",
+        "ceramica",
+        "madeira",
+        "vinilico",
+        "laminado",
+        "pedra",
+        "cimento",
+        "carpete"
+      ]
+    },
+    "pieceAMm": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "pieceBMm": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "jointMm": {
+      "type": "number",
+      "minimum": 0
+    },
+    "pattern": {
+      "type": "string",
+      "enum": [
+        "grid",
+        "half",
+        "third"
+      ]
+    },
+    "wastePct": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "manufacturer": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "pricePerM2Cents": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "name",
+    "material",
+    "pieceAMm",
+    "pieceBMm",
+    "jointMm",
+    "pattern",
+    "wastePct",
+    "color"
+  ]
+}

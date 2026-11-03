@@ -150,6 +150,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/library/{kind}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Linhas de um banco: globais e do escritório (para a tela "Banco do escritório"). */
+        get: operations["library_list"];
+        put?: never;
+        /** @description Linhas de um banco: globais e do escritório (para a tela "Banco do escritório"). */
+        post: operations["library_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{kind}/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["library_retrieve"];
+        put: operations["library_update"];
+        post?: never;
+        delete: operations["library_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{kind}/{id}/override/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Personalizar uma entrada global: cópia no banco do escritório, com o mesmo id. */
+        post: operations["library_override_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/{kind}/import/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Importa uma planilha (CSV/XLSX) para o banco do escritório. */
+        post: operations["library_import_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/library/bundle/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Tudo o que o editor precisa dos bancos numa chamada (global + escritório), com ETag. */
+        get: operations["library_bundle_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orgs/current/": {
         parameters: {
             query?: never;
@@ -305,6 +390,15 @@ export interface components {
          * @enum {string}
          */
         AssetStatusEnum: "pending" | "ready";
+        Bundle: {
+            etag: string;
+            /** @description Por banco: disciplines, items, materials, floors, handles, hardware, joinery-types, presets, rules, details, sheet-templates, spec-templates. */
+            kinds: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            };
+        };
         Conflict: {
             detail: string;
             revision: number;
@@ -315,6 +409,40 @@ export interface components {
         Health: {
             status: string;
             database: string;
+        };
+        ImportReport: {
+            criados: number;
+            atualizados: number;
+            iguais: number;
+            erros: string[];
+        };
+        ImportRequestRequest: {
+            /** Format: binary */
+            file: string;
+            /** @default false */
+            dry_run: boolean;
+        };
+        /** @description Uma linha do banco (global ou do escritório), com a entrada no formato do front. */
+        LibraryRow: {
+            pk: number;
+            scope: components["schemas"]["ScopeEnum"];
+            /** @description Global que o escritório personalizou (vale a do escritório). */
+            overridden: boolean;
+            /** @description Do escritório, no lugar de uma global. */
+            overrides: boolean;
+            is_active: boolean;
+            /** Format: date-time */
+            updated_at: string;
+            entry: {
+                [key: string]: unknown;
+            };
+        };
+        LibraryWriteRequest: {
+            /** @description Entrada no formato do front (id, name, …). */
+            entry: {
+                [key: string]: unknown;
+            };
+            is_active?: boolean;
         };
         LoginRequest: {
             /** Format: email */
@@ -445,6 +573,12 @@ export interface components {
          * @enum {string}
          */
         RoleEnum: "owner" | "editor" | "viewer";
+        /**
+         * @description * `global` - global
+         *     * `org` - escritório
+         * @enum {string}
+         */
+        ScopeEnum: "global" | "org";
         SignUpRequest: {
             name: string;
             /** Format: email */
@@ -678,6 +812,207 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Health"];
                 };
+            };
+        };
+    };
+    library_list: {
+        parameters: {
+            query?: {
+                scope?: "all" | "global" | "org";
+                search?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRow"][];
+                };
+            };
+        };
+    };
+    library_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LibraryWriteRequest"];
+                "multipart/form-data": components["schemas"]["LibraryWriteRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRow"];
+                };
+            };
+        };
+    };
+    library_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRow"];
+                };
+            };
+        };
+    };
+    library_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LibraryWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["LibraryWriteRequest"];
+                "multipart/form-data": components["schemas"]["LibraryWriteRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRow"];
+                };
+            };
+        };
+    };
+    library_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    library_override_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+                /** @description Banco. */
+                kind: "details" | "disciplines" | "floors" | "handles" | "hardware" | "items" | "joinery-types" | "materials" | "presets" | "rules" | "sheet-templates" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryRow"];
+                };
+            };
+        };
+    };
+    library_import_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                kind: "floors" | "handles" | "hardware" | "materials" | "spec-templates";
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ImportRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportReport"];
+                };
+            };
+        };
+    };
+    library_bundle_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Bundle"];
+                };
+            };
+            /** @description No response body */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -7,7 +7,8 @@ import {
   PART_HINT,
   PART_LABEL,
 } from '@/core/joinery/finish'
-import { MDF_PALETTE, type MdfMaterial } from '@/core/joinery/materials'
+import type { MdfMaterial } from '@/core/joinery/materials'
+import { useLibrary } from '@/features/library/library-store'
 import { JOINERY_PARTS, type Item, type JoineryPart } from '@/core/project/schema'
 import { useEditor } from './store'
 
@@ -32,6 +33,8 @@ export function JoineryFinishPanel({ item }: { item: Item }) {
   const [target, setTarget] = useState<Target>(
     missing.length === JOINERY_PARTS.length ? 'all' : (missing[0] ?? 'frentes'),
   )
+  // MDFs do banco em uso (escritório) ou a paleta embutida.
+  const materials = useLibrary((l) => l.lib.materials)
   const apply = (m: MdfMaterial) => {
     s.updateItem(item.id, { joinery: applyFinish(j, target === 'all' ? 'all' : [target], m) })
     // Depois de escolher, passa sozinho para a próxima parte que falta.
@@ -68,22 +71,24 @@ export function JoineryFinishPanel({ item }: { item: Item }) {
         <div key={kind}>
           <h3>{kind === 'liso' ? 'MDF liso' : 'MDF madeirado'}</h3>
           <div className="swatch-grid">
-            {MDF_PALETTE.filter((m) => m.kind === kind).map((m) => {
-              const on = target !== 'all' && j?.finishes[target]?.materialId === m.id
-              return (
-                <button
-                  key={m.id}
-                  type="button"
-                  className={`swatch-btn ${on ? 'is-on' : ''}`}
-                  onClick={() => apply(m)}
-                  title={m.name}
-                  data-testid={`mdf-${m.id}`}
-                >
-                  <Swatch hex={m.hex} kind={m.kind} />
-                  <span>{m.name}</span>
-                </button>
-              )
-            })}
+            {materials
+              .filter((m) => m.kind === kind)
+              .map((m) => {
+                const on = target !== 'all' && j?.finishes[target]?.materialId === m.id
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={`swatch-btn ${on ? 'is-on' : ''}`}
+                    onClick={() => apply(m)}
+                    title={[m.name, m.manufacturer, m.line, m.code].filter(Boolean).join(' · ')}
+                    data-testid={`mdf-${m.id}`}
+                  >
+                    <Swatch hex={m.hex} kind={m.kind} />
+                    <span>{m.name}</span>
+                  </button>
+                )
+              })}
           </div>
         </div>
       ))}

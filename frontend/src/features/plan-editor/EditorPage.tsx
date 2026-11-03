@@ -11,6 +11,8 @@ import { EditorActions } from './EditorActions'
 import { EnvTabs } from './EnvTabs'
 import { usePersistence, type ProjectSource } from './hooks'
 import { ConflictBanner } from './ConflictBanner'
+import { LibraryUpdatesBanner } from '@/features/library/LibraryUpdatesBanner'
+import { useEditorLibrary } from '@/features/library/use-editor-library'
 import { PlanCanvas } from './PlanCanvas'
 import { PropertiesPanel } from './PropertiesPanel'
 import { StageTitle } from './StageTitle'
@@ -22,6 +24,7 @@ const LOCAL: ProjectSource = { kind: 'local' }
 /** Editor. `source` = rascunho local (/editor) ou projeto do servidor (/projetos/:id). */
 export default function EditorPage({ source = LOCAL }: { source?: ProjectSource }) {
   const persistence = usePersistence(source)
+  useEditorLibrary(source)
   const { status } = persistence
   const stage = useEditor((s) => s.stage)
   const detailOpen = useEditor((s) => s.detailItemId !== null)
@@ -47,6 +50,7 @@ export default function EditorPage({ source = LOCAL }: { source?: ProjectSource 
     <section className="editor">
       <EditorActions persistence={persistence} onFit={fit} />
       <ConflictBanner persistence={persistence} />
+      {source.kind === 'server' && <LibraryUpdatesBanner />}
       <header className="editor__bar">
         <EnvTabs />
       </header>

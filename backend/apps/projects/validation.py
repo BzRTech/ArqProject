@@ -6,6 +6,8 @@ from pathlib import Path
 
 from jsonschema import Draft202012Validator
 
+from apps.common.jsonschema_pt import message_pt
+
 SCHEMA_PATH = Path(__file__).parent / "schema" / "project.schema.json"
 MAX_ERRORS = 5
 
@@ -35,5 +37,5 @@ def document_errors(data: object) -> list[str]:
     out = []
     for e in errors[:MAX_ERRORS]:
         path = "/".join(str(p) for p in e.absolute_path) or "(documento)"
-        out.append(f"{path}: {e.message}")
+        out.append(f"{path}: {message_pt(e)}")
     return out

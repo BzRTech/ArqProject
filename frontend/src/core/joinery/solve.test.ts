@@ -167,4 +167,20 @@ describe('especificações do rack (numeradas na prancha)', () => {
       'Medidas em centímetros. Conferir no local antes de produzir.',
     ])
   })
+
+  it('puxador escolhido no banco sai pelo nome, acabamento e código', async () => {
+    const { joinerySpecs } = await import('./specs')
+    const handleItem = {
+      id: 'barra-256',
+      version: 1,
+      name: 'Barra 256 mm',
+      kind: 'bar' as const,
+      finish: 'Inox escovado',
+      code: 'BX-256',
+    }
+    const design = { ...rack, handle: 'bar' as const, handleItem }
+    const j = { finishes: {}, grain: 'vertical' as const, design }
+    const specs = joinerySpecs(solveJoinery(size, design, R), j, R)
+    expect(specs).toContain('Puxador: Barra 256 mm, Inox escovado (cód. BX-256).')
+  })
 })

@@ -1,4 +1,5 @@
-import { FLOOR_FINISHES, floorFinish } from '@/core/finishes/catalog'
+import { floorsOf } from '@/core/library/bundle'
+import { useLibrary } from '@/features/library/library-store'
 import { floorQuantities } from '@/core/finishes/quantities'
 import type { AreaDrawing, Environment, Floor } from '@/core/project/schema'
 import { formatBRL, formatDecimal } from '@/core/units'
@@ -11,6 +12,8 @@ import { useUnits } from './units-pref'
 export function FloorFields({ area, env }: { area: AreaDrawing; env: Environment }) {
   const s = useEditor.getState()
   const u = useUnits()
+  const finishes = floorsOf(useLibrary((l) => l.lib))
+  const bankFinish = (id: string) => finishes.find((x) => x.id === id)
   const f = area.floor
   const set = (floor: Floor | undefined) => s.updateDrawing(area.id, { floor })
   const up = (patch: Partial<Floor>) => f && set({ ...f, ...patch })
@@ -26,7 +29,7 @@ export function FloorFields({ area, env }: { area: AreaDrawing; env: Environment
           value={f?.finishId ?? ''}
           data-testid="floor-finish"
           onChange={(e) => {
-            const def = floorFinish(e.target.value)
+            const def = bankFinish(e.target.value)
             if (!def) return set(undefined)
             set({
               finishId: def.id,
@@ -40,13 +43,14 @@ export function FloorFields({ area, env }: { area: AreaDrawing; env: Environment
               origin: f?.origin ?? 'center',
               wastePct: def.wastePct,
               color: def.color,
-              priceCentsPerM2: undefined,
+              priceCentsPerM2: useLibrary.getState().lib.floors.find((x) => x.id === def.id)
+                ?.pricePerM2Cents,
               skirting: f?.skirting,
             })
           }}
         >
           <option value="">Sem piso</option>
-          {FLOOR_FINISHES.map((x) => (
+          {finishes.map((x) => (
             <option key={x.id} value={x.id}>
               {x.name}
             </option>

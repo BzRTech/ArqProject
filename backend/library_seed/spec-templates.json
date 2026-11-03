@@ -1,0 +1,30 @@
+[
+  {
+    "id": "conferir-no-local",
+    "version": 1,
+    "name": "Conferir no local",
+    "category": "Geral",
+    "text": "Medidas devem ser conferidas no local antes da produção."
+  },
+  {
+    "id": "fita-de-borda",
+    "version": 1,
+    "name": "Fita de borda",
+    "category": "Marcenaria",
+    "text": "Fita de borda no mesmo padrão do MDF em todas as faces aparentes."
+  },
+  {
+    "id": "fundo-parafusado",
+    "version": 1,
+    "name": "Fundo parafusado",
+    "category": "Marcenaria",
+    "text": "Fundo encaixado em canal e parafusado."
+  },
+  {
+    "id": "iluminacao-led",
+    "version": 1,
+    "name": "Iluminação em LED",
+    "category": "Marcenaria",
+    "text": "Fita de LED embutida em perfil de alumínio com difusor; fonte em local ventilado e acessível."
+  }
+]

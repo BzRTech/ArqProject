@@ -6,6 +6,7 @@ import { UserMenu } from './UserMenu'
 const links = [
   { to: '/', label: 'Início', end: true },
   { to: '/projetos', label: 'Projetos' },
+  { to: '/banco', label: 'Banco' },
   { to: '/editor', label: 'Rascunho local' },
   { to: '/dev/primitivas', label: 'Primitivas' },
   { to: '/spikes/3d', label: '3D', tag: 'beta' },

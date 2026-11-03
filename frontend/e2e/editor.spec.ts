@@ -1149,3 +1149,67 @@ test('abas por etapa com passo a passo, acabamento da marcenaria e prévia da pr
   await dl.saveAs('test-results/abas.pdf')
   expect((await readFile('test-results/abas.pdf')).subarray(0, 5).toString()).toBe('%PDF-')
 })
+
+test('detalhamento da marcenaria: módulos, avisos, vistas cotadas e prancha de detalhe no PDF', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  await freshEditor(page)
+  await page.getByTestId('tool-room').click()
+  await setCm(page, 'room-w', '4,00')
+  await setCm(page, 'room-d', '3,50')
+  await moveModel(page, 0, 0)
+  await clickModel(page, 0, 0)
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('f')
+
+  // Rack de 3,18 m na aba Marcenaria, detalhado pelo passo a passo
+  await placeBlock(page, 'rack', 2000, 3200)
+  await setCm(page, 'item-w', '318')
+  await expect(page.getByTestId('step-detail')).toHaveAttribute('data-done', 'false')
+  await page.getByTestId('step-action-detail').click()
+  await expect(page.getByTestId('sheet-preview')).toBeVisible() // vistas no lugar da planta
+  await expect(page.getByTestId('step-detail')).toHaveAttribute('data-done', 'true')
+  await expect(page.getByTestId('joinery-modules').locator('li')).toHaveCount(4) // ~90 cm cada
+
+  // Módulos do vídeo: 90,9 / 90,9 / 90,9 e o último absorve o resto (45,3), com 1 porta
+  for (const i of [0, 1, 2]) await setCm(page, `module-w-${i}`, '90,9')
+  await expect(page.getByTestId('module-w-3')).toHaveValue('45,3')
+  await page.getByTestId('module-front-3').selectOption('door1')
+  await expect(page.getByTestId('joinery-warnings')).toContainText('Emenda em tampo, base, fundo')
+  await expect(page.getByTestId('joinery-warnings')).not.toContainText('larguras diferentes')
+  const sheet = page.getByTestId('sheet')
+  await expect(sheet).toContainText('M1 90,9 · M2 90,9 · M3 90,9 · M4 45,3 cm.')
+  await expect(sheet).toContainText('7 porta(s) de abrir com 14 dobradiças (2 por porta).')
+  await expect(sheet).toContainText('ESPECIFICAÇÕES')
+  await expect(page.getByTestId('sheet-preview')).toHaveAttribute('data-scale', '20')
+  await page.mouse.move(10, 10)
+  await page.screenshot({ path: shot('39-detalhe-vistas') })
+
+  // Duas portas no módulo estreito: portas diferentes → "Igualar portas" resolve
+  await page.getByTestId('module-front-3').selectOption('door2')
+  await expect(page.getByTestId('joinery-warnings')).toContainText('Portas com larguras diferentes')
+  await page.getByTestId('equalize-doors').click()
+  await expect(page.getByTestId('joinery-warnings')).not.toContainText('larguras diferentes')
+  for (const i of [0, 1, 2, 3]) await expect(page.getByTestId(`module-w-${i}`)).toHaveValue('79,5')
+  await page
+    .getByTestId('cut-list')
+    .evaluate((el) => el.closest('details')!.setAttribute('open', ''))
+  await expect(page.getByTestId('cut-list')).toContainText('Tampo')
+  await page.screenshot({ path: shot('40-detalhe-modulos-e-pecas') })
+
+  // De volta à planta; na aba Pranchas a prancha de detalhe aparece na lista
+  await page.getByTestId('detail-toggle').click()
+  await expect(page.getByTestId('plan-canvas')).toBeVisible()
+  await openStage(page, 'pranchas')
+  await page.getByTestId('sheets-panel').getByText('Rack / painel de TV · detalhe').click()
+  await expect(page.getByTestId('sheet')).toContainText('VISTA INTERNA (SEM AS FRENTES)')
+  await page.screenshot({ path: shot('41-pranchas-detalhe') })
+  const [dl] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByTestId('sheet-pdf').click(),
+  ])
+  await dl.saveAs('test-results/detalhe.pdf')
+  expect((await readFile('test-results/detalhe.pdf')).subarray(0, 5).toString()).toBe('%PDF-')
+  await expect(page.getByTestId('toolbar-message')).toContainText('2 prancha(s)')
+})

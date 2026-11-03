@@ -18,6 +18,7 @@ import type { Drawing, Environment, Item, Opening, OpeningType, Wall } from '@/c
 import { formatDecimal, formatLength, parseLength, UNIT_LABEL } from '@/core/units'
 import { isJoineryBlock } from '@/core/joinery/finish'
 import { BudgetFields } from './BudgetFields'
+import { JoineryDesignPanel } from './JoineryDesignPanel'
 import { JoineryFinishPanel } from './JoineryFinishPanel'
 import { JoineryList } from './JoineryList'
 import { PranchasPanel } from './PranchasPanel'
@@ -634,19 +635,27 @@ export function PropertiesPanel() {
     selection?.kind === 'drawing' ? env.drawings.find((d) => d.id === selection.id) : undefined
   const stage = useEditor((s) => s.stage)
   const nothing = !many && !item && !drawing && !opening
+  // Pranchas só mostra a folha: o painel é sempre o da prancha (nada se edita aqui).
+  if (stage === 'pranchas')
+    return (
+      <aside className="panel panel--props" data-testid="properties">
+        <StageChecklist />
+        <PranchasPanel env={env} />
+      </aside>
+    )
   const joineryItem = item && stage === 'marcenaria' && isJoineryBlock(item.blockId)
   return (
     <aside className="panel panel--props" data-testid="properties">
       <StageChecklist />
       <ToolOptions />
       {many && <MultiSelectionProps env={env} />}
+      {joineryItem && <JoineryDesignPanel key={`d-${item.id}`} item={item} />}
       {joineryItem && <JoineryFinishPanel key={`f-${item.id}`} item={item} />}
       {item && <ItemWithBudget key={item.id} item={item} env={env} />}
       {opening && <OpeningProps key={opening.id} opening={opening} env={env} />}
       {drawing && <DrawingProps key={drawing.id} d={drawing} />}
       {nothing && stage === 'layout' && <ItemsSummary env={env} />}
       {nothing && stage === 'marcenaria' && <JoineryList env={env} />}
-      {nothing && stage === 'pranchas' && <PranchasPanel env={env} />}
       {nothing && stage === 'piso' && (
         <>
           <p className="muted small">

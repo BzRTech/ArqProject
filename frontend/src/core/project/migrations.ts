@@ -43,6 +43,8 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
   5: (p) => ({ ...p, schemaVersion: 6 }),
   // v6 → v7: acabamento de marcenaria opcional nos itens (nada a converter).
   6: (p) => ({ ...p, schemaVersion: 7 }),
+  // v7 → v8: desenho do móvel (módulos) opcional no detalhamento (nada a converter).
+  7: (p) => ({ ...p, schemaVersion: 8 }),
 }
 
 export class MigrationError extends Error {}

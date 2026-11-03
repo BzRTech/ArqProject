@@ -35,6 +35,12 @@ export function runStepAction(a: StepAction) {
       if (target) s.select({ kind: 'item', id: target.id })
       return
     }
+    case 'open-detail': {
+      const list = env.items.filter((it) => isJoineryBlock(it.blockId))
+      const target = list.find((it) => !it.joinery?.design) ?? list[0]
+      if (target) s.openDetail(target.id)
+      return
+    }
     case 'pdf':
       void usePdf.getState().run()
   }

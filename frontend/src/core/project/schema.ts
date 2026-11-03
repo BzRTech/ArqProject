@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 /**
- * Documento do projeto (formato v7 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v8 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 7
+export const SCHEMA_VERSION = 8
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -182,8 +182,36 @@ export const JoineryFinishSchema = z.object({
 export const JOINERY_PARTS = ['frentes', 'corpo', 'tamponamento'] as const
 export type JoineryPart = (typeof JOINERY_PARTS)[number]
 
-/** Detalhamento de marcenaria do item (v7: acabamento; módulos e vistas vêm depois). */
+export const FRONT_KINDS = ['open', 'door1', 'door2', 'drawers'] as const
+export type FrontKind = (typeof FRONT_KINDS)[number]
+export const HANDLE_KINDS = ['touch', 'bar', 'profile', 'cava', 'knob'] as const
+export type HandleKind = (typeof HANDLE_KINDS)[number]
+
+/** Módulo do móvel: largura EIXO A EIXO (das divisórias; nas pontas, da face externa). */
+export const JoineryModuleSchema = z.object({
+  widthMm: positiveMm,
+  front: z.enum(FRONT_KINDS),
+  shelves: z.number().int().min(0).max(12),
+  drawers: z.number().int().min(1).max(8),
+})
+
+/**
+ * Desenho do móvel (v8). Largura e profundidade são as do item na planta (L × P); aqui ficam
+ * a altura, a base, os módulos e o puxador. A geometria sai de `core/joinery/solve.ts`.
+ */
+export const JoineryDesignSchema = z.object({
+  heightMm: positiveMm,
+  base: z.object({
+    kind: z.enum(['floor', 'suspended', 'plinth']),
+    heightMm: mm.nonnegative(),
+  }),
+  modules: z.array(JoineryModuleSchema).min(1),
+  handle: z.enum(HANDLE_KINDS),
+})
+
+/** Detalhamento de marcenaria do item (v7: acabamento; v8: desenho com módulos). */
 export const JoinerySchema = z.object({
+  design: JoineryDesignSchema.optional(),
   finishes: z.object({
     frentes: JoineryFinishSchema.optional(),
     corpo: JoineryFinishSchema.optional(),
@@ -266,6 +294,8 @@ export type Column = z.infer<typeof ColumnSchema>
 export type DimRef = z.infer<typeof DimRefSchema>
 export type Joinery = z.infer<typeof JoinerySchema>
 export type JoineryFinish = z.infer<typeof JoineryFinishSchema>
+export type JoineryDesign = z.infer<typeof JoineryDesignSchema>
+export type JoineryModule = z.infer<typeof JoineryModuleSchema>
 export type Floor = z.infer<typeof FloorSchema>
 export type Opening = z.infer<typeof OpeningSchema>
 export type Drawing = z.infer<typeof DrawingSchema>

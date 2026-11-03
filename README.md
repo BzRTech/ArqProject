@@ -10,8 +10,10 @@ memorial em PDF.
 
 ## Testar na sua máquina (só o editor, sem Docker)
 
-O editor roda inteiro no navegador e salva no próprio navegador. Para testar basta o
-**Node.js 22.12 ou mais novo** ([nodejs.org](https://nodejs.org), versão LTS) e o **Git**.
+O **rascunho local** (`/editor`) roda inteiro no navegador e salva no próprio navegador. Para
+testar basta o **Node.js 22.12 ou mais novo** ([nodejs.org](https://nodejs.org), versão LTS) e o
+**Git**. Login e projetos salvos no servidor (`/projetos`) precisam do ambiente completo (Docker,
+abaixo).
 
 ```bash
 git clone https://github.com/BzRTech/ArqProject.git
@@ -57,7 +59,10 @@ docker compose up
 | Admin    | http://localhost:8000/admin/               |
 | S3 (dev) | http://localhost:8333 (SeaweedFS)          |
 
-Na primeira subida o backend aplica as migrations e cria o bucket. Para criar um admin:
+Na primeira subida o backend aplica as migrations e cria o bucket. Abra
+**http://localhost:5173/projetos**, clique em **Criar conta** (nome, e-mail, senha e nome do
+escritório) e pronto. Depois de atualizar o código (`git pull`), rode `docker compose up --build`
+para o backend instalar dependências novas e aplicar as migrations. Para criar um admin:
 
 ```bash
 docker compose exec backend python manage.py createsuperuser
@@ -213,8 +218,29 @@ Os atalhos de teclado levam à aba da ferramenta (W na aba Layout abre a Planta 
   distância real.
 - **Baixar PDF:** gera uma prancha A3 por ambiente, na maior escala que couber.
 
-Por enquanto o projeto fica salvo **neste navegador**. A Fase 2 leva para o servidor. Há prints
-em [`docs/prints/editor/`](docs/prints/editor/).
+Há prints em [`docs/prints/editor/`](docs/prints/editor/).
+
+## Contas e projetos no servidor (Fase 2)
+
+- **Entrar / Criar conta** (`/entrar`): a conta cria também o escritório (você vira o dono).
+  Cada pessoa pode participar de mais de um escritório; o seletor fica na barra superior.
+  Papéis: dono, editor e leitor (o leitor vê, mas não altera).
+- **Projetos** (`/projetos`): busca por nome ou cliente, filtro por situação (rascunho, em
+  aprovação, aprovado, arquivado), novo projeto, duplicar, arquivar, excluir e **versões**.
+- **Salvamento:** o editor salva sozinho no servidor cerca de 1 s depois de cada mudança.
+  Cada save leva a revisão que a tela conhece; se outra aba ou outra pessoa salvou antes, aparece
+  o aviso de **conflito** e o salvamento para até você escolher: **Usar a versão salva** (descarta
+  as suas mudanças não salvas) ou **Manter a minha** (grava por cima). Sem internet, a tela mostra
+  "Sem conexão" e tenta de novo; ao fechar a aba com algo pendente, uma cópia fica no navegador e
+  é enviada quando o projeto for aberto de novo.
+- **Versões:** uma automática a cada ~10 min de edição, mais as que você salvar com nome
+  ("Enviado ao cliente"). **Restaurar** guarda o estado atual como versão antes.
+- **Planta base:** a imagem vai para o armazenamento do escritório (S3) e o navegador guarda uma
+  cópia. Abrindo em outro computador, ela é baixada do servidor.
+- **Rascunho local → conta:** o que você fez em `/editor` (sem conta) vai para os projetos pelo
+  botão **Enviar rascunho**. Um projeto baixado em `.json` volta por **Abrir .json**.
+
+Prints em [`docs/prints/fase-2/`](docs/prints/fase-2/).
 
 ## Núcleo de geometria (Fase 1)
 

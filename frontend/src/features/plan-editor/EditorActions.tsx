@@ -3,19 +3,33 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useTopbarSlot } from '@/app/topbar-slot'
 import { importBasePlan } from './base-plan-import'
+import type { Persistence, SaveStatus } from './hooks'
 import { usePdf } from './pdf-action'
 
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<SaveStatus, string> = {
   carregando: 'Carregando…',
-  salvo: 'Salvo neste navegador',
+  salvo: 'Salvo',
   salvando: 'Salvando…',
   erro: 'Erro ao salvar',
+  offline: 'Sem conexão',
+  conflito: 'Não salvo (conflito)',
+  'somente-leitura': 'Somente leitura',
 }
 
-export type SaveStatus = keyof typeof STATUS_LABEL
+function statusLabel(p: Persistence): string {
+  if (p.source.kind === 'local' && p.status === 'salvo') return 'Salvo neste navegador'
+  return STATUS_LABEL[p.status]
+}
 
 /** Ações do editor na barra superior: estado do salvamento, importar planta e baixar PDF. */
-export function EditorActions({ status, onFit }: { status: SaveStatus; onFit: () => void }) {
+export function EditorActions({
+  persistence,
+  onFit,
+}: {
+  persistence: Persistence
+  onFit: () => void
+}) {
+  const { status } = persistence
   const slot = useTopbarSlot()
   const fileRef = useRef<HTMLInputElement>(null)
   const { busy, toast, run: pdf, dismiss } = usePdf()
@@ -28,8 +42,12 @@ export function EditorActions({ status, onFit }: { status: SaveStatus; onFit: ()
 
   const actions = (
     <>
-      <span className={`save-status save-status--${status}`} data-testid="save-status">
-        {STATUS_LABEL[status]}
+      <span
+        className={`save-status save-status--${status}`}
+        data-testid="save-status"
+        title={persistence.message}
+      >
+        {statusLabel(persistence)}
       </span>
       <button
         type="button"

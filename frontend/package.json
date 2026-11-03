@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "typecheck": "tsc -b --noEmit",
-    "gen:api": "node scripts/gen-api.mjs"
+    "gen:api": "node scripts/gen-api.mjs",
+    "export:schema": "node scripts/export-json-schema.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/roboto": "^0.4.3",

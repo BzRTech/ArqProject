@@ -7,10 +7,11 @@ from botocore.exceptions import ClientError
 from django.conf import settings
 
 
-def s3_client() -> BaseClient:
+def s3_client(endpoint_url: str | None = None) -> BaseClient:
+    """Cliente S3. `endpoint_url` troca o endereço (ex.: o público, para assinar URLs)."""
     return boto3.client(
         "s3",
-        endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+        endpoint_url=endpoint_url or settings.AWS_S3_ENDPOINT_URL,
         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
         aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
         region_name=settings.AWS_S3_REGION_NAME,

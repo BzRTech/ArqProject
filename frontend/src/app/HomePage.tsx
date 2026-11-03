@@ -3,21 +3,28 @@ import { useHealth } from '@/api/health'
 
 const CARDS = [
   {
-    to: '/editor',
+    to: '/projetos',
     num: 'I.',
-    title: 'Editor de planta',
-    text: 'Paredes, portas e janelas, cotas, blocos do catálogo, legenda e orçamento. Salva no navegador e gera o PDF.',
+    title: 'Projetos',
+    text: 'Projetos do escritório salvos no servidor, com histórico de versões. Planta, layout, piso, marcenaria e pranchas em PDF.',
+    testId: 'open-projects',
+  },
+  {
+    to: '/editor',
+    num: 'II.',
+    title: 'Rascunho local',
+    text: 'O mesmo editor sem conta: salva só neste navegador. Depois dá para enviar o rascunho para os projetos.',
     testId: 'open-editor',
   },
   {
     to: '/dev/primitivas',
-    num: 'II.',
+    num: 'III.',
     title: 'Primitivas',
     text: 'Prancha A3 com planta 1:50, vista 1:20 e cotas em cadeia, na tela e em PDF.',
   },
   {
     to: '/spikes/3d',
-    num: 'III.',
+    num: 'IV.',
     title: 'Volume',
     text: 'Teste do 3D: caixas com texturas de MDF geradas no próprio app.',
   },

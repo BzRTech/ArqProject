@@ -23,10 +23,10 @@ const CARDS = [
     text: 'Prancha A3 com planta 1:50, vista 1:20 e cotas em cadeia, na tela e em PDF.',
   },
   {
-    to: '/spikes/3d',
+    to: '/editor?view=3d',
     num: 'IV.',
-    title: 'Volume',
-    text: 'Teste do 3D: caixas com texturas de MDF geradas no próprio app.',
+    title: 'Vista 3D',
+    text: 'Explore o rascunho em perspectiva, abra os móveis detalhados e capture imagens para apresentação.',
   },
 ]
 

@@ -9,7 +9,7 @@ const links = [
   { to: '/banco', label: 'Banco' },
   { to: '/editor', label: 'Rascunho local' },
   { to: '/dev/primitivas', label: 'Primitivas' },
-  { to: '/spikes/3d', label: '3D', tag: 'beta' },
+  { to: '/editor?view=3d', label: '3D', tag: 'beta' },
 ]
 
 export default function Layout() {

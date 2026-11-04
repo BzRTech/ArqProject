@@ -344,6 +344,8 @@ Os 6 passos da seção 1.2, com **modelos prontos do banco** (`JoineryPreset`), 
 ### Fase 9 — 3D e acabamentos (4–5 dias)
 `Panel[]` → meshes; fechado/aberto; materiais e texturas do banco; sentido do veio; captura PNG para a prancha de perspectivas.
 
+Primeira entrega implementada em `fase-9-3d`. No editor, abra a aba **3D**, escolha o ambiente ou um móvel e alterne **Abrir portas e gavetas**. Os móveis detalhados usam o motor de marcenaria e os acabamentos copiados do banco. Paredes respeitam altura, peitoris e vergas; pisos usam a cor escolhida. Itens sem detalhamento usam volumes. **Capturar PNG** exporta a câmera atual; **Prancha de perspectiva (PDF)** gera uma folha A3 avulsa, sem escala. As texturas de MDF são procedurais, com direção do veio. Permanecem para as próximas entregas as texturas fotográficas, a persistência das perspectivas na lista de pranchas e a integração de render por IA.
+
 ### Fase 10 — Produto e deploy (3–5 dias)
 Minha marca completa, convites para a organização, papéis, compartilhamento só-leitura por link, logs, backup do Postgres, deploy (ex.: EC2/Lightsail ou ECS + RDS + S3 + CloudFront; ou um VPS com Docker Compose + Caddy para começar barato).
 

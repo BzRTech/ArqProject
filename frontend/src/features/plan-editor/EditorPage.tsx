@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { registerWebFonts } from '@/render/pdf/fonts'
 import { AreasPanel } from './AreasPanel'
 import { CatalogPanel } from './CatalogPanel'
@@ -21,9 +21,15 @@ import { Toolbar } from './Toolbar'
 import { ViewOptions } from './ViewOptions'
 
 const LOCAL: ProjectSource = { kind: 'local' }
+const ThreePanel = lazy(() => import('./ThreePanel'))
 
 /** Editor. `source` = rascunho local (/editor) ou projeto do servidor (/projetos/:id). */
 export default function EditorPage({ source = LOCAL }: { source?: ProjectSource }) {
+  const [searchParams] = useSearchParams()
+  const view = searchParams.get('view')
+  useEffect(() => {
+    if (view === '3d') useEditor.getState().setStage('3d')
+  }, [view])
   const persistence = usePersistence(source)
   useEditorLibrary(source)
   useLoadSheetBrand(source.kind === 'server')
@@ -57,28 +63,34 @@ export default function EditorPage({ source = LOCAL }: { source?: ProjectSource 
         <EnvTabs />
       </header>
       <StageTabs />
-      <div className="editor__body">
-        {stage === 'piso' ? (
-          <AreasPanel />
-        ) : stage === 'pranchas' ? (
-          <SheetsPanel />
-        ) : (
-          <CatalogPanel />
-        )}
-        {stage === 'pranchas' || (stage === 'marcenaria' && detailOpen) ? (
-          <div className="stage">
-            <SheetPreview />
-          </div>
-        ) : (
-          <div className="stage">
-            <PlanCanvas fitSignal={fitSignal} />
-            <StageTitle />
-            <ViewOptions />
-            <Toolbar onFit={fit} />
-          </div>
-        )}
-        <PropertiesPanel />
-      </div>
+      {stage === '3d' ? (
+        <Suspense fallback={<p className="loading">Carregando vista 3D…</p>}>
+          <ThreePanel />
+        </Suspense>
+      ) : (
+        <div className="editor__body">
+          {stage === 'piso' ? (
+            <AreasPanel />
+          ) : stage === 'pranchas' ? (
+            <SheetsPanel />
+          ) : (
+            <CatalogPanel />
+          )}
+          {stage === 'pranchas' || (stage === 'marcenaria' && detailOpen) ? (
+            <div className="stage">
+              <SheetPreview />
+            </div>
+          ) : (
+            <div className="stage">
+              <PlanCanvas fitSignal={fitSignal} />
+              <StageTitle />
+              <ViewOptions />
+              <Toolbar onFit={fit} />
+            </div>
+          )}
+          <PropertiesPanel />
+        </div>
+      )}
     </section>
   )
 }

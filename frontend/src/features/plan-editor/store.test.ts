@@ -12,6 +12,20 @@ beforeEach(() => {
 })
 
 describe('editor — itens', () => {
+  it('cancela um arrasto sem consumir o histórico anterior e retoma o desfazer', () => {
+    const id = S().addItem('sofa', { x: 1000, y: 1000 })
+    S().select({ kind: 'item', id })
+    const before = S().project
+    const count = useEditor.temporal.getState().pastStates.length
+    S().beginInteraction()
+    S().moveSelection(300, 200)
+    S().cancelInteraction()
+    expect(S().project).toBe(before)
+    expect(useEditor.temporal.getState().pastStates).toHaveLength(count)
+    expect(useEditor.temporal.getState().isTracking).toBe(true)
+    undo()
+    expect(env().items).toHaveLength(0)
+  })
   it('gera UUIDs também no endereço HTTP da rede local', () => {
     const original = globalThis.crypto
     vi.stubGlobal('crypto', { getRandomValues: original.getRandomValues.bind(original) })

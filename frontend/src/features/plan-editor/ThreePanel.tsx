@@ -124,9 +124,14 @@ export default function ThreePanel() {
         />
       </div>
       <p className="three-panel__hint">
-        Arraste para girar · botão direito para mover · roda para aproximar. Móveis detalhados
-        mostram as peças e os acabamentos escolhidos. Os itens do catálogo têm modelos 3D
-        proporcionais às medidas da planta.
+        <span className="mouse-help">
+          Arraste para girar · botão direito para mover · roda para aproximar.{' '}
+        </span>
+        <span className="touch-help">
+          Um dedo para girar · dois dedos para mover · pinça para aproximar.{' '}
+        </span>
+        Móveis detalhados mostram as peças e os acabamentos escolhidos. Os itens do catálogo têm
+        modelos 3D proporcionais às medidas da planta.
       </p>
     </div>
   )

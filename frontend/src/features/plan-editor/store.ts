@@ -156,6 +156,7 @@ export interface EditorState {
   /** Agrupa várias mudanças (arrasto) em um único passo de desfazer. */
   beginInteraction: () => void
   endInteraction: () => void
+  cancelInteraction: () => void
 }
 
 function initialState() {
@@ -741,6 +742,12 @@ export const useEditor = create<EditorState>()(
           set((s) => void (s.project = snapshot))
           temporalState.resume()
           set((s) => void (s.project = final))
+        },
+        cancelInteraction: () => {
+          const snapshot = interactionSnapshot
+          interactionSnapshot = null
+          if (snapshot) set((s) => void (s.project = snapshot))
+          useEditor.temporal.getState().resume()
         },
       }
     }),

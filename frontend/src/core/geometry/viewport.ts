@@ -35,6 +35,24 @@ export function pan(v: Viewport, dx: number, dy: number): Viewport {
   return { ...v, tx: v.tx + dx, ty: v.ty + dy }
 }
 
+/** Two-finger zoom and pan, keeping the world point beneath the moving midpoint. */
+export function pinch(
+  v: Viewport,
+  before: readonly [Point, Point],
+  after: readonly [Point, Point],
+): Viewport {
+  const midpoint = ([a, b]: readonly [Point, Point]) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 })
+  const a = midpoint(before)
+  const b = midpoint(after)
+  const oldDistance = Math.hypot(before[1].x - before[0].x, before[1].y - before[0].y)
+  const newDistance = Math.hypot(after[1].x - after[0].x, after[1].y - after[0].y)
+  return pan(
+    zoomAt(v, oldDistance > 0 ? Math.max(1, newDistance) / oldDistance : 1, a),
+    b.x - a.x,
+    b.y - a.y,
+  )
+}
+
 /** Enquadra um retângulo do mundo na tela com margem em px. */
 export function fit(
   world: { x: number; y: number; width: number; height: number },

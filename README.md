@@ -56,6 +56,12 @@ Mantenha o servidor ligado no computador durante o teste. Essa versão recebe as
 após um novo `npm run build` e a atualização da página. Cada navegador guarda seu próprio
 rascunho local.
 
+No iPad, use pinça para aproximar ou afastar e dois dedos para mover a planta. Um dedo
+seleciona e arrasta móveis; no vazio ele move a vista. Abra os painéis pelos botões
+**Catálogo** e **Propriedades**. Ao desenhar, os botões **Concluir parede**, **Concluir área**
+e **Cancelar ferramenta** dispensam o teclado. As pranchas também aceitam pinça. No 3D,
+um dedo gira a vista e dois dedos movem/aproximam.
+
 Para conferir o catálogo em um teste automatizado de WebKit com tela de iPad, use
 `npx playwright install webkit` e `npx playwright test --config playwright.tablet.config.ts`.
 

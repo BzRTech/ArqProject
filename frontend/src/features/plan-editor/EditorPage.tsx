@@ -38,6 +38,7 @@ export default function EditorPage({ source = LOCAL }: { source?: ProjectSource 
   const stage = useEditor((s) => s.stage)
   const detailOpen = useEditor((s) => s.detailItemId !== null)
   const [fitSignal, setFitSignal] = useState(0)
+  const [tabletPanel, setTabletPanel] = useState<'catalog' | 'properties' | null>(null)
   const fit = () => setFitSignal((n) => n + 1)
   useEffect(() => {
     // Mesma fonte da prancha também na tela.
@@ -65,12 +66,47 @@ export default function EditorPage({ source = LOCAL }: { source?: ProjectSource 
         <EnvTabs />
       </header>
       <StageTabs />
+      {stage !== '3d' && (
+        <div className="tablet-panel-controls">
+          <button
+            type="button"
+            aria-expanded={tabletPanel === 'catalog'}
+            onClick={() => setTabletPanel(tabletPanel === 'catalog' ? null : 'catalog')}
+            data-testid="tablet-catalog"
+          >
+            {stage === 'pranchas' ? 'Pranchas' : stage === 'piso' ? 'Pisos' : 'Catálogo'}
+          </button>
+          <button
+            type="button"
+            aria-expanded={tabletPanel === 'properties'}
+            onClick={() => setTabletPanel(tabletPanel === 'properties' ? null : 'properties')}
+            data-testid="tablet-properties"
+          >
+            Propriedades
+          </button>
+          <span>Pinça para zoom · dois dedos para mover</span>
+        </div>
+      )}
       {stage === '3d' ? (
         <Suspense fallback={<p className="loading">Carregando vista 3D…</p>}>
           <ThreePanel />
         </Suspense>
       ) : (
-        <div className="editor__body">
+        <div
+          className={`editor__body ${tabletPanel ? `tablet-${tabletPanel}-open` : ''}`}
+          onClickCapture={(e) => {
+            if ((e.target as Element).closest('[data-testid^="block-"], [data-testid^="opening-"]'))
+              setTabletPanel(null)
+          }}
+        >
+          {tabletPanel && (
+            <button
+              type="button"
+              className="tablet-panel-backdrop"
+              aria-label="Fechar painel"
+              onClick={() => setTabletPanel(null)}
+            />
+          )}
           {stage === 'piso' ? (
             <AreasPanel />
           ) : stage === 'pranchas' ? (

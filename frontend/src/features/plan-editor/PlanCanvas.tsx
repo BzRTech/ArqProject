@@ -21,6 +21,7 @@ import {
 import {
   fit,
   pan,
+  pinch,
   screenToWorld,
   worldToScreen,
   zoomAt,
@@ -430,6 +431,11 @@ interface Props {
   fitSignal: number
 }
 
+type CanvasInput = Pick<
+  React.PointerEvent<SVGSVGElement>,
+  'clientX' | 'clientY' | 'button' | 'shiftKey' | 'pointerType' | 'preventDefault'
+>
+
 export function PlanCanvas({ fitSignal }: Props) {
   const ref = useRef<SVGSVGElement>(null)
   const env = useEditor(selectActiveEnv)
@@ -459,6 +465,10 @@ export function PlanCanvas({ fitSignal }: Props) {
   } | null>(null)
   const [dragDelta, setDragDelta] = useState<string | null>(null)
   const spaceDown = useRef(false)
+  const touches = useRef(new Map<number, Vec2>())
+  const touchStart = useRef<CanvasInput | null>(null)
+  const multipleTouches = useRef(false)
+  const penPointer = useRef<number | null>(null)
   /** Movendo a vista (botão do meio/direito ou Espaço): cursor de "mão fechada". */
   const [panning, setPanning] = useState(false)
   const selected = useEditor((s) => s.selected)
@@ -812,16 +822,15 @@ export function PlanCanvas({ fitSignal }: Props) {
   }, [wallDraft, dimDraft, areaDraft, commitWall, commitArea, fitToContent, typed, typedPoint])
 
   // --- Ponteiro --------------------------------------------------------------
-  const screenPt = (e: React.PointerEvent) => {
+  const screenPt = (e: { clientX: number; clientY: number }) => {
     const r = ref.current!.getBoundingClientRect()
     return { x: e.clientX - r.left, y: e.clientY - r.top }
   }
 
-  const onPointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+  const startEditing = (e: CanvasInput) => {
     const s = useEditor.getState()
     const p = toModel(e)
     const sp = screenPt(e)
-    e.currentTarget.setPointerCapture(e.pointerId)
     // Uma seleção de texto que já existia (p. ex. arrastando no painel) não pode seguir pelo desenho.
     window.getSelection()?.removeAllRanges()
     if (e.button === 1 || e.button === 2 || spaceDown.current) {
@@ -837,7 +846,7 @@ export function PlanCanvas({ fitSignal }: Props) {
         const grip = nearestWallVertex(
           editEnv,
           p,
-          8 * px,
+          (e.pointerType === 'touch' ? 16 : 8) * px,
           s.selection?.kind === 'drawing' ? s.selection.id : undefined,
         )
         if (grip) {
@@ -907,7 +916,7 @@ export function PlanCanvas({ fitSignal }: Props) {
           }
           break
         }
-        const hit = hitTest(editEnv, p, 6 * px)
+        const hit = hitTest(editEnv, p, (e.pointerType === 'touch' ? 12 : 6) * px)
         if (hit && e.shiftKey) {
           s.toggleSelect(hit)
           break
@@ -1158,6 +1167,106 @@ export function PlanCanvas({ fitSignal }: Props) {
     }
     drag.current = null
   }
+
+  const cancelDrag = () => {
+    useEditor.getState().cancelInteraction()
+    drag.current = null
+    setBand(null)
+    setEditGuide(null)
+    setDragDelta(null)
+    setPanning(false)
+  }
+
+  const pointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType === 'touch' && penPointer.current !== null) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (e.pointerType !== 'touch') {
+      if (e.pointerType === 'pen') penPointer.current = e.pointerId
+      startEditing(e)
+      return
+    }
+    e.preventDefault()
+    touches.current.set(e.pointerId, screenPt(e))
+    if (touches.current.size === 1) {
+      touchStart.current = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        button: 0,
+        shiftKey: false,
+        pointerType: 'touch',
+        preventDefault: () => undefined,
+      }
+    } else {
+      multipleTouches.current = true
+      touchStart.current = null
+      cancelDrag()
+      setCursor(null)
+      setCursorScreen(null)
+    }
+  }
+
+  const pointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (e.pointerType !== 'touch') {
+      onPointerMove(e)
+      return
+    }
+    if (!touches.current.has(e.pointerId)) return
+    e.preventDefault()
+    const previous = [...touches.current.values()]
+    const point = screenPt(e)
+    touches.current.set(e.pointerId, point)
+    if (touches.current.size >= 2) {
+      const next = [...touches.current.values()]
+      setView((v) => pinch(v, [previous[0]!, previous[1]!], [next[0]!, next[1]!]))
+      return
+    }
+    if (multipleTouches.current) return
+    const start = touchStart.current
+    if (start && useEditor.getState().tool === 'select' && distance(screenPt(start), point) > 6) {
+      startEditing(start)
+      // On empty space a finger moves the view. Selection windows remain available with a mouse.
+      if (drag.current?.mode === 'band') {
+        setBand(null)
+        drag.current = {
+          mode: 'pan',
+          last: screenPt(start),
+          start: toModel(start),
+          applied: { x: 0, y: 0 },
+        }
+        setPanning(true)
+      }
+      touchStart.current = null
+    }
+    onPointerMove(e)
+  }
+
+  const pointerEnd = (e: React.PointerEvent<SVGSVGElement>, cancelled = false) => {
+    if (penPointer.current === e.pointerId) penPointer.current = null
+    if (e.pointerType !== 'touch') {
+      if (cancelled) cancelDrag()
+      else onPointerUp()
+      return
+    }
+    if (!touches.current.has(e.pointerId)) return
+    touches.current.delete(e.pointerId)
+    if (cancelled) {
+      multipleTouches.current = true
+      touchStart.current = null
+      cancelDrag()
+    } else if (!multipleTouches.current) {
+      if (touchStart.current) startEditing(e)
+      onPointerUp()
+    }
+    if (touches.current.size === 0) {
+      touchStart.current = null
+      multipleTouches.current = false
+      setPanning(false)
+      setCursor(null)
+      setCursorScreen(null)
+    }
+  }
+
+  useEffect(() => () => useEditor.getState().cancelInteraction(), [])
 
   useEffect(() => {
     cursorRef.current = cursor
@@ -1420,10 +1529,13 @@ export function PlanCanvas({ fitSignal }: Props) {
         className={`canvas canvas--${tool} ${cadCursor ? 'canvas--cad' : ''} ${panning ? 'canvas--panning' : ''}`}
         data-testid="plan-canvas"
         data-view={`${view.scale} ${view.tx} ${view.ty}`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
+        onPointerDown={pointerDown}
+        onPointerMove={pointerMove}
+        onPointerUp={(e) => pointerEnd(e)}
+        onPointerCancel={(e) => pointerEnd(e, true)}
+        onLostPointerCapture={(e) => {
+          if (touches.current.has(e.pointerId) || drag.current) pointerEnd(e, true)
+        }}
         // No Windows, o botão do meio liga a "rolagem automática" do Chrome/Edge (que toma conta
         // do mouse) e no Linux cola o texto copiado: o desenho cancela essas ações.
         onMouseDown={(e) => {
@@ -1612,6 +1724,23 @@ export function PlanCanvas({ fitSignal }: Props) {
           pickbox={tool === 'select'}
         />
       </svg>
+      <div className="touch-draft-actions">
+        {tool === 'wall' && wallDraft.length >= 2 && (
+          <button type="button" onClick={() => commitWall(wallDraft, false)}>
+            Concluir parede
+          </button>
+        )}
+        {tool === 'area' && areaDraft.length >= 3 && (
+          <button type="button" onClick={() => commitArea(areaDraft)}>
+            Concluir área
+          </button>
+        )}
+        {tool !== 'select' && (
+          <button type="button" onClick={() => useEditor.getState().setTool('select')}>
+            Cancelar ferramenta
+          </button>
+        )}
+      </div>
       <footer className="statusbar" data-testid="editor-status">
         <span className="statusbar__coords">
           {cursor
@@ -1627,7 +1756,10 @@ export function PlanCanvas({ fitSignal }: Props) {
             {dragDelta}
           </span>
         )}
-        <span className="statusbar__hint">
+        <span className="touch-help">
+          Toque para editar · arraste no vazio para mover · pinça para zoom
+        </span>
+        <span className="statusbar__hint mouse-help">
           {typeof hint === 'string'
             ? hint
             : hint.map((h, i) => (

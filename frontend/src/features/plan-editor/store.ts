@@ -711,7 +711,12 @@ export const useEditor = create<EditorState>()(
             e.openings = e.openings.filter((o) => !openings.has(o.id) && !drawings.has(o.wallId))
             setSel(s, null)
           }),
-        setBasePlan: (bp) => set((s) => void (env(s).basePlan = bp)),
+        setBasePlan: (bp) =>
+          set((s) => {
+            env(s).basePlan = bp
+            s.calibration = []
+            if (!bp && s.tool === 'calibrate') s.tool = 'select'
+          }),
         updateBasePlan: (patch) =>
           set((s) => {
             const bp = env(s).basePlan

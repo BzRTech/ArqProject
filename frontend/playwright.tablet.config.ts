@@ -6,7 +6,7 @@ export default defineConfig({
   projects: [
     {
       name: 'ipad-webkit',
-      testMatch: '**/tablet.spec.ts',
+      testMatch: ['**/tablet.spec.ts', '**/base-plan-pdf.spec.ts'],
       use: {
         ...devices['iPad (gen 7)'],
         browserName: 'webkit',

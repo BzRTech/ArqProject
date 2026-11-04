@@ -24,7 +24,7 @@ import { JoineryList } from './JoineryList'
 import { PranchasPanel } from './PranchasPanel'
 import { StageChecklist } from './StageChecklist'
 import { ColumnProps } from './ColumnProps'
-import { importBasePlan } from './base-plan-import'
+import { importBasePlan, isPdfPlan } from './base-plan-import'
 import { LengthField, TextField } from './fields'
 import { useUnits } from './units-pref'
 import { FloorFields } from './FloorFields'
@@ -489,7 +489,7 @@ function DrawingProps({ d }: { d: Drawing }) {
 function BasePlanDropzone() {
   const [over, setOver] = useState(false)
   const take = (f: File | undefined) => {
-    if (f && f.type.startsWith('image/')) void importBasePlan(f)
+    if (f && (f.type.startsWith('image/') || isPdfPlan(f))) void importBasePlan(f)
   }
   return (
     <label
@@ -508,13 +508,13 @@ function BasePlanDropzone() {
       data-testid="base-plan-dropzone"
     >
       <ImageUp size={20} strokeWidth={1.5} />
-      <strong>Arraste a imagem da planta</strong>
+      <strong>Arraste a imagem ou PDF da planta</strong>
       <span>
         Ou clique para escolher. Depois calibre com uma medida conhecida e desenhe por cima.
       </span>
       <input
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf,.pdf"
         hidden
         onChange={(e) => {
           take(e.target.files?.[0])

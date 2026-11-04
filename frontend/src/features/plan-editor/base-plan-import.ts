@@ -4,9 +4,42 @@ import { rememberAsset } from './hooks'
 import { usePdf } from './pdf-action'
 import { imageSize, putAsset, readFileAsDataUrl } from './persistence'
 import { newId, useEditor } from './store'
+import { create } from 'zustand'
+
+interface PdfRequest {
+  file: File
+  environmentId: string
+  complete: () => void
+}
+export const usePdfPlanImport = create<{ request: PdfRequest | null; busy: boolean }>(() => ({
+  request: null,
+  busy: false,
+}))
+export const isPdfPlan = (file: File) =>
+  file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+export function closePdfPlanImport() {
+  if (usePdfPlanImport.getState().busy) return
+  const request = usePdfPlanImport.getState().request
+  usePdfPlanImport.setState({ request: null })
+  request?.complete()
+}
+
+export function importBasePlan(file: File): Promise<void> {
+  if (usePdfPlanImport.getState().busy) return Promise.resolve()
+  if (!isPdfPlan(file)) return importImagePlan(file)
+  closePdfPlanImport()
+  return new Promise((resolve) =>
+    usePdfPlanImport.setState({
+      request: { file, environmentId: useEditor.getState().activeEnvId, complete: resolve },
+    }),
+  )
+}
 
 /** Carrega uma imagem como planta base (10 m de largura até calibrar) e passa a calibrar. */
-export async function importBasePlan(file: File) {
+export async function importImagePlan(
+  file: File,
+  environmentId = useEditor.getState().activeEnvId,
+) {
   try {
     const dataUrl = await readFileAsDataUrl(file)
     const { width, height } = await imageSize(dataUrl)
@@ -14,6 +47,10 @@ export async function importBasePlan(file: File) {
     const assetId = assetTarget() === 'server' ? await uploadAsset(file, file.name) : newId()
     await putAsset(assetId, dataUrl)
     rememberAsset(assetId, dataUrl)
+    if (useEditor.getState().activeEnvId !== environmentId)
+      throw new Error(
+        'O ambiente mudou durante a importação. Importe a planta novamente no ambiente desejado.',
+      )
     const widthMm = 10000
     useEditor.getState().setBasePlan({
       assetId,

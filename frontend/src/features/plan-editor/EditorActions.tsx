@@ -5,6 +5,7 @@ import { useTopbarSlot } from '@/app/topbar-slot'
 import { importBasePlan } from './base-plan-import'
 import type { Persistence, SaveStatus } from './hooks'
 import { usePdf } from './pdf-action'
+import { selectActiveEnv, useEditor } from './store'
 
 const STATUS_LABEL: Record<SaveStatus, string> = {
   carregando: 'Carregando…',
@@ -30,6 +31,7 @@ export function EditorActions({
   onFit: () => void
 }) {
   const { status } = persistence
+  const basePlan = useEditor(selectActiveEnv).basePlan
   const slot = useTopbarSlot()
   const fileRef = useRef<HTMLInputElement>(null)
   const { busy, toast, run: pdf, dismiss } = usePdf()
@@ -61,7 +63,7 @@ export function EditorActions({
       <input
         ref={fileRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf,.pdf"
         hidden
         data-testid="base-plan-input"
         onChange={(e) => {
@@ -70,6 +72,16 @@ export function EditorActions({
           e.target.value = ''
         }}
       />
+      {basePlan && (
+        <button
+          type="button"
+          className="sm danger"
+          data-testid="remove-base-plan"
+          onClick={() => useEditor.getState().setBasePlan(null)}
+        >
+          Remover planta
+        </button>
+      )}
       <button
         type="button"
         className="primary sm"

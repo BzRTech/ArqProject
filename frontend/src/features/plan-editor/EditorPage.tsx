@@ -19,6 +19,7 @@ import { PropertiesPanel } from './PropertiesPanel'
 import { StageTitle } from './StageTitle'
 import { Toolbar } from './Toolbar'
 import { ViewOptions } from './ViewOptions'
+import { PdfPlanImportDialog } from './PdfPlanImportDialog'
 
 const LOCAL: ProjectSource = { kind: 'local' }
 const ThreePanel = lazy(() => import('./ThreePanel'))
@@ -56,6 +57,7 @@ export default function EditorPage({ source = LOCAL }: { source?: ProjectSource 
   if (status === 'carregando') return <p className="loading">Carregando projeto…</p>
   return (
     <section className="editor">
+      <PdfPlanImportDialog />
       <EditorActions persistence={persistence} onFit={fit} />
       <ConflictBanner persistence={persistence} />
       {source.kind === 'server' && <LibraryUpdatesBanner />}

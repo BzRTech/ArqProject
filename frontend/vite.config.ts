@@ -11,6 +11,7 @@ const s3Bucket = process.env.VITE_S3_BUCKET ?? 'prancheta'
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: { include: ['pdfjs-dist'] },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

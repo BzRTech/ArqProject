@@ -5,6 +5,9 @@ import { placeEntity, placePoint, type Placement } from '../drawing/transform-en
 import { containsPoint } from '../geometry/polygon'
 import { vec, type Vec2 } from '../geometry/vec'
 import { planFinish, shade } from '../joinery/finish'
+import { joineryPlanSymbol } from '../joinery/plan-symbol'
+import type { RuleProfile } from '../joinery/rules'
+import { solveJoinery } from '../joinery/solve'
 import type { Item } from './schema'
 
 /** Local (origem no canto) → modelo: centraliza, espelha, gira e leva ao `position`. */
@@ -29,10 +32,18 @@ export function hitItem(item: Item, p: Vec2): boolean {
  * Entidades do bloco já posicionadas no modelo. Humanizado: a marcenaria com acabamento é
  * pintada com a cor do MDF (e, se madeirado, ganha o veio em tom mais escuro).
  */
-export function itemEntities(item: Item, opts: { humanized?: boolean } = {}): Entity[] {
+export function itemEntities(
+  item: Item,
+  opts: { humanized?: boolean; rules?: RuleProfile } = {},
+): Entity[] {
   const block = getBlock(item.blockId)
   const { w, d, h } = item.sizeMm
-  const local = buildSymbol(block.symbol, { w, d, h })
+  // Móvel detalhado: o símbolo sai do detalhamento (módulos, portas e giro), não do catálogo.
+  const design = item.joinery?.design
+  const local =
+    design && opts.rules
+      ? joineryPlanSymbol(solveJoinery({ w, d }, design, opts.rules), opts.rules)
+      : buildSymbol(block.symbol, { w, d, h })
   const pl = placement(item)
   const shift = { translate: vec(-w / 2, -d / 2), rotationDeg: 0, mirrorX: false }
   const placed = local.map((e) => placeEntity(placeEntity(e, shift), pl))

@@ -1,3 +1,4 @@
+import type { RuleProfile } from '../joinery/rules'
 import { columnEntities } from './columns'
 import type { Entity } from '../drawing/entities'
 import { itemEntities, itemsInDrawOrder } from './items'
@@ -61,6 +62,8 @@ export interface EnvironmentRenderOptions {
   basePlanHref?: string
   /** Modo humanizado: pisos com cor. */
   humanized?: boolean
+  /** Regras de marcenaria: com elas, móveis detalhados mostram módulos e giro das portas. */
+  rules?: RuleProfile
 }
 
 /** Tudo o que o ambiente desenha, na ordem de empilhamento (planta base → itens → paredes → anotações). */
@@ -96,7 +99,7 @@ export function environmentEntities(env: Environment, o: EnvironmentRenderOption
     kind: 'group',
     role: 'itens',
     children: itemsInDrawOrder(env.items).flatMap((it) =>
-      itemEntities(it, { humanized: o.humanized }),
+      itemEntities(it, { humanized: o.humanized, rules: o.rules }),
     ),
   })
   const walls = env.drawings.filter((d) => d.kind === 'wall')

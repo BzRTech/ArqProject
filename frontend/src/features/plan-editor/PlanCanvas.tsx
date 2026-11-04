@@ -85,6 +85,7 @@ import {
 } from './geometry'
 import { useAssetUrl } from './hooks'
 import { redo, selectActiveEnv, undo, useEditor, type Selection } from './store'
+import { currentRuleProfile, useRuleProfile } from './rules'
 import { UI } from './theme'
 import { useUnits } from './units-pref'
 
@@ -111,7 +112,9 @@ const ItemView = memo(function ItemView({
   humanized: boolean
   dim: boolean
 }) {
-  const entities = useMemo(() => itemEntities(item, { humanized }), [item, humanized])
+  // Regras vêm do perfil em uso: móvel detalhado mostra módulos e giro das portas na planta.
+  const rules = useRuleProfile()
+  const entities = useMemo(() => itemEntities(item, { humanized, rules }), [item, humanized, rules])
   return <Compiled entities={entities} role="item" opacity={dim ? DIMMED : undefined} />
 })
 
@@ -575,7 +578,11 @@ export function PlanCanvas({ fitSignal }: Props) {
     const s = useEditor.getState()
     const e = selectActiveEnv(s)
     let bb = entitiesBBox(
-      environmentEntities(e, { scale: DISPLAY_SCALE, basePlanHref: e.basePlan ? 'x' : undefined }),
+      environmentEntities(e, {
+        scale: DISPLAY_SCALE,
+        basePlanHref: e.basePlan ? 'x' : undefined,
+        rules: currentRuleProfile(),
+      }),
       DISPLAY_SCALE,
     )
     if (isEmpty(bb)) bb = { minX: 0, minY: 0, maxX: 6000, maxY: 4500 }

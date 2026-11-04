@@ -20,7 +20,9 @@ export function SheetPreview() {
     const dateText = new Date().toLocaleDateString('pt-BR')
     const item = detailId ? env.items.find((i) => i.id === detailId) : undefined
     const detail = item && joinerySheet(project, env, item, rules, { dateText })
-    return detail ?? environmentSheet(project, env, { humanized, basePlanHref: href, dateText })
+    return (
+      detail ?? environmentSheet(project, env, { humanized, basePlanHref: href, dateText, rules })
+    )
   }, [project, env, humanized, href, detailId, rules])
   const node = useMemo(
     () =>

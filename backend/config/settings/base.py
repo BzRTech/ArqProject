@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "storages",
     "apps.accounts",
     "apps.assets",
+    "apps.projects",
 ]
 
 MIDDLEWARE = [
@@ -99,6 +100,9 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get("S3_BUCKET", "prancheta")
 AWS_S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL") or None
 AWS_S3_CUSTOM_DOMAIN = os.environ.get("S3_PUBLIC_DOMAIN") or None
 AWS_S3_URL_PROTOCOL = os.environ.get("S3_PUBLIC_PROTOCOL", "https:")
+# Endereço do S3 visto pelo NAVEGADOR nas URLs pré-assinadas (ver apps/assets/services.py):
+# "same-origin" = o próprio site (dev: o Vite repassa /<bucket>/ ao SeaweedFS), uma URL, ou vazio.
+S3_PUBLIC_ENDPOINT_URL = os.environ.get("S3_PUBLIC_ENDPOINT_URL", "")
 AWS_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_KEY")
 AWS_S3_REGION_NAME = os.environ.get("S3_REGION", "us-east-1")
@@ -129,6 +133,12 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "ProjectStatusEnum": "apps.projects.models.Project.Status",
+        "VersionKindEnum": "apps.projects.models.ProjectVersion.Kind",
+        "AssetStatusEnum": "apps.assets.models.Asset.Status",
+        "RoleEnum": "apps.accounts.models.Membership.Role",
+    },
 }
 
 # --- Sessão / CSRF (SPA servida no mesmo domínio) ----------------------------
@@ -136,6 +146,14 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_HTTPONLY = False  # o front lê o cookie para enviar X-CSRFToken
 CSRF_COOKIE_SAMESITE = "Lax"
+
+# --- Projetos / contas -------------------------------------------------------
+# Documento inteiro vai no corpo do save (JSON); plantas e imagens vão ao S3, não aqui.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+# Uma versão automática no máximo a cada N minutos de edição.
+PROJECT_AUTOVERSION_MINUTES = int(os.environ.get("PROJECT_AUTOVERSION_MINUTES", "10"))
+# Cadastro aberto (conta + escritório). Em produção, desligar e usar convites (Fase 10).
+ALLOW_SIGNUP = env_bool("ALLOW_SIGNUP", True)
 
 LOGGING = {
     "version": 1,

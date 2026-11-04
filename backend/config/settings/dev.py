@@ -7,3 +7,4 @@ ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,backend,0.
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173"
 )
+S3_PUBLIC_ENDPOINT_URL = S3_PUBLIC_ENDPOINT_URL or "same-origin"  # noqa: F405

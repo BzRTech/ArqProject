@@ -11,6 +11,8 @@ dependencies = [
     "dj-database-url>=2.3",
     "psycopg[binary]>=3.2",
     "gunicorn>=23",
+    "jsonschema>=4.23",
+    "boto3>=1.35",
 ]
 
 [dependency-groups]

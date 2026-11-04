@@ -31,6 +31,8 @@ container.
 - Variáveis: `S3_ENDPOINT_URL`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` (ver
   `.env.example`). Se trocar a chave, atualize também `docker/seaweedfs/s3.json`.
 - Para voltar ao MinIO (ou usar RustFS, Garage etc.), basta trocar o serviço `s3` do compose.
-- Pendência da Fase 2: URL pré-assinada gerada com o host interno (`http://s3:8333`) não é
-  acessível pelo navegador. Será preciso um endpoint público separado (ex.:
-  `S3_PUBLIC_ENDPOINT_URL=http://localhost:8333`) para assinar as URLs de upload.
+- ~~Pendência da Fase 2~~ resolvida: as URLs pré-assinadas usam `S3_PUBLIC_ENDPOINT_URL`
+  (o host entra na assinatura v4). Em dev o valor é `same-origin`: o backend assina para o
+  PRÓPRIO site (`http://localhost:5173/prancheta/...`) e o Vite repassa `/<bucket>/` ao
+  SeaweedFS mantendo o `Host` — sem CORS e funcionando em localhost, 127.0.0.1 ou IP da rede.
+  Em produção, a URL pública do S3/CDN (com CORS liberando o domínio do app).

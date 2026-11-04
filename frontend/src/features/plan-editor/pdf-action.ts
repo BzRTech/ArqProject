@@ -9,6 +9,8 @@ interface PdfState {
   /** Gera o PDF (uma prancha A3 por ambiente) e avisa no toast. */
   run: () => Promise<void>
   dismiss: () => void
+  /** Aviso avulso no mesmo toast (ex.: erro ao importar a planta). */
+  notify: (text: string, error?: boolean) => void
 }
 
 /** Baixar PDF: usado pela barra superior, pelo passo a passo e pela aba Pranchas. */
@@ -16,6 +18,7 @@ export const usePdf = create<PdfState>()((set) => ({
   busy: false,
   toast: null,
   dismiss: () => set({ toast: null }),
+  notify: (text, error) => set({ toast: { text, error } }),
   run: async () => {
     set({ busy: true, toast: null })
     try {

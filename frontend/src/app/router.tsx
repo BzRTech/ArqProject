@@ -12,6 +12,33 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage, ErrorBoundary: ErrorPage },
       {
+        path: 'entrar',
+        ErrorBoundary: ErrorPage,
+        lazy: async () => ({ Component: (await import('@/features/auth/LoginPage')).default }),
+      },
+      {
+        // Rotas que exigem login (projetos no servidor)
+        lazy: async () => ({ Component: (await import('@/features/auth/RequireAuth')).default }),
+        ErrorBoundary: ErrorPage,
+        children: [
+          {
+            path: 'projetos',
+            ErrorBoundary: ErrorPage,
+            lazy: async () => ({
+              Component: (await import('@/features/projects/ProjectsPage')).default,
+            }),
+          },
+          {
+            path: 'projetos/:id',
+            ErrorBoundary: ErrorPage,
+            lazy: async () => ({
+              Component: (await import('@/features/projects/ProjectEditorPage')).default,
+            }),
+          },
+        ],
+      },
+      {
+        // Rascunho local (sem conta): salvo só neste navegador.
         path: 'editor',
         ErrorBoundary: ErrorPage,
         lazy: async () => ({

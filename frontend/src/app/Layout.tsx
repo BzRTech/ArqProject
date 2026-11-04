@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
 import { TopbarSlotContext } from './topbar-slot'
+import { UserMenu } from './UserMenu'
 
 const links = [
   { to: '/', label: 'Início', end: true },
-  { to: '/editor', label: 'Editor' },
+  { to: '/projetos', label: 'Projetos' },
+  { to: '/editor', label: 'Rascunho local' },
   { to: '/dev/primitivas', label: 'Primitivas' },
   { to: '/spikes/3d', label: '3D', tag: 'beta' },
 ]
@@ -24,6 +26,7 @@ export default function Layout() {
           ))}
         </nav>
         <div className="topbar__actions" ref={setSlot} />
+        <UserMenu />
       </header>
       <main className="content">
         <TopbarSlotContext.Provider value={slot}>

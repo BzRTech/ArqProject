@@ -302,6 +302,8 @@ Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fase
 - Schema zod v1 do documento + `export-json-schema` que grava em `backend/apps/projects/schema/`.
 - Testes: pytest de permissão entre organizações (um escritório não vê projeto do outro), conflito 409, validação inválida.
 
+> **Feito (03/11/2026).** Cadastro abre conta + escritório (`ALLOW_SIGNUP`; convites na Fase 10). Versões automáticas no máximo a cada 10 min de edição (o autosave é de ~1 s) + versões com nome; restaurar guarda o estado atual antes. `ProjectItemIndex` copia os campos do item (sem numeração de marcador, que é regra do front). Upload: URL pré-assinada com `S3_PUBLIC_ENDPOINT_URL` (`same-origin` em dev, via proxy do Vite — ADR 002). O `/editor` continua como **rascunho local** sem conta e pode ser enviado aos projetos.
+
 ### Fase 3 — Bancos (library) (4–5 dias)
 - Models da seção 4.3 com `LibraryEntry`, admin com miniaturas e filtros, serializers, `scope=global|org`, sobrescrita por `slug`.
 - `GET /api/library/bundle/` com ETag; cache no front (IndexedDB).

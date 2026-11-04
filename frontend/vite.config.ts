@@ -4,6 +4,10 @@ import { defineConfig } from 'vitest/config'
 
 // Em Docker o backend é "http://backend:8000"; localmente, "http://localhost:8000".
 const apiTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8000'
+// Arquivos (plantas, imagens): o backend assina URLs para o PRÓPRIO site e o Vite repassa
+// /<bucket>/ ao S3 local (SeaweedFS) mantendo o Host — sem CORS. Em produção, S3/CDN.
+const s3Target = process.env.VITE_S3_PROXY_TARGET ?? 'http://localhost:8333'
+const s3Bucket = process.env.VITE_S3_BUCKET ?? 'prancheta'
 
 export default defineConfig({
   plugins: [react()],
@@ -17,6 +21,7 @@ export default defineConfig({
       '/api': { target: apiTarget, changeOrigin: false },
       '/admin': { target: apiTarget, changeOrigin: false },
       '/static': { target: apiTarget, changeOrigin: false },
+      [`/${s3Bucket}/`]: { target: s3Target, changeOrigin: false },
     },
   },
   test: {

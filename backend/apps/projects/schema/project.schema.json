@@ -1,0 +1,1125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "number",
+      "const": 8
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environments": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "ceilingHeightMm": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "basePlan": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "assetId": {
+                    "type": "string"
+                  },
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  },
+                  "widthMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "heightMm": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "opacity": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "locked": {
+                    "type": "boolean"
+                  },
+                  "visible": {
+                    "type": "boolean"
+                  },
+                  "calibrated": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "assetId",
+                  "x",
+                  "y",
+                  "widthMm",
+                  "heightMm",
+                  "opacity",
+                  "locked",
+                  "visible",
+                  "calibrated"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "drawings": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "wall"
+                    },
+                    "points": {
+                      "minItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "y": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "x",
+                          "y"
+                        ]
+                      }
+                    },
+                    "closed": {
+                      "type": "boolean"
+                    },
+                    "thicknessMm": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "points",
+                    "closed",
+                    "thicknessMm"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "dimension"
+                    },
+                    "ref": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "wall-outer"
+                            },
+                            "wallId": {
+                              "type": "string"
+                            },
+                            "segment": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "wallId",
+                            "segment"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "wall-inner"
+                            },
+                            "wallId": {
+                              "type": "string"
+                            },
+                            "segment": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "wallId",
+                            "segment"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "item"
+                            },
+                            "itemId": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "itemId",
+                            "side"
+                          ]
+                        }
+                      ]
+                    },
+                    "p1": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "p2": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "orientation": {
+                      "type": "string",
+                      "enum": [
+                        "aligned",
+                        "horizontal",
+                        "vertical"
+                      ]
+                    },
+                    "offsetMm": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "p1",
+                    "p2",
+                    "orientation",
+                    "offsetMm"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "chain"
+                    },
+                    "ref": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "wall-outer"
+                            },
+                            "wallId": {
+                              "type": "string"
+                            },
+                            "segment": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "wallId",
+                            "segment"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "wall-inner"
+                            },
+                            "wallId": {
+                              "type": "string"
+                            },
+                            "segment": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "wallId",
+                            "segment"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "item"
+                            },
+                            "itemId": {
+                              "type": "string"
+                            },
+                            "side": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 3
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "itemId",
+                            "side"
+                          ]
+                        }
+                      ]
+                    },
+                    "points": {
+                      "minItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "y": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "x",
+                          "y"
+                        ]
+                      }
+                    },
+                    "orientation": {
+                      "type": "string",
+                      "enum": [
+                        "aligned",
+                        "horizontal",
+                        "vertical"
+                      ]
+                    },
+                    "offsetMm": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "total": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "points",
+                    "orientation",
+                    "offsetMm",
+                    "total"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "text"
+                    },
+                    "at": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "sizeMm": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "at",
+                    "text",
+                    "sizeMm"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "area"
+                    },
+                    "points": {
+                      "minItems": 3,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "y": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "x",
+                          "y"
+                        ]
+                      }
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "labelOffset": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "floor": {
+                      "type": "object",
+                      "properties": {
+                        "finishId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "material": {
+                          "type": "string",
+                          "enum": [
+                            "porcelanato",
+                            "ceramica",
+                            "madeira",
+                            "vinilico",
+                            "laminado",
+                            "pedra",
+                            "cimento",
+                            "carpete"
+                          ]
+                        },
+                        "pieceAMm": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "pieceBMm": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "jointMm": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "pattern": {
+                          "type": "string",
+                          "enum": [
+                            "grid",
+                            "half",
+                            "third"
+                          ]
+                        },
+                        "angleDeg": {
+                          "type": "number"
+                        },
+                        "origin": {
+                          "type": "string",
+                          "enum": [
+                            "center",
+                            "corner"
+                          ]
+                        },
+                        "wastePct": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "color": {
+                          "type": "string"
+                        },
+                        "priceCentsPerM2": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "skirting": {
+                          "type": "object",
+                          "properties": {
+                            "heightMm": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "priceCentsPerM": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "heightMm"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "finishId",
+                        "name",
+                        "material",
+                        "pieceAMm",
+                        "pieceBMm",
+                        "jointMm",
+                        "pattern",
+                        "angleDeg",
+                        "origin",
+                        "wastePct",
+                        "color"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "points",
+                    "name"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "kind": {
+                      "type": "string",
+                      "const": "column"
+                    },
+                    "at": {
+                      "type": "object",
+                      "properties": {
+                        "x": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "y": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "x",
+                        "y"
+                      ]
+                    },
+                    "shape": {
+                      "type": "string",
+                      "enum": [
+                        "rect",
+                        "circle"
+                      ]
+                    },
+                    "widthMm": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "depthMm": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "rotationDeg": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "at",
+                    "shape",
+                    "widthMm",
+                    "depthMm",
+                    "rotationDeg"
+                  ]
+                }
+              ]
+            }
+          },
+          "openings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "wallId": {
+                  "type": "string"
+                },
+                "segment": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "offsetMm": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "widthMm": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "heightMm": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "sillMm": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "porta-abrir",
+                    "porta-correr",
+                    "porta-pivotante",
+                    "janela-correr-2",
+                    "janela-correr-4",
+                    "janela-maxim-ar",
+                    "janela-basculante",
+                    "janela-fixa"
+                  ]
+                },
+                "hinge": {
+                  "type": "string",
+                  "enum": [
+                    "start",
+                    "end"
+                  ]
+                },
+                "side": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "wallId",
+                "segment",
+                "offsetMm",
+                "widthMm",
+                "heightMm",
+                "sillMm",
+                "type",
+                "hinge",
+                "side"
+              ]
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "blockId": {
+                  "type": "string"
+                },
+                "blockVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "name": {
+                  "type": "string"
+                },
+                "position": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "y": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "rotationDeg": {
+                  "type": "number"
+                },
+                "mirrored": {
+                  "type": "boolean"
+                },
+                "sizeMm": {
+                  "type": "object",
+                  "properties": {
+                    "w": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "d": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "h": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "w",
+                    "d"
+                  ]
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "qty": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "un",
+                    "pç",
+                    "cj",
+                    "m",
+                    "m²"
+                  ]
+                },
+                "showMarker": {
+                  "type": "boolean"
+                },
+                "markerOffset": {
+                  "type": "object",
+                  "properties": {
+                    "x": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "y": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "x",
+                    "y"
+                  ]
+                },
+                "inLegend": {
+                  "type": "boolean"
+                },
+                "existing": {
+                  "type": "boolean"
+                },
+                "approved": {
+                  "type": "boolean"
+                },
+                "unitPriceCents": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "brandModel": {
+                  "type": "string"
+                },
+                "supplier": {
+                  "type": "string"
+                },
+                "joinery": {
+                  "type": "object",
+                  "properties": {
+                    "design": {
+                      "type": "object",
+                      "properties": {
+                        "heightMm": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "base": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "floor",
+                                "suspended",
+                                "plinth"
+                              ]
+                            },
+                            "heightMm": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "heightMm"
+                          ]
+                        },
+                        "modules": {
+                          "minItems": 1,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "widthMm": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "front": {
+                                "type": "string",
+                                "enum": [
+                                  "open",
+                                  "door1",
+                                  "door2",
+                                  "drawers"
+                                ]
+                              },
+                              "shelves": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 12
+                              },
+                              "drawers": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 8
+                              }
+                            },
+                            "required": [
+                              "widthMm",
+                              "front",
+                              "shelves",
+                              "drawers"
+                            ]
+                          }
+                        },
+                        "handle": {
+                          "type": "string",
+                          "enum": [
+                            "touch",
+                            "bar",
+                            "profile",
+                            "cava",
+                            "knob"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "heightMm",
+                        "base",
+                        "modules",
+                        "handle"
+                      ]
+                    },
+                    "finishes": {
+                      "type": "object",
+                      "properties": {
+                        "frentes": {
+                          "type": "object",
+                          "properties": {
+                            "materialId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "liso",
+                                "madeirado"
+                              ]
+                            },
+                            "hex": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "materialId",
+                            "name",
+                            "kind",
+                            "hex"
+                          ]
+                        },
+                        "corpo": {
+                          "type": "object",
+                          "properties": {
+                            "materialId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "liso",
+                                "madeirado"
+                              ]
+                            },
+                            "hex": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "materialId",
+                            "name",
+                            "kind",
+                            "hex"
+                          ]
+                        },
+                        "tamponamento": {
+                          "type": "object",
+                          "properties": {
+                            "materialId": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "liso",
+                                "madeirado"
+                              ]
+                            },
+                            "hex": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "materialId",
+                            "name",
+                            "kind",
+                            "hex"
+                          ]
+                        }
+                      }
+                    },
+                    "grain": {
+                      "type": "string",
+                      "enum": [
+                        "vertical",
+                        "horizontal"
+                      ]
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "finishes",
+                    "grain"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "blockId",
+                "blockVersion",
+                "name",
+                "position",
+                "rotationDeg",
+                "mirrored",
+                "sizeMm",
+                "qty",
+                "unit",
+                "showMarker",
+                "inLegend",
+                "existing",
+                "approved"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "ceilingHeightMm",
+          "basePlan",
+          "drawings",
+          "openings",
+          "items"
+        ]
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "name",
+    "environments"
+  ],
+  "$id": "https://prancheta.local/schema/project.v8.json",
+  "title": "Projeto Prancheta (schema v8)"
+}

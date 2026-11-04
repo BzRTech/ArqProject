@@ -1,9 +1,10 @@
+import { downloadAsset } from '@/api/assets'
 import { migrateProject } from '@/core/project/migrations'
 import type { Project } from '@/core/project/schema'
 
 /**
- * Persistência local no navegador (IndexedDB). Na Fase 2 o documento passa a ser salvo
- * no servidor; o formato é o mesmo (validado pelo schema zod).
+ * Persistência local no navegador (IndexedDB): o RASCUNHO LOCAL (/editor) e o cache dos
+ * arquivos (plantas) dos projetos do servidor. O formato do documento é o mesmo.
  */
 const DB = 'prancheta'
 const VERSION = 1
@@ -115,9 +116,20 @@ export function clearLocalBackup() {
 export const putAsset = (id: string, dataUrl: string) =>
   tx(ASSETS, 'readwrite', (s) => s.put(dataUrl, id)).then(() => undefined)
 
-export const getAsset = (id: string) => tx<string | undefined>(ASSETS, 'readonly', (s) => s.get(id))
+const getLocalAsset = (id: string) => tx<string | undefined>(ASSETS, 'readonly', (s) => s.get(id))
 
-export function readFileAsDataUrl(file: File): Promise<string> {
+/** Arquivo como data URL: do cache do navegador ou, se não houver, do servidor (e guarda). */
+export async function getAsset(id: string): Promise<string | undefined> {
+  const local = await getLocalAsset(id).catch(() => undefined)
+  if (local) return local
+  const blob = await downloadAsset(id).catch(() => null)
+  if (!blob) return undefined
+  const url = await readFileAsDataUrl(blob)
+  await putAsset(id, url).catch(() => undefined)
+  return url
+}
+
+export function readFileAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader()
     r.onload = () => resolve(String(r.result))

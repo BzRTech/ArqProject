@@ -1,10 +1,18 @@
 import { Download, RotateCw } from 'lucide-react'
 import { useRouteError } from 'react-router'
 
-/** Baixa o projeto salvo no navegador (.json), para nada se perder mesmo com a tela quebrada. */
+/**
+ * Baixa o projeto (.json), para nada se perder mesmo com a tela quebrada: o que está aberto no
+ * editor (servidor ou rascunho) ou, se nada estiver aberto, o rascunho salvo no navegador.
+ */
 async function downloadSavedProject() {
+  const { useEditor } = await import('@/features/plan-editor/store')
   const { loadProject } = await import('@/features/plan-editor/persistence')
-  const project = await loadProject()
+  const open = useEditor.getState().project
+  const hasContent = open.environments.some(
+    (e) => e.drawings.length > 0 || e.items.length > 0 || e.basePlan,
+  )
+  const project = hasContent ? open : await loadProject()
   if (!project) {
     window.alert('Não há projeto salvo neste navegador.')
     return
@@ -27,8 +35,9 @@ export default function ErrorPage() {
       <div className="eyebrow">Erro inesperado</div>
       <h1>Algo deu errado nesta tela.</h1>
       <p>
-        O projeto continua salvo neste navegador. Recarregue a página; se o erro voltar, baixe uma
-        cópia do projeto e envie junto com a mensagem abaixo.
+        O que já foi salvo continua salvo. Recarregue a página; se o erro voltar, baixe uma cópia do
+        projeto e envie junto com a mensagem abaixo (dá para abri-la de novo em Projetos → Abrir
+        .json).
       </p>
       <div className="button-row">
         <button type="button" className="primary" onClick={() => window.location.reload()}>

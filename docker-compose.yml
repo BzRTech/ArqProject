@@ -14,6 +14,8 @@ x-backend-env: &backend-env
   S3_BUCKET: ${S3_BUCKET:-prancheta}
   S3_ACCESS_KEY: ${S3_ACCESS_KEY:-prancheta}
   S3_SECRET_KEY: ${S3_SECRET_KEY:-prancheta-dev-secret}
+  S3_PUBLIC_ENDPOINT_URL: ${S3_PUBLIC_ENDPOINT_URL:-same-origin}
+  ALLOW_SIGNUP: ${ALLOW_SIGNUP:-true}
 
 services:
   postgres:
@@ -80,6 +82,8 @@ services:
     command: sh -c "npm ci --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     environment:
       VITE_API_PROXY_TARGET: http://backend:8000
+      VITE_S3_PROXY_TARGET: http://s3:8333
+      VITE_S3_BUCKET: ${S3_BUCKET:-prancheta}
     ports: ["5173:5173"]
     volumes:
       - ./frontend:/app

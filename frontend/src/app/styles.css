@@ -2490,3 +2490,32 @@ a.icon-link:hover {
   display: flex;
   flex-direction: column;
 }
+.three-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.three-panel__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.three-panel__controls label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.three-panel__canvas {
+  flex: 1;
+  min-height: 320px;
+}
+.three-panel__hint {
+  margin: 0;
+  padding: 10px 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+}

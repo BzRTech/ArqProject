@@ -1,7 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useMemo } from 'react'
-import { solidTexture, woodTexture } from './textures'
+import { solidTexture, woodTexture } from '@/render/three/textures'
 
 interface BoxSpec {
   /** Medidas em mm (padrão do modelo); convertidas para metros só aqui no renderizador. */

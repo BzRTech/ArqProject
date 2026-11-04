@@ -6,7 +6,7 @@ import type { Environment } from '../project/schema'
  * Abas de trabalho de cada ambiente, em ordem (o número é o passo). Todas mostram a MESMA
  * planta; cada uma edita só as suas camadas — o resto aparece apagado e não é clicável.
  */
-export const STAGES = ['planta', 'layout', 'piso', 'marcenaria', 'pranchas'] as const
+export const STAGES = ['planta', 'layout', 'piso', 'marcenaria', '3d', 'pranchas'] as const
 export type Stage = (typeof STAGES)[number]
 
 export const STAGE_LABEL: Record<Stage, string> = {
@@ -15,6 +15,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   piso: 'Piso',
   marcenaria: 'Marcenaria',
   pranchas: 'Pranchas',
+  '3d': '3D',
 }
 
 export const STAGE_HINT: Record<Stage, string> = {
@@ -23,6 +24,7 @@ export const STAGE_HINT: Record<Stage, string> = {
   piso: 'Áreas, revestimento e paginação',
   marcenaria: 'Móveis planejados e acabamentos',
   pranchas: 'Conferir a folha e baixar o PDF',
+  '3d': 'Explorar o ambiente e os móveis em perspectiva',
 }
 
 export type Layer = 'wall' | 'opening' | 'column' | 'dims' | 'text' | 'item' | 'joinery' | 'area'
@@ -35,6 +37,7 @@ export const STAGE_LAYERS: Record<Stage, readonly Layer[]> = {
   marcenaria: ['joinery', 'dims', 'text'],
   // Pranchas mostra a FOLHA (prévia do PDF); a edição fica nas outras abas.
   pranchas: [],
+  '3d': [],
 }
 
 /** Ferramentas da barra em cada aba (ids da barra do editor). */
@@ -44,6 +47,7 @@ export const STAGE_TOOLS: Record<Stage, readonly string[]> = {
   piso: ['select', 'area'],
   marcenaria: ['select', 'dimension', 'text'],
   pranchas: [],
+  '3d': [],
 }
 
 /** Camada de um objeto do ambiente. */
@@ -118,6 +122,8 @@ export function stageChecklist(env: Environment, stage: Stage): ChecklistStep[] 
     actionLabel: 'Cotar móveis',
   }
   switch (stage) {
+    case '3d':
+      return []
     case 'planta':
       return [
         {

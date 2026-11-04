@@ -4,6 +4,7 @@ import type { Environment, Item } from '../project/schema'
 import { wallsShape } from '../project/wall-union'
 import type { RuleProfile } from '../joinery/rules'
 import { joineryBoxes } from './joinery'
+import { furnitureBoxes } from './furniture'
 import type { Scene, SceneGroup } from './model'
 
 export function itemGroup(item: Item, rules: RuleProfile, open: boolean): SceneGroup {
@@ -14,15 +15,7 @@ export function itemGroup(item: Item, rules: RuleProfile, open: boolean): SceneG
     center: [item.position.x, 0, item.position.y],
     rotationY: (-item.rotationDeg * Math.PI) / 180,
     mirrored: item.mirrored,
-    boxes: item.joinery?.design
-      ? joineryBoxes(item, rules, open)
-      : [
-          {
-            name: item.name,
-            center: [0, height / 2, 0],
-            size: [item.sizeMm.w, height, item.sizeMm.d],
-          },
-        ],
+    boxes: item.joinery?.design ? joineryBoxes(item, rules, open) : furnitureBoxes(item, height),
   }
 }
 

@@ -33,6 +33,32 @@ const rack: Item = {
 }
 
 describe('3D do documento', () => {
+  it.each([
+    ['cama-solteiro', 880, 1880, 1],
+    ['cama-casal', 1580, 2000, 2],
+    ['cama-king', 1930, 2030, 2],
+  ] as const)(
+    'representa %s com colchão, cabeceira e travesseiros dentro da planta',
+    (blockId, w, d, pillows) => {
+      const item = { ...rack, blockId, joinery: undefined, sizeMm: { w, d, h: 500 } }
+      const group = itemGroup(item, rules, false)
+      expect(group.boxes.filter((b) => b.name === 'Travesseiro')).toHaveLength(pillows)
+      expect(group.boxes.map((b) => b.name)).toEqual(
+        expect.arrayContaining(['Colchão', 'Base estofada', 'Cabeceira estofada', 'Edredom']),
+      )
+      for (const box of group.boxes) {
+        expect(Math.abs(box.center[0]) + box.size[0] / 2).toBeLessThanOrEqual(w / 2)
+        expect(Math.abs(box.center[2]) + box.size[2] / 2).toBeLessThanOrEqual(d / 2)
+        expect(box.radiusMm).toBeGreaterThan(0)
+        expect(box.center[1] - box.size[1] / 2).toBeGreaterThanOrEqual(0)
+      }
+      expect(group).toMatchObject({
+        center: [2000, 0, 1000],
+        mirrored: true,
+        rotationY: -Math.PI / 2,
+      })
+    },
+  )
   it('usa as dimensões e a quantidade das peças do motor, com elevação e acabamentos', () => {
     const boxes = joineryBoxes(rack, rules, false)
     const solved = solveJoinery(rack.sizeMm, rack.joinery!.design!, rules)

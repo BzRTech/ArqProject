@@ -2,6 +2,7 @@ import { Component, useEffect, useMemo, type ReactNode } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { Path, Shape } from 'three'
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
 import type { Scene, SceneBox, SceneSlab, Triple } from '@/core/scene/model'
 import { shade } from '@/core/joinery/finish'
 import { solidTexture, woodTexture } from './textures'
@@ -9,7 +10,7 @@ import { solidTexture, woodTexture } from './textures'
 const meters = (v: Triple): Triple => [v[0] / 1000, v[1] / 1000, v[2] / 1000]
 
 function PanelMesh({ box }: { box: SceneBox }) {
-  const hex = box.finish?.hex ?? '#cec4b4'
+  const hex = box.finish?.hex ?? box.color ?? '#cec4b4'
   const wood = box.finish?.kind === 'madeirado'
   const map = useMemo(
     () =>
@@ -19,6 +20,16 @@ function PanelMesh({ box }: { box: SceneBox }) {
     [hex, wood, box.grain],
   )
   useEffect(() => () => map.dispose(), [map])
+  const [width, height, depth] = box.size
+  const radius = box.radiusMm ?? 0
+  const roundedGeometry = useMemo(
+    () =>
+      radius > 0
+        ? new RoundedBoxGeometry(width / 1000, height / 1000, depth / 1000, 3, radius / 1000)
+        : null,
+    [width, height, depth, radius],
+  )
+  useEffect(() => () => roundedGeometry?.dispose(), [roundedGeometry])
   return (
     <mesh
       position={meters(box.center)}
@@ -26,7 +37,11 @@ function PanelMesh({ box }: { box: SceneBox }) {
       castShadow
       receiveShadow
     >
-      <boxGeometry args={meters(box.size)} />
+      {roundedGeometry ? (
+        <primitive attach="geometry" object={roundedGeometry} />
+      ) : (
+        <boxGeometry args={meters(box.size)} />
+      )}
       <meshStandardMaterial map={map} roughness={0.72} />
     </mesh>
   )

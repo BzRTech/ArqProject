@@ -27,22 +27,14 @@ export default function ThreePanel() {
     const result = environmentScene(env, rules, open)
     return walls ? result : { ...result, slabs: result.slabs.filter((s) => s.bottom < 0) }
   }, [env, item, rules, open, walls])
+  const itemHeight = Math.max(
+    1,
+    ...scene.groups.flatMap((g) => g.boxes.map((b) => b.center[1] + b.size[1] / 2)),
+  )
   const frame = item
     ? {
-        target: [
-          0,
-          (item.joinery?.design?.heightMm ?? item.sizeMm.h ?? 750) / 2 +
-            (item.joinery?.design?.base.kind === 'floor'
-              ? 0
-              : (item.joinery?.design?.base.heightMm ?? 0)),
-          0,
-        ] as Triple,
-        span:
-          Math.max(
-            item.sizeMm.w,
-            item.sizeMm.d,
-            item.joinery?.design?.heightMm ?? item.sizeMm.h ?? 750,
-          ) * 1.35,
+        target: [0, itemHeight / 2, 0] as Triple,
+        span: Math.max(item.sizeMm.w, item.sizeMm.d, itemHeight) * 1.35,
       }
     : sceneFrame(env)
   const capture = (pdf: boolean) => {
@@ -129,7 +121,8 @@ export default function ThreePanel() {
       </div>
       <p className="three-panel__hint">
         Arraste para girar · botão direito para mover · roda para aproximar. Móveis detalhados
-        mostram as peças e os acabamentos escolhidos. Os demais itens aparecem como volumes.
+        mostram as peças e os acabamentos escolhidos. Camas têm modelo próprio; outros itens
+        aparecem como volumes.
       </p>
     </div>
   )

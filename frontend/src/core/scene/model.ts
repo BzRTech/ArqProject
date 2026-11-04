@@ -9,6 +9,8 @@ export interface SceneBox {
   rotationY?: number
   finish?: JoineryFinish
   grain?: 'vertical' | 'horizontal'
+  color?: string
+  radiusMm?: number
 }
 export interface SceneGroup {
   id: string

@@ -1,6 +1,25 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
+test('cama reconhecível no 3D a partir de um item do catálogo', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (e) => errors.push(e.message))
+  await page.goto('/editor')
+  await expect(page.getByTestId('save-status')).toContainText('Salvo')
+  await page.getByTestId('stage-layout').click()
+  await page.getByTestId('block-cama-casal').click()
+  const plan = page.getByTestId('plan-canvas')
+  const bounds = (await plan.boundingBox())!
+  await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+  await page.getByTestId('stage-3d').click()
+  await page.getByLabel('Vista 3D').selectOption({ label: 'Cama de casal' })
+  await expect(page.getByRole('button', { name: 'Capturar PNG' })).toBeEnabled()
+  await expect(page.getByTestId('scene-canvas').locator('canvas')).toBeVisible()
+  await page.waitForTimeout(1000)
+  await page.screenshot({ path: 'test-results/screenshots/45-3d-cama.png' })
+  expect(errors).toEqual([])
+})
+
 test('3D do ambiente e móvel, aberto/fechado, PNG e prancha de perspectiva', async ({ page }) => {
   test.setTimeout(120_000)
   const errors: string[] = []

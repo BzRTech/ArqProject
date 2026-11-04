@@ -1,12 +1,14 @@
-import { DEFAULT_RULE_PROFILE, type RuleProfile } from '@/core/joinery/rules'
+import type { RuleProfile } from '@/core/joinery/rules'
+import { useEditor } from './store'
 
 /**
- * Perfil de regras de marcenaria em uso. Hoje é o perfil global padrão (seed do PLANO 4.6);
- * na Fase 3 vem do banco (`RuleProfile` do escritório). Componentes pegam daqui, nunca de
- * constantes próprias.
+ * Perfil de regras de marcenaria em uso = a CÓPIA guardada no projeto
+ * (`librarySnapshots.rules`, vinda do banco do escritório). Componentes pegam daqui, nunca de
+ * constantes próprias. Mudanças no banco chegam pelo aviso "Atualizar do banco".
  */
 export function useRuleProfile(): RuleProfile {
-  return DEFAULT_RULE_PROFILE
+  return useEditor((s) => s.project.librarySnapshots.rules)
 }
 
-export const currentRuleProfile = (): RuleProfile => DEFAULT_RULE_PROFILE
+export const currentRuleProfile = (): RuleProfile =>
+  useEditor.getState().project.librarySnapshots.rules

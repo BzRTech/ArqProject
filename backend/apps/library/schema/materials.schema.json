@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "maxLength": 80,
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "liso",
+        "madeirado"
+      ]
+    },
+    "hex": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "manufacturer": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "line": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "thicknessesMm": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      }
+    },
+    "sheet": {
+      "type": "object",
+      "properties": {
+        "lengthMm": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "widthMm": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "lengthMm",
+        "widthMm"
+      ]
+    }
+  },
+  "required": [
+    "id",
+    "version",
+    "name",
+    "kind",
+    "hex"
+  ]
+}

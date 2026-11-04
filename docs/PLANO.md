@@ -313,6 +313,8 @@ Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fase
 - Tela "Banco do escritório" no front (listar, criar, editar, sobrescrever item global).
 - **Se você tiver mandado um banco existente (planilha/dump) em `docs/material/`, esta fase inclui o mapeamento e o importador dele.**
 
+> **Feito (03/11/2026).** 12 bancos (os da tabela 4.3 + `FloorFinish` para pisos e `SpecTemplate`), formato único do front (zod → JSON Schema → validação no Django) e seed gerado do front (`npm run export:schema` grava `backend/library_seed/`). Snapshot no documento = schema v9 (`librarySnapshots`: blocos `id@versão` + regras). Sobrescrita por `slug` com versão começando em global + 1; inativar no escritório esconde a global. Importação de planilha também pela tela. `docs/material/` continua vazio (sem banco existente para mapear). Ver ADR 005.
+
 ### Fase 4 — Planta base e editor (5–7 dias)
 - Importar planta (imagem ou 1ª página de PDF via pdf.js) → Asset; **calibrar escala**; travar, opacidade, ver através; **conferir medida**.
 - Ferramentas: selecionar, parede, retângulo, cota com snap, texto, guia, área (m²); snap a grade/extremidades/ortogonal; barra do elemento (cor, linha, espessura, preenchimento); disciplinas como filtro; atalhos.

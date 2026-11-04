@@ -36,7 +36,7 @@ export function itemEntities(
   item: Item,
   opts: { humanized?: boolean; rules?: RuleProfile } = {},
 ): Entity[] {
-  const block = getBlock(item.blockId)
+  const block = getBlock(item.blockId, item.blockVersion)
   const { w, d, h } = item.sizeMm
   // Móvel detalhado: o símbolo sai do detalhamento (módulos, portas e giro), não do catálogo.
   const design = item.joinery?.design
@@ -69,7 +69,9 @@ export function itemEntities(
 }
 
 /** Ordem de desenho: tapetes (blocos `underlay`) primeiro, depois o resto, mantendo a ordem. */
-export function itemsInDrawOrder<T extends Pick<Item, 'blockId'>>(items: readonly T[]): T[] {
-  const under = (it: T) => !!getBlock(it.blockId).underlay
+export function itemsInDrawOrder<T extends Pick<Item, 'blockId'> & { blockVersion?: number }>(
+  items: readonly T[],
+): T[] {
+  const under = (it: T) => !!getBlock(it.blockId, it.blockVersion).underlay
   return [...items.filter(under), ...items.filter((it) => !under(it))]
 }

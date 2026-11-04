@@ -35,7 +35,7 @@ import { selectActiveEnv, useEditor } from './store'
 function ItemProps({ item }: { item: Item }) {
   const u = useUnits()
   const s = useEditor.getState()
-  const block = getBlock(item.blockId)
+  const block = getBlock(item.blockId, item.blockVersion)
   return (
     <section data-testid="item-props">
       <h2>{block.name}</h2>

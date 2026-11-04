@@ -1,0 +1,67 @@
+[
+  {
+    "id": "rack",
+    "version": 1,
+    "name": "Rack",
+    "base": {
+      "kind": "suspended",
+      "heightMm": 100
+    },
+    "handle": "touch",
+    "moduleWidthMm": 900,
+    "front": "door2",
+    "shelves": 1
+  },
+  {
+    "id": "roupeiro",
+    "version": 1,
+    "name": "Roupeiro",
+    "base": {
+      "kind": "plinth",
+      "heightMm": 100
+    },
+    "handle": "profile",
+    "moduleWidthMm": 900,
+    "front": "door2",
+    "shelves": 3
+  },
+  {
+    "id": "cozinha",
+    "version": 1,
+    "name": "Armário de cozinha",
+    "base": {
+      "kind": "plinth",
+      "heightMm": 150
+    },
+    "handle": "cava",
+    "moduleWidthMm": 600,
+    "front": "door1",
+    "shelves": 1
+  },
+  {
+    "id": "estante",
+    "version": 1,
+    "name": "Estante",
+    "base": {
+      "kind": "plinth",
+      "heightMm": 100
+    },
+    "handle": "touch",
+    "moduleWidthMm": 800,
+    "front": "open",
+    "shelves": 4
+  },
+  {
+    "id": "aparador",
+    "version": 1,
+    "name": "Aparador",
+    "base": {
+      "kind": "floor",
+      "heightMm": 0
+    },
+    "handle": "cava",
+    "moduleWidthMm": 500,
+    "front": "door1",
+    "shelves": 1
+  }
+]

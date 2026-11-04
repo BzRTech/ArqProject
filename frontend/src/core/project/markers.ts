@@ -50,7 +50,7 @@ export function computeLegend(env: Pick<Environment, 'items'>): Legend {
     const key = legendKey(it)
     let row = byKey.get(key)
     if (!row) {
-      const marcenaria = getBlock(it.blockId).discipline === 'marcenaria'
+      const marcenaria = getBlock(it.blockId, it.blockVersion).discipline === 'marcenaria'
       const label = marcenaria ? `M${String(++m).padStart(2, '0')}` : String(++n)
       row = {
         key,

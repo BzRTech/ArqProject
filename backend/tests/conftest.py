@@ -1,4 +1,6 @@
 import copy
+import json
+from pathlib import Path
 
 import pytest
 from rest_framework.test import APIClient
@@ -62,7 +64,7 @@ def lonely_user():
 
 ITEM = {
     "id": "i1",
-    "blockId": "sofa-3",
+    "blockId": "sofa",
     "blockVersion": 1,
     "name": "Sofá 3 lugares",
     "position": {"x": 1000, "y": 800},
@@ -80,8 +82,19 @@ ITEM = {
 }
 
 
+SEED = Path(__file__).resolve().parent.parent / "library_seed"
+
+
+def seed_entry(kind: str, slug: str) -> dict:
+    return next(e for e in json.loads((SEED / f"{kind}.json").read_text()) if e["id"] == slug)
+
+
 def make_document(name: str = "Casa Silva", items: list | None = None) -> dict:
     return {
+        "librarySnapshots": {
+            "blocks": {"sofa@1": seed_entry("items", "sofa")},
+            "rules": seed_entry("rules", "padrao"),
+        },
         "schemaVersion": current_schema_version(),
         "name": name,
         "environments": [

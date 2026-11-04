@@ -1,0 +1,37 @@
+[
+  {
+    "id": "layout",
+    "version": 1,
+    "name": "Layout",
+    "color": "#4a4741",
+    "order": 1
+  },
+  {
+    "id": "marcenaria",
+    "version": 1,
+    "name": "Marcenaria",
+    "color": "#a65f45",
+    "order": 2
+  },
+  {
+    "id": "revestimentos",
+    "version": 1,
+    "name": "Revestimentos",
+    "color": "#b08a3e",
+    "order": 3
+  },
+  {
+    "id": "eletrica",
+    "version": 1,
+    "name": "Elétrica",
+    "color": "#2f5560",
+    "order": 4
+  },
+  {
+    "id": "hidraulica",
+    "version": 1,
+    "name": "Hidráulica",
+    "color": "#6f7b66",
+    "order": 5
+  }
+]

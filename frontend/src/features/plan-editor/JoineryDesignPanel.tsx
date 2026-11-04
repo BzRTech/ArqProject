@@ -1,3 +1,5 @@
+import { getBlock } from '@/core/blocks/catalog'
+import { useLibrary } from '@/features/library/library-store'
 import { AlertTriangle, Eye, Info, Map as MapIcon, Plus, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { normalizeModules, equalizeDoors, solveJoinery } from '@/core/joinery/solve'
@@ -47,6 +49,14 @@ export function JoineryDesignPanel({ item }: { item: Item }) {
     [design, W, item.sizeMm.d, rules],
   )
   const warnings = useMemo(() => (solved ? validateJoinery(solved, rules) : []), [solved, rules])
+  // Puxadores e modelos prontos do banco em uso.
+  const lib = useLibrary((l) => l.lib)
+  const handles = lib.handles
+  const joineryType = getBlock(item.blockId, item.blockVersion).joineryType
+  const presets = useMemo(
+    () => lib.presets.filter((p) => !joineryType || p.joineryType === joineryType),
+    [lib.presets, joineryType],
+  )
 
   if (!design || !solved) {
     return (
@@ -296,19 +306,69 @@ export function JoineryDesignPanel({ item }: { item: Item }) {
         </button>
       </div>
 
+      {presets.length > 0 && (
+        <label className="field">
+          <span>Modelo pronto (banco)</span>
+          <select
+            value=""
+            onChange={(e) => {
+              const p = presets.find((x) => x.id === e.target.value)
+              if (p) s.applyPreset(item.id, p)
+            }}
+            data-testid="joinery-preset"
+          >
+            <option value="">Aplicar um modelo…</option>
+            {presets.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="field">
         <span>Puxador</span>
-        <select
-          value={design.handle}
-          onChange={(e) => set({ ...design, handle: e.target.value as HandleKind })}
-          data-testid="joinery-handle"
-        >
-          {HANDLE_KINDS.map((h) => (
-            <option key={h} value={h}>
-              {HANDLE_LABEL[h]}
-            </option>
-          ))}
-        </select>
+        {handles.length > 0 ? (
+          <select
+            value={design.handleItem?.id ?? `kind:${design.handle}`}
+            onChange={(e) => {
+              const h = handles.find((x) => x.id === e.target.value)
+              if (h) set({ ...design, handle: h.kind, handleItem: h })
+            }}
+            data-testid="joinery-handle"
+          >
+            {!design.handleItem && (
+              <option value={`kind:${design.handle}`}>{HANDLE_LABEL[design.handle]}</option>
+            )}
+            {HANDLE_KINDS.map((k) => {
+              const list = handles.filter((h) => h.kind === k)
+              return list.length ? (
+                <optgroup key={k} label={HANDLE_LABEL[k]}>
+                  {list.map((h) => (
+                    <option key={h.id} value={h.id}>
+                      {h.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ) : null
+            })}
+          </select>
+        ) : (
+          <select
+            value={design.handle}
+            onChange={(e) =>
+              set({ ...design, handle: e.target.value as HandleKind, handleItem: undefined })
+            }
+            data-testid="joinery-handle"
+          >
+            {HANDLE_KINDS.map((h) => (
+              <option key={h} value={h}>
+                {HANDLE_LABEL[h]}
+              </option>
+            ))}
+          </select>
+        )}
       </label>
 
       <details className="cutlist">

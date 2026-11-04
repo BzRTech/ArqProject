@@ -1,13 +1,18 @@
 import { current } from 'immer'
 import { COLUMN_DEFAULTS } from '@/core/project/columns'
 import { innerFacePolygon } from '@/core/project/areas'
-import { defaultDesign } from '@/core/joinery/sheet'
+import { defaultDesign, designFromPreset } from '@/core/joinery/sheet'
 import { STAGES, STAGE_TOOLS, type Stage } from '@/core/editor/stages'
 import { createItemDims, createWallDims, syncLinkedDims } from '@/core/project/linked-dims'
 import { temporal } from 'zundo'
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
-import { getBlock } from '@/core/blocks/catalog'
+import { getBlock, registerSnapshot, setSnapshots } from '@/core/blocks/catalog'
+import type { BlockDef } from '@/core/blocks/types'
+import type { RuleProfile } from '@/core/joinery/rules'
+import type { JoineryPresetDef } from '@/core/library/schemas'
+import { applyBlockUpdate, applyRules, snapshotBlock } from '@/core/library/updates'
+import { useLibrary } from '@/features/library/library-store'
 import type { Vec2 } from '@/core/geometry/vec'
 import { openingDef } from '@/core/project/openings'
 import { reattachOpenings } from '@/core/project/wall-edit'
@@ -43,6 +48,12 @@ export type Selection = { kind: 'item' | 'drawing' | 'opening'; id: string } | n
 export type SelRef = NonNullable<Selection>
 
 export const newId = (): string => crypto.randomUUID()
+
+/** Tipo de móvel do bloco (banco em uso), para os padrões do detalhamento. */
+function joineryTypeOf(it: Pick<Item, 'blockId' | 'blockVersion'>) {
+  const type = getBlock(it.blockId, it.blockVersion).joineryType
+  return type ? useLibrary.getState().lib['joinery-types'].find((t) => t.id === type) : undefined
+}
 const rp = (p: Vec2): Vec2 => ({ x: roundMm(p.x), y: roundMm(p.y) })
 
 export interface EditorState {
@@ -62,6 +73,12 @@ export interface EditorState {
   closeDetail: () => void
   /** Troca o desenho (módulos, base, puxador) do móvel. */
   setJoineryDesign: (itemId: string, design: JoineryDesign) => void
+  /** Troca o desenho do móvel pelo de um modelo pronto do banco. */
+  applyPreset: (itemId: string, preset: JoineryPresetDef) => void
+  /** "Atualizar do banco": itens do bloco passam para a versão nova (o desenho muda). */
+  updateBlockFromBank: (def: BlockDef) => void
+  /** "Atualizar do banco": regras de marcenaria do escritório no projeto. */
+  updateRulesFromBank: (rules: RuleProfile) => void
   setStage: (stage: Stage) => void
   /** Cria a área de cada parede fechada que ainda não tem (pelas faces internas). */
   addAreasFromWalls: () => void
@@ -174,11 +191,23 @@ export const useEditor = create<EditorState>()(
             const it = env(s).items.find((i) => i.id === itemId)
             if (!it) return
             const j = it.joinery ?? { finishes: {}, grain: 'vertical' as const }
-            if (!j.design) it.joinery = { ...j, design: defaultDesign(it) }
+            if (!j.design) it.joinery = { ...j, design: defaultDesign(it, joineryTypeOf(it)) }
             s.detailItemId = itemId
             setSel(s, { kind: 'item', id: itemId })
           }),
         closeDetail: () => set((s) => void (s.detailItemId = null)),
+        applyPreset: (itemId, preset) =>
+          set((s) => {
+            const it = env(s).items.find((i) => i.id === itemId)
+            if (!it) return
+            const j = it.joinery ?? { finishes: {}, grain: 'vertical' as const }
+            it.joinery = { ...j, design: designFromPreset(it, preset) }
+          }),
+        updateBlockFromBank: (def) => {
+          registerSnapshot(def)
+          set((s) => void applyBlockUpdate(s.project, def))
+        },
+        updateRulesFromBank: (rules) => set((s) => applyRules(s.project, rules)),
         setJoineryDesign: (itemId, design) =>
           set((s) => {
             const it = env(s).items.find((i) => i.id === itemId)
@@ -295,6 +324,7 @@ export const useEditor = create<EditorState>()(
 
         loadProject: (p) =>
           set((s) => {
+            setSnapshots(Object.values(p.librarySnapshots.blocks))
             s.project = p
             s.activeEnvId = p.environments[0]!.id
             setSel(s, null)
@@ -325,9 +355,12 @@ export const useEditor = create<EditorState>()(
           }),
 
         addItem: (blockId, position) => {
+          // A versão mais nova (banco do escritório, ou embutida) e a cópia vai para o projeto.
           const block = getBlock(blockId)
+          registerSnapshot(block)
           const id = newId()
           set((s) => {
+            snapshotBlock(s.project, block)
             const { w, d, h } = block.defaultSize
             env(s).items.push({
               id,
@@ -339,6 +372,7 @@ export const useEditor = create<EditorState>()(
               mirrored: false,
               sizeMm: h ? { w, d, h } : { w, d },
               ...ITEM_DEFAULTS,
+              ...(block.refPriceCents !== undefined ? { unitPriceCents: block.refPriceCents } : {}),
             })
             setSel(s, { kind: 'item', id })
             s.tool = 'select'
@@ -352,7 +386,7 @@ export const useEditor = create<EditorState>()(
             if (!it) return
             Object.assign(it, patch)
             it.position = rp(it.position)
-            const min = getBlock(it.blockId).minSize
+            const min = getBlock(it.blockId, it.blockVersion).minSize
             it.sizeMm.w = Math.max(min.w, roundMm(it.sizeMm.w))
             it.sizeMm.d = Math.max(min.d, roundMm(it.sizeMm.d))
             it.rotationDeg = ((it.rotationDeg % 360) + 360) % 360

@@ -2275,3 +2275,137 @@ button.chip--on:hover:not(:disabled) {
   font-size: 48px;
   margin: var(--s-4) 0;
 }
+
+/* --- Fase 3: bancos ---------------------------------------------------------- */
+.library {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 40px 96px;
+}
+.library__tabs {
+  padding: var(--s-4) 0 0;
+  border-top: 1px solid var(--line);
+}
+.library__hint {
+  margin: 0;
+  max-width: 560px;
+}
+.library__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.library__table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.library__table tr.is-overridden td,
+.library__table tr.is-inactive td {
+  opacity: 0.55;
+}
+.library__preview {
+  width: 60px;
+}
+.library__swatch {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+}
+.library__actions {
+  text-align: right;
+  white-space: nowrap;
+}
+.library__actions button.icon {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.library__actions button.icon:hover:not(:disabled) {
+  background: var(--canvas);
+}
+.scope {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.scope--global {
+  background: var(--line-soft);
+  color: var(--ink-2);
+}
+.scope--org {
+  background: var(--clay-soft);
+  color: var(--clay);
+}
+.scope--muted {
+  color: var(--muted);
+  border: 1px dashed var(--line-strong);
+}
+.entry-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3) var(--s-4);
+  max-height: 60vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+.entry-form__grid .field--wide {
+  grid-column: 1 / -1;
+}
+.entry-form__grid textarea {
+  font-size: 12px;
+}
+.field--check {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--s-2);
+}
+.color-field {
+  display: flex;
+  gap: var(--s-2);
+}
+.color-field input[type='color'] {
+  width: 44px;
+  height: 36px;
+  padding: 2px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+.color-field input:not([type='color']) {
+  flex: 1;
+}
+.import-errors {
+  margin: var(--s-2) 0 0;
+  padding-left: 18px;
+  color: var(--brick);
+  font-size: 12px;
+}
+.banner--info {
+  background: var(--sage-soft);
+  color: var(--sage-ink);
+  border-bottom-color: #d3d9cb;
+  flex-wrap: wrap;
+}
+.banner__list {
+  flex-basis: 100%;
+  list-style: none;
+  margin: var(--s-1) 0 0;
+  padding: 0 0 0 28px;
+}
+.banner__list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  padding: 4px 0;
+  border-top: 1px solid #d3d9cb;
+}

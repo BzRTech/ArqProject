@@ -1,7 +1,7 @@
 /**
- * Paleta inicial de MDF (lisos e madeirados), com nomes genéricos. É o "seed" até a Fase 3,
- * quando os acabamentos vêm do banco (`Material`, com fabricante, linha e textura). O projeto
- * guarda uma CÓPIA do acabamento escolhido (snapshot), como os demais itens de banco.
+ * Paleta EMBUTIDA de MDF (lisos e madeirados), com nomes genéricos: seed do banco global
+ * (`Material`) e paleta do rascunho local sem servidor. O projeto guarda uma CÓPIA do
+ * acabamento escolhido (snapshot), como os demais itens de banco.
  */
 export type MdfKind = 'liso' | 'madeirado'
 
@@ -25,6 +25,8 @@ export const MDF_PALETTE: readonly MdfMaterial[] = [
   { id: 'verde-salvia', name: 'Verde sálvia', kind: 'liso', hex: '#9aa58e' },
   { id: 'azul-petroleo', name: 'Azul petróleo', kind: 'liso', hex: '#2f5560' },
   { id: 'terracota', name: 'Terracota', kind: 'liso', hex: '#b9714f' },
+  { id: 'verde-oliva', name: 'Verde oliva', kind: 'liso', hex: '#6f7350' },
+  { id: 'rosa-argila', name: 'Rosa argila', kind: 'liso', hex: '#c9a294' },
   { id: 'carvalho-claro', name: 'Carvalho claro', kind: 'madeirado', hex: '#d9bf98' },
   { id: 'carvalho', name: 'Carvalho', kind: 'madeirado', hex: '#c09b6d' },
   { id: 'freijo', name: 'Freijó', kind: 'madeirado', hex: '#b88a5a' },

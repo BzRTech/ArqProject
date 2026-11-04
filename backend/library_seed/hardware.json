@@ -1,0 +1,38 @@
+[
+  {
+    "id": "dobradica-reta-35",
+    "version": 1,
+    "name": "Dobradiça reta 35 mm com amortecedor",
+    "kind": "dobradica"
+  },
+  {
+    "id": "dobradica-curva-35",
+    "version": 1,
+    "name": "Dobradiça curva 35 mm com amortecedor",
+    "kind": "dobradica"
+  },
+  {
+    "id": "corredica-telescopica-450",
+    "version": 1,
+    "name": "Corrediça telescópica 450 mm",
+    "kind": "corredica"
+  },
+  {
+    "id": "corredica-oculta-450",
+    "version": 1,
+    "name": "Corrediça oculta com amortecedor 450 mm",
+    "kind": "corredica"
+  },
+  {
+    "id": "fecho-toque-push",
+    "version": 1,
+    "name": "Fecho toque (push)",
+    "kind": "fecho-toque"
+  },
+  {
+    "id": "articulador-basculante",
+    "version": 1,
+    "name": "Articulador para porta basculante",
+    "kind": "articulador"
+  }
+]

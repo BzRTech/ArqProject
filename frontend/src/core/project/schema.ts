@@ -1,12 +1,19 @@
 import { z } from 'zod'
+import { DEFAULT_RULE_PROFILE } from '../joinery/rules'
+import {
+  BlockDefSchema,
+  HANDLE_KINDS,
+  HandleDefSchema,
+  RuleProfileSchema,
+} from '../library/schemas'
 
 /**
- * Documento do projeto (formato v8 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v9 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 8
+export const SCHEMA_VERSION = 9
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -184,7 +191,7 @@ export type JoineryPart = (typeof JOINERY_PARTS)[number]
 
 export const FRONT_KINDS = ['open', 'door1', 'door2', 'drawers'] as const
 export type FrontKind = (typeof FRONT_KINDS)[number]
-export const HANDLE_KINDS = ['touch', 'bar', 'profile', 'cava', 'knob'] as const
+export { HANDLE_KINDS }
 export type HandleKind = (typeof HANDLE_KINDS)[number]
 
 /** Módulo do móvel: largura EIXO A EIXO (das divisórias; nas pontas, da face externa). */
@@ -207,6 +214,8 @@ export const JoineryDesignSchema = z.object({
   }),
   modules: z.array(JoineryModuleSchema).min(1),
   handle: z.enum(HANDLE_KINDS),
+  /** Puxador escolhido no banco (cópia; v9). `handle` continua sendo o tipo. */
+  handleItem: HandleDefSchema.optional(),
 })
 
 /** Detalhamento de marcenaria do item (v7: acabamento; v8: desenho com módulos). */
@@ -279,10 +288,22 @@ export const EnvironmentSchema = z.object({
   items: z.array(ItemSchema),
 })
 
+/**
+ * Cópias (snapshots) do que o projeto usa dos bancos (v9). Os itens são desenhados por estas
+ * cópias; mudar o banco não muda o projeto sem o usuário pedir ("Atualizar do banco").
+ */
+export const LibrarySnapshotsSchema = z.object({
+  /** Blocos do catálogo, chave `id@versão` (o item guarda `blockId` + `blockVersion`). */
+  blocks: z.record(z.string(), BlockDefSchema),
+  /** Regras de marcenaria do projeto. */
+  rules: RuleProfileSchema,
+})
+
 export const ProjectSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
   name: z.string().min(1),
   environments: z.array(EnvironmentSchema).min(1),
+  librarySnapshots: LibrarySnapshotsSchema,
 })
 
 export type Wall = z.infer<typeof WallSchema>
@@ -303,6 +324,13 @@ export type Item = z.infer<typeof ItemSchema>
 export type BasePlan = z.infer<typeof BasePlanSchema>
 export type Environment = z.infer<typeof EnvironmentSchema>
 export type Project = z.infer<typeof ProjectSchema>
+export type LibrarySnapshots = z.infer<typeof LibrarySnapshotsSchema>
+
+/** Cópias iniciais: nenhum bloco; regras padrão embutidas. */
+export const emptySnapshots = (): LibrarySnapshots => ({
+  blocks: {},
+  rules: JSON.parse(JSON.stringify(DEFAULT_RULE_PROFILE)) as typeof DEFAULT_RULE_PROFILE,
+})
 
 /** Valores padrão dos campos de legenda/orçamento de um item novo. */
 export const ITEM_DEFAULTS = {
@@ -331,5 +359,6 @@ export function newProject(envId: string): Project {
     schemaVersion: SCHEMA_VERSION,
     name: 'Projeto sem nome',
     environments: [newEnvironment(envId, 'Ambiente 1')],
+    librarySnapshots: emptySnapshots(),
   }
 }

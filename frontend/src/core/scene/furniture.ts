@@ -1,11 +1,16 @@
 import type { Item } from '../project/schema'
 import type { SceneBox, Triple } from './model'
+import { catalogFurnitureBoxes } from './catalog-furniture'
 
 /** Furniture in local coordinates, with the head of the bed at the back of the plan symbol. */
 export function furnitureBoxes(item: Item, height: number): SceneBox[] {
   const { w, d } = item.sizeMm
   if (!['cama-casal', 'cama-solteiro', 'cama-king'].includes(item.blockId)) {
-    return [{ name: item.name, center: [0, height / 2, 0], size: [w, height, d] }]
+    return (
+      catalogFurnitureBoxes(item, height) ?? [
+        { name: item.name, center: [0, height / 2, 0], size: [w, height, d] },
+      ]
+    )
   }
   const boxes: SceneBox[] = []
   const add = (name: string, center: Triple, size: Triple, color: string, radius: number) => {

@@ -5,22 +5,51 @@ import { wallsShape } from '../project/wall-union'
 import type { RuleProfile } from '../joinery/rules'
 import { joineryBoxes } from './joinery'
 import { furnitureBoxes } from './furniture'
+import { FURNITURE_HEIGHTS } from './catalog-furniture'
+import { defaultDesign } from '../joinery/sheet'
+import { JOINERY_TYPE_SEED } from '../library/seed'
+import type { JoineryTypeDef } from '../library/schemas'
 import type { Scene, SceneGroup } from './model'
 
-export function itemGroup(item: Item, rules: RuleProfile, open: boolean): SceneGroup {
+export function itemGroup(
+  item: Item,
+  rules: RuleProfile,
+  open: boolean,
+  types: readonly JoineryTypeDef[] = JOINERY_TYPE_SEED,
+): SceneGroup {
   const block = getBlock(item.blockId, item.blockVersion)
-  const height = item.sizeMm.h ?? block.defaultSize.h ?? (block.underlay ? 10 : 750)
+  const height =
+    item.sizeMm.h ??
+    block.defaultSize.h ??
+    FURNITURE_HEIGHTS[item.blockId] ??
+    (block.underlay ? 10 : 750)
+  const design =
+    item.joinery?.design ??
+    (block.joinery
+      ? defaultDesign(
+          item,
+          types.find((t) => t.id === block.joineryType),
+        )
+      : undefined)
+  const joineryItem = design
+    ? { ...item, joinery: { finishes: {}, grain: 'vertical' as const, ...item.joinery, design } }
+    : item
   return {
     id: item.id,
     center: [item.position.x, 0, item.position.y],
     rotationY: (-item.rotationDeg * Math.PI) / 180,
     mirrored: item.mirrored,
-    boxes: item.joinery?.design ? joineryBoxes(item, rules, open) : furnitureBoxes(item, height),
+    boxes: design ? joineryBoxes(joineryItem, rules, open) : furnitureBoxes(item, height),
   }
 }
 
 /** Horizontal wall slices preserve window sills and lintels, including overlapping walls. */
-export function environmentScene(env: Environment, rules: RuleProfile, open: boolean): Scene {
+export function environmentScene(
+  env: Environment,
+  rules: RuleProfile,
+  open: boolean,
+  types: readonly JoineryTypeDef[] = JOINERY_TYPE_SEED,
+): Scene {
   const walls = env.drawings.filter((d) => d.kind === 'wall')
   const levels = [
     ...new Set([
@@ -74,7 +103,7 @@ export function environmentScene(env: Environment, rules: RuleProfile, open: boo
       })
     }
   }
-  return { groups: env.items.map((it) => itemGroup(it, rules, open)), slabs }
+  return { groups: env.items.map((it) => itemGroup(it, rules, open, types)), slabs }
 }
 
 export function sceneFrame(env: Environment) {

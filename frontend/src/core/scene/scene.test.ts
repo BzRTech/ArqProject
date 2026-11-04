@@ -4,6 +4,7 @@ import { DEFAULT_RULE_PROFILE as rules } from '../joinery/rules'
 import { solveJoinery } from '../joinery/solve'
 import { environmentScene, itemGroup } from './environment'
 import { joineryBoxes } from './joinery'
+import { CATALOG } from '../blocks/catalog'
 
 const rack: Item = {
   ...ITEM_DEFAULTS,
@@ -33,6 +34,27 @@ const rack: Item = {
 }
 
 describe('3D do documento', () => {
+  it.each(CATALOG)('gera um modelo composto para $id nas medidas padrão e mínimas', (block) => {
+    for (const size of [block.defaultSize, { ...block.defaultSize, ...block.minSize }]) {
+      const item = {
+        ...rack,
+        blockId: block.id,
+        blockVersion: block.version,
+        sizeMm: size,
+        joinery: undefined,
+      }
+      const before = JSON.stringify(item)
+      for (const open of [false, true]) {
+        const group = itemGroup(item, rules, open)
+        expect(group.boxes.length).toBeGreaterThan(1)
+        expect(group.boxes.every((b) => b.size.every((n) => Number.isFinite(n) && n > 0))).toBe(
+          true,
+        )
+        expect(group.boxes.every((b) => b.center.every(Number.isFinite))).toBe(true)
+      }
+      expect(JSON.stringify(item)).toBe(before)
+    }
+  })
   it.each([
     ['cama-solteiro', 880, 1880, 1],
     ['cama-casal', 1580, 2000, 2],
@@ -130,7 +152,7 @@ describe('3D do documento', () => {
       slabs: [],
     })
     const old = { ...rack, joinery: undefined }
-    expect(itemGroup(old, rules, true).boxes).toHaveLength(1)
-    expect(itemGroup(old, rules, true).boxes[0]!.size[0]).toBe(1800)
+    expect(itemGroup(old, rules, true).boxes.length).toBeGreaterThan(1)
+    expect(old.joinery).toBeUndefined()
   })
 })

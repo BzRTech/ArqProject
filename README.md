@@ -42,6 +42,23 @@ alteração local com `git checkout -- frontend/package-lock.json` e repita o `g
 Sem Git: no GitHub, escolha a branch `fase-editor-blocos` → **Code → Download ZIP**, descompacte
 e rode os mesmos comandos a partir da pasta `frontend`.
 
+## Testar no iPad pela rede local
+
+Com o computador e o iPad conectados ao mesmo Wi-Fi, execute na pasta `frontend`.
+
+```bash
+npm run build
+npm run preview -- --host 0.0.0.0 --port 5177 --strictPort
+```
+
+No Safari do iPad, abra o endereço **Network** exibido no terminal e acrescente `/editor`.
+Mantenha o servidor ligado no computador durante o teste. Essa versão recebe as alterações
+após um novo `npm run build` e a atualização da página. Cada navegador guarda seu próprio
+rascunho local.
+
+Para conferir o catálogo em um teste automatizado de WebKit com tela de iPad, use
+`npx playwright install webkit` e `npx playwright test --config playwright.tablet.config.ts`.
+
 ## Subir o ambiente completo
 
 Requer Docker com Compose v2.

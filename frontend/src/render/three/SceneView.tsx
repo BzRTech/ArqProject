@@ -33,16 +33,33 @@ function PanelMesh({ box }: { box: SceneBox }) {
   return (
     <mesh
       position={meters(box.center)}
-      rotation={[0, box.rotationY ?? 0, 0]}
+      rotation={[box.rotationX ?? 0, box.rotationY ?? 0, 0]}
+      scale={
+        box.shape === 'ellipsoid'
+          ? [width / 2000, height / 2000, depth / 2000]
+          : box.shape === 'cylinder'
+            ? [width / 2000, height / 1000, depth / 2000]
+            : [1, 1, 1]
+      }
       castShadow
       receiveShadow
     >
-      {roundedGeometry ? (
+      {box.shape === 'ellipsoid' ? (
+        <sphereGeometry args={[1, 20, 12]} />
+      ) : box.shape === 'cylinder' ? (
+        <cylinderGeometry args={[1, 1, 1, 32]} />
+      ) : roundedGeometry ? (
         <primitive attach="geometry" object={roundedGeometry} />
       ) : (
         <boxGeometry args={meters(box.size)} />
       )}
-      <meshStandardMaterial map={map} roughness={0.72} />
+      <meshStandardMaterial
+        map={map}
+        roughness={0.72}
+        transparent={box.opacity !== undefined}
+        opacity={box.opacity ?? 1}
+        depthWrite={box.opacity === undefined}
+      />
     </mesh>
   )
 }

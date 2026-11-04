@@ -1,5 +1,13 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
+type FixtureState = {
+  addWall: (points: { x: number; y: number }[], closed: boolean) => string
+  addAreasFromWalls: () => void
+  addItem: (id: string, point: { x: number; y: number }) => string
+  openDetail: (id: string) => void
+  updateItem: (id: string, patch: unknown) => void
+  project: { environments: { items: { id: string; joinery?: Record<string, unknown> }[] }[] }
+}
 
 test('cama reconhecível no 3D a partir de um item do catálogo', async ({ page }) => {
   const errors: string[] = []
@@ -27,9 +35,8 @@ test('3D do ambiente e móvel, aberto/fechado, PNG e prancha de perspectiva', as
   await page.goto('/editor')
   await expect(page.getByTestId('save-status')).toContainText('Salvo')
   // Fixture through the same store commands used by the editor controls.
-  await page.evaluate(async () => {
-    // @ts-expect-error Vite serves this module in the dev test environment.
-    const { useEditor } = await import('/src/features/plan-editor/store.ts')
+  await page.evaluate(() => {
+    const useEditor = (window as unknown as { __editor: { getState: () => FixtureState } }).__editor
     const s = useEditor.getState()
     s.addWall(
       [
@@ -43,13 +50,16 @@ test('3D do ambiente e móvel, aberto/fechado, PNG e prancha de perspectiva', as
     s.addAreasFromWalls()
     const id = useEditor.getState().addItem('rack', { x: 2000, y: 400 })
     useEditor.getState().openDetail(id)
-    const item = useEditor
-      .getState()
-      .project.environments[0].items.find((it: { id: string }) => it.id === id)
-    const wood = { materialId: 'freijo', name: 'Freijó', kind: 'madeirado', hex: '#b88a5a' }
+    const item = useEditor.getState().project.environments[0]!.items.find((it) => it.id === id)!
+    const wood = {
+      materialId: 'freijo',
+      name: 'Freijó',
+      kind: 'madeirado' as const,
+      hex: '#b88a5a',
+    }
     useEditor.getState().updateItem(id, {
       joinery: {
-        ...item.joinery,
+        ...item.joinery!,
         grain: 'vertical',
         finishes: {
           frentes: wood,

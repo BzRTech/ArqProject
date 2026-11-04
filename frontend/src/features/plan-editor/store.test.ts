@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProjectSchema, newProject } from '@/core/project/schema'
 import { setSegmentLengthLinked } from '@/core/project/wall-edit'
-import { clearHistory, redo, selectActiveEnv, undo, useEditor } from './store'
+import { clearHistory, newId, redo, selectActiveEnv, undo, useEditor } from './store'
 
 const S = () => useEditor.getState()
 const env = () => selectActiveEnv(S())
@@ -12,6 +12,17 @@ beforeEach(() => {
 })
 
 describe('editor — itens', () => {
+  it('gera UUIDs também no endereço HTTP da rede local', () => {
+    const original = globalThis.crypto
+    vi.stubGlobal('crypto', { getRandomValues: original.getRandomValues.bind(original) })
+    try {
+      const first = newId()
+      expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+      expect(newId()).not.toBe(first)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
   it('insere bloco com medidas padrão, seleciona e volta à ferramenta de seleção', () => {
     S().startPlacing('cama-casal')
     const id = S().addItem('cama-casal', { x: 1000.4, y: 2000.6 })

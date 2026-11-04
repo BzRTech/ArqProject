@@ -5,11 +5,13 @@ import type { Scene, Triple } from '@/core/scene/model'
 import { SceneView } from '@/render/three/SceneView'
 import { selectActiveEnv, useEditor } from './store'
 import { useRuleProfile } from './rules'
+import { useLibrary } from '@/features/library/library-store'
 
 export default function ThreePanel() {
   const env = useEditor(selectActiveEnv)
   const projectName = useEditor((s) => s.project.name)
   const rules = useRuleProfile()
+  const joineryTypes = useLibrary((s) => s.lib['joinery-types'])
   const [itemId, setItemId] = useState('')
   const [open, setOpen] = useState(false)
   const [walls, setWalls] = useState(true)
@@ -21,12 +23,14 @@ export default function ThreePanel() {
   const scene = useMemo((): Scene => {
     if (item)
       return {
-        groups: [{ ...itemGroup(item, rules, open), center: [0, 0, 0], rotationY: 0 }],
+        groups: [
+          { ...itemGroup(item, rules, open, joineryTypes), center: [0, 0, 0], rotationY: 0 },
+        ],
         slabs: [],
       }
-    const result = environmentScene(env, rules, open)
+    const result = environmentScene(env, rules, open, joineryTypes)
     return walls ? result : { ...result, slabs: result.slabs.filter((s) => s.bottom < 0) }
-  }, [env, item, rules, open, walls])
+  }, [env, item, rules, open, walls, joineryTypes])
   const itemHeight = Math.max(
     1,
     ...scene.groups.flatMap((g) => g.boxes.map((b) => b.center[1] + b.size[1] / 2)),
@@ -121,8 +125,8 @@ export default function ThreePanel() {
       </div>
       <p className="three-panel__hint">
         Arraste para girar · botão direito para mover · roda para aproximar. Móveis detalhados
-        mostram as peças e os acabamentos escolhidos. Camas têm modelo próprio; outros itens
-        aparecem como volumes.
+        mostram as peças e os acabamentos escolhidos. Os itens do catálogo têm modelos 3D
+        proporcionais às medidas da planta.
       </p>
     </div>
   )

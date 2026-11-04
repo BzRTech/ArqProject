@@ -11,6 +11,9 @@ export interface SceneBox {
   grain?: 'vertical' | 'horizontal'
   color?: string
   radiusMm?: number
+  shape?: 'ellipsoid' | 'cylinder'
+  rotationX?: number
+  opacity?: number
 }
 export interface SceneGroup {
   id: string

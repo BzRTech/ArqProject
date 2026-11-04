@@ -2409,3 +2409,84 @@ button.chip--on:hover:not(:disabled) {
   padding: 4px 0;
   border-top: 1px solid #d3d9cb;
 }
+
+/* --- Fase 6: Minha marca, folha e memorial ------------------------------------ */
+.brand-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 48px 40px 96px;
+}
+.brand-page__grid {
+  display: grid;
+  grid-template-columns: 380px minmax(0, 1fr);
+  gap: var(--s-8);
+  align-items: start;
+}
+.brand-logo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  align-items: flex-start;
+  padding-bottom: var(--s-3);
+  border-bottom: 1px solid var(--line-soft);
+}
+.brand-logo img {
+  max-width: 220px;
+  max-height: 64px;
+  object-fit: contain;
+}
+.brand-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  position: sticky;
+  top: var(--s-6);
+}
+.brand-preview__sheet {
+  height: 460px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--canvas);
+  overflow: hidden;
+}
+.user-menu a.user-menu__org {
+  color: var(--ink);
+}
+.user-menu a.user-menu__org:hover {
+  color: var(--clay);
+}
+.pranchas-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin-top: var(--s-4);
+}
+.pranchas-actions button {
+  justify-content: flex-start;
+}
+.sheet-setup {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+a.icon-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-md);
+  color: var(--ink-2);
+}
+a.icon-link:hover {
+  background: var(--canvas);
+  color: var(--ink);
+}
+.brand-preview__sheet .viewer {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}

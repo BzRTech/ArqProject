@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { projectJsonSchema, projectJsonSchemaText } from './json-schema'
+import { projectJsonSchema, projectJsonSchemaText, reportJsonSchema } from './json-schema'
 import { SCHEMA_VERSION } from './schema'
 
 const target = fileURLToPath(
@@ -19,5 +19,14 @@ describe('JSON Schema exportado para o backend', () => {
     if (process.env.UPDATE_SCHEMA === '1') writeFileSync(target, text)
     // Compara o conteúdo (formatação do arquivo não importa).
     expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual(JSON.parse(text))
+  })
+
+  it('o JSON Schema do relatório (memorial) está atualizado', () => {
+    const file = fileURLToPath(
+      new URL('../../../../backend/apps/projects/schema/report.schema.json', import.meta.url),
+    )
+    const text = JSON.stringify(reportJsonSchema(), null, 2) + '\n'
+    if (process.env.UPDATE_SCHEMA === '1') writeFileSync(file, text)
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(JSON.parse(text))
   })
 })

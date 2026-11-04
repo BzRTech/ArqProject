@@ -5,6 +5,7 @@ import { buildPlanSheet, type LegendLine, type PlanSheet } from '../sheets/plan-
 import { formatQty } from '../units'
 import { computeLegend } from './markers'
 import { environmentEntities } from './render'
+import { sheetSetup, type SheetContext } from './sheet-setup'
 import type { Environment, Project } from './schema'
 
 /** Linhas da legenda do ambiente: itens (marcenaria com o acabamento embaixo) e revestimentos. */
@@ -28,13 +29,15 @@ export function environmentLegend(env: Environment): LegendLine[] {
   ]
 }
 
-/** Prancha A3 do ambiente — a MESMA para a prévia na tela e para o PDF. */
+/** Prancha do ambiente — a MESMA para a prévia na tela e para o PDF. */
 export function environmentSheet(
-  project: Pick<Project, 'name'>,
+  project: Pick<Project, 'name'> & Partial<Pick<Project, 'librarySnapshots'>>,
   env: Environment,
-  o: { dateText?: string; basePlanHref?: string; humanized?: boolean; rules?: RuleProfile } = {},
+  o: SheetContext & { basePlanHref?: string; humanized?: boolean; rules?: RuleProfile } = {},
 ): PlanSheet {
   return buildPlanSheet({
+    ...sheetSetup(project, env),
+    brand: o.brand,
     title: env.name,
     subtitle: project.name.toUpperCase(),
     dateText: o.dateText,

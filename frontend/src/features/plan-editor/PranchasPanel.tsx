@@ -1,11 +1,14 @@
-import { FileDown } from 'lucide-react'
+import { FileDown, FileText, ScrollText } from 'lucide-react'
 import { useMemo } from 'react'
 import { Switch } from '@/app/ui/Switch'
 import { environmentLegend, environmentSheet } from '@/core/project/env-sheet'
+import { sheetSetup } from '@/core/project/sheet-setup'
 import type { Environment } from '@/core/project/schema'
 import { joinerySheet, solveItem } from '@/core/joinery/sheet'
 import { joinerySpecs } from '@/core/joinery/specs'
 import { usePdf } from './pdf-action'
+import { useEditorSession } from './session'
+import { SheetSetupFields } from './SheetSetupFields'
 import { useRuleProfile } from './rules'
 import { useEditor } from './store'
 import { useUnits } from './units-pref'
@@ -26,11 +29,56 @@ export function PranchasPanel({ env }: { env: Environment }) {
       specs: joinerySpecs(solved, detailItem.joinery, rules),
     }
   }, [project, env, detailItem, rules])
+  const setup = sheetSetup(project, env)
+  const sheetLabel = `${setup.format} ${setup.orientation === 'landscape' ? 'paisagem' : 'retrato'}`
   const scale = useMemo(
     () => environmentSheet(project, env, { rules }).scale,
     [project, env, rules],
   )
   const legend = environmentLegend(env)
+  const projectId = useEditorSession((x) => x.projectId)
+  const openMemorial = () => {
+    if (!projectId) return
+    // O memorial usa o relatório do último save: grava o pendente antes de abrir.
+    const tab = window.open('', '_blank')
+    void useEditorSession
+      .getState()
+      .flush()
+      .then(() => {
+        const url = `/api/projects/${projectId}/memorial.pdf`
+        if (tab) tab.location.href = url
+        else window.location.href = url
+      })
+  }
+  const actions = (only: { envId: string; itemId?: string }) => (
+    <div className="pranchas-actions">
+      <button
+        type="button"
+        className="primary"
+        onClick={() => void run()}
+        disabled={busy}
+        data-testid="sheet-pdf"
+      >
+        <FileDown size={15} strokeWidth={1.5} />
+        {busy ? 'Gerando…' : 'Baixar PDF (todas as pranchas)'}
+      </button>
+      <button
+        type="button"
+        onClick={() => void run(only)}
+        disabled={busy}
+        data-testid="sheet-pdf-one"
+      >
+        <FileText size={15} strokeWidth={1.5} />
+        Baixar só esta prancha
+      </button>
+      {projectId && (
+        <button type="button" onClick={openMemorial} data-testid="memorial-pdf">
+          <ScrollText size={15} strokeWidth={1.5} />
+          Memorial (PDF)
+        </button>
+      )}
+    </div>
+  )
   if (detail && detailItem)
     return (
       <section data-testid="pranchas-panel">
@@ -46,23 +94,15 @@ export function PranchasPanel({ env }: { env: Environment }) {
             <li key={i}>{t}</li>
           ))}
         </ol>
-        <button
-          type="button"
-          className="primary"
-          onClick={() => void run()}
-          disabled={busy}
-          data-testid="sheet-pdf"
-        >
-          <FileDown size={15} strokeWidth={1.5} />
-          {busy ? 'Gerando…' : 'Baixar PDF (todas as pranchas)'}
-        </button>
+        <SheetSetupFields env={env} />
+        {actions({ envId: env.id, itemId: detailItem.id })}
       </section>
     )
   return (
     <section data-testid="pranchas-panel">
       <h2>Prancha</h2>
       <p className="muted small">
-        A3 deitada, escala <strong className="mono">1:{scale}</strong> (a maior que couber, com as
+        {sheetLabel}, escala <strong className="mono">1:{scale}</strong> (a maior que couber, com as
         cotas). Para mudar o desenho, volte às outras abas.
       </p>
       <Switch
@@ -86,16 +126,8 @@ export function PranchasPanel({ env }: { env: Environment }) {
           </li>
         ))}
       </ul>
-      <button
-        type="button"
-        className="primary"
-        onClick={() => void run()}
-        disabled={busy}
-        data-testid="sheet-pdf"
-      >
-        <FileDown size={15} strokeWidth={1.5} />
-        {busy ? 'Gerando…' : 'Baixar PDF (todas as pranchas)'}
-      </button>
+      <SheetSetupFields env={env} />
+      {actions({ envId: env.id })}
     </section>
   )
 }

@@ -329,6 +329,8 @@ Cada fase = um branch + PR, começando em **plan mode**, com `/clear` entre fase
 - PDF de uma prancha ou de todas (cliente).
 - **Memorial PDF no servidor** (WeasyPrint) a partir do `ProjectItemIndex`: por ambiente/disciplina, marcador, item, qtd, especificação, marca, fornecedor, preço, total.
 
+> **Feito (03/11/2026).** Folha por ambiente (schema v10: `Environment.sheet` + `librarySnapshots.sheetTemplate`), carimbo com "Minha marca" (campos no `Organization`, logo como `Asset`) e as notas do modelo de folha, legenda embaixo em folha estreita, PDF de uma prancha. Memorial: o núcleo calcula o RELATÓRIO (`core/project/report.ts`: linhas da legenda e do orçamento, com marcador e pisos com perda) e o envia em cada save; o servidor valida (JSON Schema exportado), grava em `Project.report`, refaz o `ProjectItemIndex` com marcador/disciplina e imprime com WeasyPrint (fontes do design system embutidas). Pendentes da fase: viewports por disciplina numa mesma folha; `DimStyle` do `SheetTemplate`.
+
 **Marco:** produto usável sem marcenaria.
 
 ### Fase 7 — Motor de marcenaria (núcleo, TDD) (5–7 dias)

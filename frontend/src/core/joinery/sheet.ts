@@ -6,6 +6,7 @@ import { isEmpty } from '../geometry/bbox'
 import { vec } from '../geometry/vec'
 import { computeLegend } from '../project/markers'
 import type { Environment, Item, JoineryDesign, Project } from '../project/schema'
+import { sheetSetup, type SheetContext } from '../project/sheet-setup'
 import { buildPlanSheet, type PlanSheet } from '../sheets/plan-sheet'
 import type { JoineryPresetDef, JoineryTypeDef } from '../library/schemas'
 import type { RuleProfile } from './rules'
@@ -96,11 +97,11 @@ const move = (es: Entity[], dx: number, dy: number) =>
  * mesma escala, com as especificações numeradas na coluna da direita.
  */
 export function joinerySheet(
-  project: Pick<Project, 'name'>,
+  project: Pick<Project, 'name'> & Partial<Pick<Project, 'librarySnapshots'>>,
   env: Environment,
   item: Item,
   rules: RuleProfile,
-  o: { dateText?: string } = {},
+  o: SheetContext = {},
 ): PlanSheet | null {
   const s = solveItem(item, rules)
   if (!s) return null
@@ -111,6 +112,8 @@ export function joinerySheet(
     ['PLANTA', planView(s, rules)],
   ]
   return buildPlanSheet({
+    ...sheetSetup(project, env),
+    brand: o.brand,
     title: `${code} · ${item.name}`,
     subtitle: `${env.name.toUpperCase()} — ${project.name.toUpperCase()}`,
     dateText: o.dateText,

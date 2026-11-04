@@ -33,6 +33,18 @@ class Organization(models.Model):
     name = models.CharField("nome", max_length=200)
     slug = models.SlugField("identificador", max_length=80, unique=True)
     created_at = models.DateTimeField("criado em", auto_now_add=True)
+    # --- Minha marca (carimbo das pranchas e cabeçalho do memorial) -----------------------
+    logo = models.ForeignKey(
+        "assets.Asset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    brand_color = models.CharField("cor da marca", max_length=7, blank=True)
+    phone = models.CharField("telefone", max_length=40, blank=True)
+    email = models.EmailField("e-mail de contato", blank=True)
+    website = models.CharField("site", max_length=120, blank=True)
+    address = models.CharField("endereço", max_length=200, blank=True)
+    registration = models.CharField(
+        "registro profissional", max_length=80, blank=True, help_text="Ex.: CAU A12345-6"
+    )
 
     class Meta:
         verbose_name = "escritório"

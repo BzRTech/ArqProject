@@ -14,8 +14,8 @@ export function SheetsPanel() {
     <aside className="panel panel--catalog" data-testid="sheets-panel">
       <h2>Pranchas</h2>
       <p className="muted small">
-        Uma prancha A3 por ambiente e uma de detalhe por móvel de marcenaria detalhado. Clique para
-        ver cada uma.
+        Uma prancha por ambiente e uma de detalhe por móvel de marcenaria detalhado. Clique para ver
+        cada uma.
       </p>
       <ul className="list">
         {project.environments.flatMap((e) => {

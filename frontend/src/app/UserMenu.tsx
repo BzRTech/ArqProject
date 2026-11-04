@@ -35,7 +35,14 @@ export function UserMenu() {
           ))}
         </select>
       ) : (
-        <span className="user-menu__org">{data.organization?.name}</span>
+        <Link
+          to="/escritorio"
+          className="user-menu__org"
+          title="Minha marca"
+          data-testid="brand-link"
+        >
+          {data.organization?.name}
+        </Link>
       )}
       <span className="user-menu__who" title={data.email}>
         {data.name}

@@ -5,15 +5,17 @@ import {
   HANDLE_KINDS,
   HandleDefSchema,
   RuleProfileSchema,
+  SheetTemplateDefSchema,
 } from '../library/schemas'
+import { SHEET_TEMPLATE_SEED } from '../library/seed'
 
 /**
- * Documento do projeto (formato v9 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v10 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 9
+export const SCHEMA_VERSION = 10
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -278,10 +280,17 @@ export const BasePlanSchema = z.object({
   calibrated: z.boolean(),
 })
 
+/** Folha da prancha do ambiente (v10); sem ela vale o modelo de folha do projeto. */
+export const SheetSetupSchema = z.object({
+  paper: z.enum(['A4', 'A3', 'A2', 'A1']),
+  orientation: z.enum(['landscape', 'portrait']),
+})
+
 export const EnvironmentSchema = z.object({
   id,
   name: z.string().min(1),
   ceilingHeightMm: positiveMm,
+  sheet: SheetSetupSchema.optional(),
   basePlan: BasePlanSchema.nullable(),
   drawings: z.array(DrawingSchema),
   openings: z.array(OpeningSchema),
@@ -297,6 +306,8 @@ export const LibrarySnapshotsSchema = z.object({
   blocks: z.record(z.string(), BlockDefSchema),
   /** Regras de marcenaria do projeto. */
   rules: RuleProfileSchema,
+  /** Modelo de folha das pranchas (tamanho, orientação, margem, notas do carimbo) — v10. */
+  sheetTemplate: SheetTemplateDefSchema,
 })
 
 export const ProjectSchema = z.object({
@@ -325,11 +336,16 @@ export type BasePlan = z.infer<typeof BasePlanSchema>
 export type Environment = z.infer<typeof EnvironmentSchema>
 export type Project = z.infer<typeof ProjectSchema>
 export type LibrarySnapshots = z.infer<typeof LibrarySnapshotsSchema>
+export type SheetSetup = z.infer<typeof SheetSetupSchema>
+
+/** Modelo de folha padrão (A3 paisagem do seed). */
+export const DEFAULT_SHEET_TEMPLATE = SHEET_TEMPLATE_SEED[0]!
 
 /** Cópias iniciais: nenhum bloco; regras padrão embutidas. */
 export const emptySnapshots = (): LibrarySnapshots => ({
   blocks: {},
   rules: JSON.parse(JSON.stringify(DEFAULT_RULE_PROFILE)) as typeof DEFAULT_RULE_PROFILE,
+  sheetTemplate: { ...DEFAULT_SHEET_TEMPLATE, notes: [...DEFAULT_SHEET_TEMPLATE.notes] },
 })
 
 /** Valores padrão dos campos de legenda/orçamento de um item novo. */

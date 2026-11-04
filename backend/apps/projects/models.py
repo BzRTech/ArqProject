@@ -29,6 +29,9 @@ class Project(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
     schema_version = models.PositiveIntegerField("versão do formato")
     data = models.JSONField("documento")
+    # Relatório do memorial, calculado pelo núcleo do front e enviado junto com o save
+    # (marcadores, quantidades de piso com perda, totais). O servidor só guarda e imprime.
+    report = models.JSONField("relatório (memorial)", default=dict, blank=True)
     revision = models.PositiveIntegerField("revisão", default=1)
     thumbnail = models.ForeignKey(
         "assets.Asset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
@@ -81,21 +84,25 @@ class ProjectVersion(models.Model):
 
 
 class ProjectItemIndex(models.Model):
-    """Itens do documento em linhas (derivado a cada save) — memorial, busca e relatórios.
+    """Linhas do memorial (derivadas a cada save) — memorial, busca e relatórios.
 
-    Só COPIA campos do documento; numeração de marcadores e geometria continuam no front.
+    Vêm do relatório que o front envia (uma linha por marcador: itens iguais somados, pisos
+    com perda); sem relatório, uma linha por item do documento. O servidor só COPIA.
     """
 
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="item_index")
     environment_id = models.CharField(max_length=64)
     environment_name = models.CharField(max_length=200)
-    item_id = models.CharField(max_length=64)
-    block_id = models.CharField("bloco", max_length=100)
+    item_id = models.CharField(max_length=64, blank=True)
+    marker_no = models.CharField("marcador", max_length=12, blank=True)
+    discipline = models.CharField("disciplina", max_length=20, blank=True)
+    block_id = models.CharField("bloco", max_length=100, blank=True)
     name = models.CharField("nome", max_length=300)
+    detail = models.TextField("especificação", blank=True)
     qty = models.DecimalField("quantidade", max_digits=12, decimal_places=3)
     unit = models.CharField("unidade", max_length=10)
-    size_w_mm = models.PositiveIntegerField()
-    size_d_mm = models.PositiveIntegerField()
+    size_w_mm = models.PositiveIntegerField(null=True)
+    size_d_mm = models.PositiveIntegerField(null=True)
     size_h_mm = models.PositiveIntegerField(null=True)
     unit_price_cents = models.PositiveBigIntegerField(null=True)
     supplier = models.CharField("fornecedor", max_length=200, blank=True)

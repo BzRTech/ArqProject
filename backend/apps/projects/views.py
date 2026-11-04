@@ -1,5 +1,6 @@
 import re
 
+from django.http import HttpResponse
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
@@ -144,7 +145,11 @@ class ProjectViewSet(GenericViewSet):
         s.is_valid(raise_exception=True)
         try:
             project = services.save_project(
-                project, request.user, data=s.validated_data["data"], expected_revision=expected
+                project,
+                request.user,
+                data=s.validated_data["data"],
+                report=s.validated_data.get("report"),
+                expected_revision=expected,
             )
         except services.RevisionConflict as exc:
             return conflict_response(exc.project)
@@ -223,3 +228,18 @@ class ProjectViewSet(GenericViewSet):
         except services.InvalidDocument as exc:
             raise invalid_document(exc) from exc
         return with_etag(Response(ProjectDetailSerializer(project).data), project)
+
+    @extend_schema(
+        responses={(200, "application/pdf"): OpenApiTypes.BINARY},
+        tags=["projects"],
+        description="Memorial descritivo em PDF (itens por ambiente e disciplina, com a marca).",
+    )
+    def memorial(self, request: Request, pk=None) -> HttpResponse:
+        from apps.exports.services import render_memorial
+
+        project = self.get_object()
+        pdf = render_memorial(project)
+        name = re.sub(r"[^\w-]+", "-", project.name, flags=re.ASCII).strip("-").lower() or "projeto"
+        response = HttpResponse(pdf, content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="memorial-{name}.pdf"'
+        return response

@@ -242,14 +242,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Escritório ativo. Só o dono altera (a "Minha marca" completa vem na Fase 6). */
+        /** @description Escritório ativo com a "Minha marca" (logo, cor, contato). Só o dono altera. */
         get: operations["orgs_current_retrieve"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** @description Escritório ativo. Só o dono altera (a "Minha marca" completa vem na Fase 6). */
+        /** @description Escritório ativo com a "Minha marca" (logo, cor, contato). Só o dono altera. */
         patch: operations["orgs_current_partial_update"];
         trace?: never;
     };
@@ -324,6 +324,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/projects/{id}/memorial.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Memorial descritivo em PDF (itens por ambiente e disciplina, com a marca). */
+        get: operations["projects_memorial.pdf_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/projects/{id}/versions/": {
         parameters: {
             query?: never;
@@ -390,6 +407,32 @@ export interface components {
          * @enum {string}
          */
         AssetStatusEnum: "pending" | "ready";
+        /** @description Escritório com a "Minha marca" (só o dono altera). */
+        Brand: {
+            readonly id: number;
+            /** Nome */
+            name: string;
+            /** Identificador */
+            readonly slug: string;
+            /** Format: uuid */
+            logo?: string | null;
+            /** @description URL temporária do logo (para a tela e para o PDF). */
+            readonly logo_url: string | null;
+            brand_color?: string;
+            /** Telefone */
+            phone?: string;
+            /** E-mail de contato */
+            email?: string;
+            /** Site */
+            website?: string;
+            /** Endereço */
+            address?: string;
+            /**
+             * Registro profissional
+             * @description Ex.: CAU A12345-6
+             */
+            registration?: string;
+        };
         Bundle: {
             etag: string;
             /** @description Por banco: disciplines, items, materials, floors, handles, hardware, joinery-types, presets, rules, details, sheet-templates, spec-templates. */
@@ -473,9 +516,26 @@ export interface components {
             /** Identificador */
             readonly slug: string;
         };
-        PatchedOrganizationRequest: {
+        /** @description Escritório com a "Minha marca" (só o dono altera). */
+        PatchedBrandRequest: {
             /** Nome */
             name?: string;
+            /** Format: uuid */
+            logo?: string | null;
+            brand_color?: string;
+            /** Telefone */
+            phone?: string;
+            /** E-mail de contato */
+            email?: string;
+            /** Site */
+            website?: string;
+            /** Endereço */
+            address?: string;
+            /**
+             * Registro profissional
+             * @description Ex.: CAU A12345-6
+             */
+            registration?: string;
         };
         /** @description PATCH: dados fora do documento (não mexem na revisão). */
         PatchedProjectMetaRequest: {
@@ -500,6 +560,8 @@ export interface components {
         ProjectCreateRequest: {
             /** @description Documento completo (formato atual). */
             data: unknown;
+            /** @description Relatório do memorial (calculado pelo editor). */
+            report?: unknown;
             client_name?: string;
             status?: components["schemas"]["ProjectStatusEnum"];
         };
@@ -517,6 +579,7 @@ export interface components {
             readonly schema_version: number;
             /** Documento */
             readonly data: unknown;
+            readonly has_report: boolean;
             /**
              * Criado em
              * Format: date-time
@@ -557,6 +620,8 @@ export interface components {
         /** @description PUT: o documento inteiro. Exige o cabeçalho `If-Match: <revision>`. */
         ProjectSaveRequest: {
             data: unknown;
+            /** @description Relatório do memorial (calculado pelo editor). */
+            report?: unknown;
         };
         /**
          * @description * `draft` - rascunho
@@ -1030,7 +1095,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Brand"];
                 };
             };
         };
@@ -1044,9 +1109,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedOrganizationRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedOrganizationRequest"];
-                "multipart/form-data": components["schemas"]["PatchedOrganizationRequest"];
+                "application/json": components["schemas"]["PatchedBrandRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedBrandRequest"];
+                "multipart/form-data": components["schemas"]["PatchedBrandRequest"];
             };
         };
         responses: {
@@ -1055,7 +1120,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Organization"];
+                    "application/json": components["schemas"]["Brand"];
                 };
             };
         };
@@ -1257,6 +1322,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectList"];
+                };
+            };
+        };
+    };
+    "projects_memorial.pdf_retrieve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
         };

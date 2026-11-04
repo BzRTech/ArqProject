@@ -10,7 +10,7 @@ import { immer } from 'zustand/middleware/immer'
 import { getBlock, registerSnapshot, setSnapshots } from '@/core/blocks/catalog'
 import type { BlockDef } from '@/core/blocks/types'
 import type { RuleProfile } from '@/core/joinery/rules'
-import type { JoineryPresetDef } from '@/core/library/schemas'
+import type { JoineryPresetDef, SheetTemplateDef } from '@/core/library/schemas'
 import { applyBlockUpdate, applyRules, snapshotBlock } from '@/core/library/updates'
 import { useLibrary } from '@/features/library/library-store'
 import type { Vec2 } from '@/core/geometry/vec'
@@ -29,6 +29,7 @@ import {
   type Opening,
   type OpeningType,
   type Project,
+  type SheetSetup,
   type Wall,
 } from '@/core/project/schema'
 import { roundMm } from '@/core/units'
@@ -79,6 +80,10 @@ export interface EditorState {
   updateBlockFromBank: (def: BlockDef) => void
   /** "Atualizar do banco": regras de marcenaria do escritório no projeto. */
   updateRulesFromBank: (rules: RuleProfile) => void
+  /** Folha da prancha do ambiente (undefined = a do modelo do projeto). */
+  setEnvSheet: (envId: string, sheet: SheetSetup | undefined) => void
+  /** Modelo de folha do projeto (cópia do banco: tamanho, orientação, margem, notas). */
+  setSheetTemplate: (t: SheetTemplateDef) => void
   setStage: (stage: Stage) => void
   /** Cria a área de cada parede fechada que ainda não tem (pelas faces internas). */
   addAreasFromWalls: () => void
@@ -208,6 +213,14 @@ export const useEditor = create<EditorState>()(
           set((s) => void applyBlockUpdate(s.project, def))
         },
         updateRulesFromBank: (rules) => set((s) => applyRules(s.project, rules)),
+        setEnvSheet: (envId, sheet) =>
+          set((s) => {
+            const e = s.project.environments.find((x) => x.id === envId)
+            if (!e) return
+            if (sheet) e.sheet = sheet
+            else delete e.sheet
+          }),
+        setSheetTemplate: (t) => set((s) => void (s.project.librarySnapshots.sheetTemplate = t)),
         setJoineryDesign: (itemId, design) =>
           set((s) => {
             const it = env(s).items.find((i) => i.id === itemId)

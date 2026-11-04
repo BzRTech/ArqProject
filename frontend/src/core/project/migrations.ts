@@ -1,5 +1,6 @@
 import { blockKey, CATALOG_BY_ID } from '../blocks/catalog'
 import { DEFAULT_RULE_PROFILE } from '../joinery/rules'
+import { SHEET_TEMPLATE_SEED } from '../library/seed'
 import { ProjectSchema, SCHEMA_VERSION, type Project } from './schema'
 
 /**
@@ -62,6 +63,16 @@ const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
       librarySnapshots: { blocks, rules: DEFAULT_RULE_PROFILE },
     }
   },
+  // v9 → v10: modelo de folha nas cópias do banco (A3 paisagem, como era); folha por ambiente
+  // é opcional.
+  9: (p) => ({
+    ...p,
+    schemaVersion: 10,
+    librarySnapshots: {
+      ...(p.librarySnapshots as Raw),
+      sheetTemplate: SHEET_TEMPLATE_SEED[0],
+    },
+  }),
 }
 
 export class MigrationError extends Error {}

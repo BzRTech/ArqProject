@@ -4,7 +4,7 @@
   "properties": {
     "schemaVersion": {
       "type": "number",
-      "const": 9
+      "const": 10
     },
     "name": {
       "type": "string",
@@ -28,6 +28,31 @@
             "type": "integer",
             "exclusiveMinimum": 0,
             "maximum": 9007199254740991
+          },
+          "sheet": {
+            "type": "object",
+            "properties": {
+              "paper": {
+                "type": "string",
+                "enum": [
+                  "A4",
+                  "A3",
+                  "A2",
+                  "A1"
+                ]
+              },
+              "orientation": {
+                "type": "string",
+                "enum": [
+                  "landscape",
+                  "portrait"
+                ]
+              }
+            },
+            "required": [
+              "paper",
+              "orientation"
+            ]
           },
           "basePlan": {
             "anyOf": [
@@ -1433,11 +1458,69 @@
             "minClearWidthMm",
             "doorWidthToleranceMm"
           ]
+        },
+        "sheetTemplate": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^[a-z0-9][a-z0-9-]*$"
+            },
+            "version": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "paper": {
+              "type": "string",
+              "enum": [
+                "A4",
+                "A3",
+                "A2",
+                "A1"
+              ]
+            },
+            "orientation": {
+              "type": "string",
+              "enum": [
+                "landscape",
+                "portrait"
+              ]
+            },
+            "marginMm": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "notes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          },
+          "required": [
+            "id",
+            "version",
+            "name",
+            "paper",
+            "orientation",
+            "marginMm",
+            "notes"
+          ]
         }
       },
       "required": [
         "blocks",
-        "rules"
+        "rules",
+        "sheetTemplate"
       ]
     }
   },
@@ -2204,6 +2287,6 @@
       ]
     }
   },
-  "$id": "https://prancheta.local/schema/project.v9.json",
-  "title": "Projeto Prancheta (schema v9)"
+  "$id": "https://prancheta.local/schema/project.v10.json",
+  "title": "Projeto Prancheta (schema v10)"
 }

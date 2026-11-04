@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Memorial — {{ project.name }}</title>
+<style>
+  @font-face { font-family: "Montserrat"; font-weight: 400; src: url("{{ fonts }}/montserrat-latin-400-normal.woff"); }
+  @font-face { font-family: "Montserrat"; font-weight: 600; src: url("{{ fonts }}/montserrat-latin-600-normal.woff"); }
+  @font-face { font-family: "Montserrat"; font-weight: 700; src: url("{{ fonts }}/montserrat-latin-700-normal.woff"); }
+  @font-face { font-family: "Instrument Serif"; font-weight: 400; src: url("{{ fonts }}/instrument-serif-latin-400-normal.woff"); }
+  @page {
+    size: A4 portrait;
+    margin: 18mm 14mm 20mm 20mm;
+    @bottom-left { content: element(footer); }
+    @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 7pt "Montserrat"; color: #8a857c; }
+  }
+  * { box-sizing: border-box; }
+  .footer { position: running(footer); font-size: 7pt; color: #8a857c; }
+  body { font-family: "Montserrat", sans-serif; font-size: 8.5pt; color: #1c1b19; margin: 0; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 6mm; border-bottom: 1.2pt solid {{ accent }}; margin-bottom: 6mm; }
+  .brand img { max-height: 16mm; max-width: 60mm; }
+  .brand .name { font-weight: 700; font-size: 11pt; }
+  .brand .contacts { color: #4a4741; font-size: 7.5pt; margin-top: 1.5mm; line-height: 1.5; }
+  .doc { text-align: right; }
+  .eyebrow { font-size: 7pt; letter-spacing: .12em; text-transform: uppercase; color: #8a857c; }
+  h1 { font-family: "Instrument Serif", serif; font-weight: 400; font-size: 26pt; line-height: 1; margin: 2mm 0 1mm; }
+  .meta { color: #4a4741; font-size: 8pt; }
+  h2 { font-family: "Instrument Serif", serif; font-weight: 400; font-size: 17pt; margin: 7mm 0 2mm; break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 6.5pt; letter-spacing: .08em; text-transform: uppercase; color: #8a857c; font-weight: 600; text-align: left; padding: 1.5mm 2mm; border-bottom: .6pt solid #cfc9be; }
+  tr.group td { font-weight: 600; font-size: 7.5pt; padding: 3mm 2mm 1mm; color: {{ accent }}; border-bottom: .4pt solid #e3ded5; }
+  tbody td { padding: 1.6mm 2mm; vertical-align: top; border-bottom: .4pt solid #efece6; }
+  tr { break-inside: avoid; }
+  .marker { width: 11mm; font-weight: 700; }
+  .marker span { display: inline-block; min-width: 6mm; text-align: center; border: .6pt solid #1c1b19; border-radius: 3mm; padding: .2mm 1mm; font-size: 7pt; }
+  .marker span.tag { border-radius: .8mm; }
+  .item .spec { color: #4a4741; font-size: 7.5pt; margin-top: .6mm; }
+  .num { text-align: right; white-space: nowrap; }
+  .ok { color: #4f5a47; font-weight: 600; }
+  tfoot td { padding: 2mm; font-weight: 600; text-align: right; border-top: .8pt solid #1c1b19; }
+  .grand { margin-top: 8mm; padding: 3mm 4mm; border: 1pt solid {{ accent }}; display: flex; justify-content: space-between; font-size: 10pt; font-weight: 700; break-inside: avoid; }
+  .note { margin-top: 5mm; color: #8a857c; font-size: 7pt; line-height: 1.5; }
+  .empty { margin-top: 10mm; color: #4a4741; }
+</style>
+</head>
+<body>
+<div class="footer">{{ org.name }}{% if contacts %} · {{ contacts|join:" · " }}{% endif %}</div>
+<header>
+  <div class="brand">
+    {% if logo %}<img src="{{ logo }}" alt="">{% endif %}
+    <div class="name">{{ org.name }}</div>
+    {% if contacts %}<div class="contacts">{{ contacts|join:" · " }}</div>{% endif %}
+  </div>
+  <div class="doc">
+    <div class="eyebrow">Memorial descritivo</div>
+    <h1>{{ project.name }}</h1>
+    <div class="meta">{% if project.client_name %}Cliente: {{ project.client_name }} · {% endif %}{{ date }} · revisão {{ project.revision }}</div>
+  </div>
+</header>
+
+{% if empty %}
+  <p class="empty">Ainda não há itens neste projeto. Abra o projeto no editor, insira os itens e baixe o memorial de novo.</p>
+{% endif %}
+
+{% for env in environments %}
+  <h2>{{ env.name }}</h2>
+  <table>
+    <thead>
+      <tr><th>Nº</th><th>Item e especificação</th><th>Fornecedor</th><th class="num">Qtd</th><th class="num">Unitário</th><th class="num">Total</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for g in env.groups %}
+        <tr class="group"><td colspan="7">{{ g.label }}</td></tr>
+        {% for l in g.lines %}
+          <tr>
+            <td class="marker">{% if l.marker %}<span class="{% if l.marker.0 == 'M' or l.marker.0 == 'P' %}tag{% endif %}">{{ l.marker }}</span>{% endif %}</td>
+            <td class="item">{{ l.name }}{% if l.spec %}<div class="spec">{{ l.spec }}</div>{% endif %}</td>
+            <td>{{ l.supplier }}</td>
+            <td class="num">{{ l.qty }}</td>
+            <td class="num">{{ l.unit_price }}</td>
+            <td class="num">{{ l.total }}</td>
+            <td class="ok">{% if l.approved %}✓{% endif %}</td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+    <tfoot><tr><td colspan="6">Total do ambiente {{ env.total }}</td><td></td></tr></tfoot>
+  </table>
+{% endfor %}
+
+{% if not empty %}
+  <div class="grand"><span>Total do projeto</span><span>{{ grand_total }}</span></div>
+  <p class="note">✓ = item aprovado pelo cliente. Valores de referência, sujeitos a confirmação do fornecedor. Itens existentes no local não entram nos totais. Medidas e quantidades devem ser conferidas no local antes da compra e da execução.</p>
+{% endif %}
+</body>
+</html>

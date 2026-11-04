@@ -7,40 +7,60 @@ import { toMarkup } from '@/render/svg/markup'
 import { primitivesToSvg } from '@/render/svg/primitives-to-svg'
 import { getAsset } from './persistence'
 import { currentRuleProfile } from './rules'
+import { useSheetBrand } from '@/features/brand/sheet-brand'
 
-/** Uma prancha A3 por ambiente com conteúdo; escala automática (maior que couber). */
+/** Prancha escolhida: a do ambiente (sem `itemId`) ou a de detalhe de um móvel. */
+export interface SheetRef {
+  envId: string
+  itemId?: string
+}
+
+/**
+ * Pranchas em PDF: uma por ambiente com conteúdo e uma de detalhe por móvel detalhado (ou só
+ * a escolhida em `only`). Folha e escala de cada uma como na tela; carimbo com a marca.
+ */
 export async function exportProjectPdf(
   project: Project,
-  options: { humanized?: boolean } = {},
+  options: { humanized?: boolean; only?: SheetRef } = {},
 ): Promise<{ pages: number; scales: number[] }> {
   await registerWebFonts()
   const date = new Date().toLocaleDateString('pt-BR')
+  const brand = useSheetBrand.getState().brand
+  const only = options.only
   const envs = project.environments.filter((e) => e.items.length || e.drawings.length || e.basePlan)
-  const list = envs.length ? envs : project.environments.slice(0, 1)
+  const list = only
+    ? project.environments.filter((e) => e.id === only.envId)
+    : envs.length
+      ? envs
+      : project.environments.slice(0, 1)
   const pages = []
   const scales: number[] = []
   for (const env of list) {
     const href = env.basePlan?.visible ? await getAsset(env.basePlan.assetId) : undefined
+    const wantPlan = !only || !only.itemId
     const sheet = environmentSheet(project, env, {
       dateText: date,
+      brand,
       basePlanHref: href,
       humanized: options.humanized,
       rules: currentRuleProfile(),
     })
-    scales.push(sheet.scale)
-    pages.push({
-      svgMarkup: toMarkup(
-        primitivesToSvg(sheet.primitives, {
-          widthMm: sheet.widthMm,
-          heightMm: sheet.heightMm,
-          background: '#ffffff',
-        }),
-      ),
-      widthMm: sheet.widthMm,
-      heightMm: sheet.heightMm,
-    })
+    if (wantPlan) scales.push(sheet.scale)
+    if (wantPlan)
+      pages.push({
+        svgMarkup: toMarkup(
+          primitivesToSvg(sheet.primitives, {
+            widthMm: sheet.widthMm,
+            heightMm: sheet.heightMm,
+            background: '#ffffff',
+          }),
+        ),
+        widthMm: sheet.widthMm,
+        heightMm: sheet.heightMm,
+      })
     for (const item of env.items) {
-      const d = joinerySheet(project, env, item, currentRuleProfile(), { dateText: date })
+      if (only && only.itemId !== item.id) continue
+      const d = joinerySheet(project, env, item, currentRuleProfile(), { dateText: date, brand })
       if (!d) continue
       scales.push(d.scale)
       pages.push({
@@ -63,6 +83,7 @@ export async function exportProjectPdf(
       .replace(/[^\w]+/g, '-')
       .replace(/^-|-$/g, '')
       .toLowerCase() || 'projeto'
-  doc.save(`${slug}.pdf`)
+  const suffix = only ? `-${only.itemId ? 'detalhe' : 'prancha'}` : ''
+  doc.save(`${slug}${suffix}.pdf`)
   return { pages: pages.length, scales }
 }

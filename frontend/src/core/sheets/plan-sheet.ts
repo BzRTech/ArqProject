@@ -33,6 +33,8 @@ export interface PlanSheetInput {
   legendTitle?: string
   /** Escalas candidatas (padrão: as da planta). */
   scales?: readonly number[]
+  /** Captura sem escala, ajustada à área da vista preservando a proporção. */
+  image?: { href: string; aspect: number }
 }
 
 export interface SheetBrand {
@@ -297,7 +299,15 @@ function stampEntities(
       ny += 2.7
     }
   out.push(t(scaleX + 3, box.y + 6, 'ESCALA', 2))
-  out.push(t(scaleX + 3, box.y + 13, `1:${scale}`, 4, true))
+  out.push(
+    t(
+      scaleX + 3,
+      box.y + 13,
+      input.image ? 'SEM ESCALA' : `1:${scale}`,
+      input.image ? 2.7 : 4,
+      true,
+    ),
+  )
   out.push(t(scaleX + 3, box.y + 20, `FOLHA ${format}`, 2))
   if (input.dateText) out.push(t(scaleX + 3, box.y + 25, input.dateText, 2))
   return out
@@ -324,7 +334,7 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
   const sy = frame.y + frame.h - STAMP_H
   // Escala gráfica ao lado do carimbo, se couber; senão logo acima dele.
   const scaleBeside = sx - frame.x >= 105
-  const scaleBandH = scaleBeside ? 0 : 12
+  const scaleBandH = input.image || scaleBeside ? 0 : 12
 
   const pad = 8
   const lines = input.legend ?? []
@@ -349,6 +359,19 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     [...(input.scales ?? STANDARD_SCALES)].sort((a, b) => a - b).find(fits) ??
     Math.max(...(input.scales ?? STANDARD_SCALES))
   const entities = input.build(scale)
+  if (input.image) {
+    const aspect = Math.max(0.001, input.image.aspect)
+    const w = Math.min(area.w, area.h * aspect)
+    const h = w / aspect
+    entities.push({
+      kind: 'image',
+      href: input.image.href,
+      x: (area.w - w) / 2,
+      y: (area.h - h) / 2,
+      width: w,
+      height: h,
+    })
+  }
   const bbox = entitiesBBox(entities, scale)
   const bb = isEmpty(bbox) ? { minX: 0, minY: 0, maxX: 0, maxY: 0 } : expand(bbox, 0)
   const origin = vec(
@@ -390,11 +413,15 @@ export function buildPlanSheet(input: PlanSheetInput): PlanSheet {
     primitives: [
       ...compileView(paperEntities, PAPER_VIEW),
       { kind: 'group', role: 'vista', children: compileView(entities, { scale, origin }) },
-      graphicScale({
-        at: scaleBeside ? vec(frame.x + 7, sy + 14) : vec(frame.x + 7, sy - 8),
-        scale,
-        meters,
-      }),
+      ...(!input.image
+        ? [
+            graphicScale({
+              at: scaleBeside ? vec(frame.x + 7, sy + 14) : vec(frame.x + 7, sy - 8),
+              scale,
+              meters,
+            }),
+          ]
+        : []),
       ...(hasLegend
         ? [
             {

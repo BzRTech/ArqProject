@@ -145,7 +145,10 @@ function ImportButtons({ onDone }: { onDone: (r: ImportResult) => void }) {
     setError(undefined)
     fn()
       .then((r) => {
-        if (r.missing) window.alert(`${r.missing} planta(s) base não estavam neste navegador.`)
+        if (r.missing)
+          window.alert(
+            `${r.missing} arquivo(s) de planta ou perspectiva não estavam neste navegador.`,
+          )
         onDone(r)
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)))

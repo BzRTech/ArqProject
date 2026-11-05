@@ -1,5 +1,6 @@
 import { joinerySheet } from '@/core/joinery/sheet'
 import { environmentSheet } from '@/core/project/env-sheet'
+import { perspectiveSheet } from '@/core/project/perspective-sheet'
 import type { Project } from '@/core/project/schema'
 import { svgPagesToPdf } from '@/render/pdf/exportPdf'
 import { loadPdfFonts, registerWebFonts } from '@/render/pdf/fonts'
@@ -13,6 +14,7 @@ import { useSheetBrand } from '@/features/brand/sheet-brand'
 export interface SheetRef {
   envId: string
   itemId?: string
+  perspectiveId?: string
 }
 
 /**
@@ -27,7 +29,9 @@ export async function exportProjectPdf(
   const date = new Date().toLocaleDateString('pt-BR')
   const brand = useSheetBrand.getState().brand
   const only = options.only
-  const envs = project.environments.filter((e) => e.items.length || e.drawings.length || e.basePlan)
+  const envs = project.environments.filter(
+    (e) => e.items.length || e.drawings.length || e.basePlan || e.perspectives?.length,
+  )
   const list = only
     ? project.environments.filter((e) => e.id === only.envId)
     : envs.length
@@ -37,7 +41,7 @@ export async function exportProjectPdf(
   const scales: number[] = []
   for (const env of list) {
     const href = env.basePlan?.visible ? await getAsset(env.basePlan.assetId) : undefined
-    const wantPlan = !only || !only.itemId
+    const wantPlan = !only || (!only.itemId && !only.perspectiveId)
     const sheet = environmentSheet(project, env, {
       dateText: date,
       brand,
@@ -75,6 +79,26 @@ export async function exportProjectPdf(
         heightMm: d.heightMm,
       })
     }
+    for (const perspective of env.perspectives ?? []) {
+      if (only && only.perspectiveId !== perspective.id) continue
+      const image = await getAsset(perspective.assetId)
+      if (!image)
+        throw new Error(
+          `A captura "${perspective.title}" não está disponível. Reabra o projeto com conexão ou faça uma nova captura.`,
+        )
+      const d = perspectiveSheet(project, env, perspective, image, { dateText: date, brand })
+      pages.push({
+        svgMarkup: toMarkup(
+          primitivesToSvg(d.primitives, {
+            widthMm: d.widthMm,
+            heightMm: d.heightMm,
+            background: '#ffffff',
+          }),
+        ),
+        widthMm: d.widthMm,
+        heightMm: d.heightMm,
+      })
+    }
   }
   const doc = await svgPagesToPdf(pages, await loadPdfFonts())
   const slug =
@@ -83,7 +107,9 @@ export async function exportProjectPdf(
       .replace(/[^\w]+/g, '-')
       .replace(/^-|-$/g, '')
       .toLowerCase() || 'projeto'
-  const suffix = only ? `-${only.itemId ? 'detalhe' : 'prancha'}` : ''
+  const suffix = only
+    ? `-${only.perspectiveId ? 'perspectiva' : only.itemId ? 'detalhe' : 'prancha'}`
+    : ''
   doc.save(`${slug}${suffix}.pdf`)
   return { pages: pages.length, scales }
 }

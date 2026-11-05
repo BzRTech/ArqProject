@@ -29,6 +29,7 @@ import {
   type Opening,
   type OpeningType,
   type Project,
+  type Perspective,
   type SheetSetup,
   type Wall,
 } from '@/core/project/schema'
@@ -75,6 +76,12 @@ export interface EditorState {
   tool: Tool
   /** Aba de trabalho do ambiente (Planta, Layout, Piso, Marcenaria, Pranchas). */
   stage: Stage
+  /** Captura aberta na aba Pranchas (estado de navegação, fora do documento). */
+  perspectiveId: string | null
+  openPerspective: (envId: string, id: string) => void
+  addPerspective: (envId: string, view: Perspective) => void
+  renamePerspective: (id: string, title: string) => void
+  removePerspective: (id: string) => void
   /** Móvel de marcenaria aberto no detalhamento (vistas no lugar da planta). */
   detailItemId: string | null
   /** Abre o detalhamento (cria o desenho inicial se o móvel ainda não tiver). */
@@ -194,6 +201,37 @@ export const useEditor = create<EditorState>()(
         tool: 'select',
         stage: 'planta',
         detailItemId: null,
+        perspectiveId: null,
+        openPerspective: (envId, id) =>
+          set((s) => {
+            if (
+              !s.project.environments
+                .find((e) => e.id === envId)
+                ?.perspectives?.some((v) => v.id === id)
+            )
+              return
+            s.activeEnvId = envId
+            s.perspectiveId = id
+            s.detailItemId = null
+            s.stage = 'pranchas'
+            setSel(s, null)
+          }),
+        addPerspective: (envId, view) =>
+          set((s) => {
+            const e = s.project.environments.find((e) => e.id === envId)
+            if (e) (e.perspectives ??= []).push(view)
+          }),
+        renamePerspective: (id, title) =>
+          set((s) => {
+            const v = env(s).perspectives?.find((v) => v.id === id)
+            if (v && title.trim()) v.title = title.trim().slice(0, 120)
+          }),
+        removePerspective: (id) =>
+          set((s) => {
+            const e = env(s)
+            e.perspectives = e.perspectives?.filter((v) => v.id !== id)
+            if (s.perspectiveId === id) s.perspectiveId = null
+          }),
         placeBlockId: null,
         placeOpeningType: null,
         wallThicknessMm: 150,
@@ -206,6 +244,7 @@ export const useEditor = create<EditorState>()(
             if (!it) return
             const j = it.joinery ?? { finishes: {}, grain: 'vertical' as const }
             if (!j.design) it.joinery = { ...j, design: defaultDesign(it, joineryTypeOf(it)) }
+            s.perspectiveId = null
             s.detailItemId = itemId
             setSel(s, { kind: 'item', id: itemId })
           }),
@@ -251,6 +290,7 @@ export const useEditor = create<EditorState>()(
         setStage: (stage) =>
           set((s) => {
             s.stage = stage
+            s.perspectiveId = null
             s.detailItemId = null
             s.tool = 'select'
             s.placeBlockId = null
@@ -340,6 +380,7 @@ export const useEditor = create<EditorState>()(
         setActiveEnv: (id) =>
           set((s) => {
             s.activeEnvId = id
+            s.perspectiveId = null
             s.detailItemId = null
             setSel(s, null)
           }),
@@ -347,6 +388,8 @@ export const useEditor = create<EditorState>()(
         loadProject: (p) =>
           set((s) => {
             setSnapshots(Object.values(p.librarySnapshots.blocks))
+            s.perspectiveId = null
+            s.detailItemId = null
             s.project = p
             s.activeEnvId = p.environments[0]!.id
             setSel(s, null)

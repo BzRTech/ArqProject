@@ -6,6 +6,7 @@ import { SceneView } from '@/render/three/SceneView'
 import { selectActiveEnv, useEditor } from './store'
 import { useRuleProfile } from './rules'
 import { useLibrary } from '@/features/library/library-store'
+import { savePerspective } from './save-perspective'
 
 export default function ThreePanel() {
   const env = useEditor(selectActiveEnv)
@@ -18,6 +19,7 @@ export default function ThreePanel() {
   const [reset, setReset] = useState(0)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   const canvas = useRef<HTMLCanvasElement | null>(null)
   const item = env.items.find((it) => it.id === itemId)
   const scene = useMemo((): Scene => {
@@ -108,6 +110,26 @@ export default function ThreePanel() {
         </button>
         <button type="button" disabled={!ready} onClick={() => capture(true)}>
           Prancha de perspectiva (PDF)
+        </button>
+        <button
+          type="button"
+          disabled={!ready || saving}
+          onClick={async () => {
+            if (!canvas.current || saving) return
+            setSaving(true)
+            try {
+              await savePerspective(
+                canvas.current,
+                `${item?.name ?? env.name} · ${open ? 'Aberta' : 'Fechada'}`,
+              )
+            } catch (e) {
+              setError(e instanceof Error ? e.message : 'Não foi possível salvar a perspectiva.')
+            } finally {
+              setSaving(false)
+            }
+          }}
+        >
+          {saving ? 'Salvando perspectiva…' : 'Salvar perspectiva nas pranchas'}
         </button>
       </div>
       {error && <p role="alert">{error}</p>}

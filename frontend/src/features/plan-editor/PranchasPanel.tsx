@@ -1,5 +1,6 @@
 import { FileDown, FileText, ScrollText } from 'lucide-react'
 import { useMemo } from 'react'
+import { useStore } from 'zustand'
 import { Switch } from '@/app/ui/Switch'
 import { environmentLegend, environmentSheet } from '@/core/project/env-sheet'
 import { sheetSetup } from '@/core/project/sheet-setup'
@@ -10,14 +11,20 @@ import { usePdf } from './pdf-action'
 import { useEditorSession } from './session'
 import { SheetSetupFields } from './SheetSetupFields'
 import { useRuleProfile } from './rules'
-import { useEditor } from './store'
+import { redo, undo, useEditor } from './store'
 import { useUnits } from './units-pref'
+import { TextField } from './fields'
+import type { SheetRef } from './export-pdf'
 
 /** Aba Pranchas, à direita: o que sai na folha e o botão de baixar. */
 export function PranchasPanel({ env }: { env: Environment }) {
   const project = useEditor((s) => s.project)
+  const canUndo = useStore(useEditor.temporal, (s) => s.pastStates.length > 0)
+  const canRedo = useStore(useEditor.temporal, (s) => s.futureStates.length > 0)
   const u = useUnits()
   const { busy, run } = usePdf()
+  const perspectiveId = useEditor((st) => st.perspectiveId)
+  const perspective = env.perspectives?.find((v) => v.id === perspectiveId)
   const detailId = useEditor((st) => st.detailItemId)
   const rules = useRuleProfile()
   const detailItem = detailId ? env.items.find((i) => i.id === detailId) : undefined
@@ -50,8 +57,16 @@ export function PranchasPanel({ env }: { env: Environment }) {
         else window.location.href = url
       })
   }
-  const actions = (only: { envId: string; itemId?: string }) => (
+  const actions = (only: SheetRef) => (
     <div className="pranchas-actions">
+      <div className="button-row">
+        <button type="button" disabled={!canUndo} onClick={undo} data-testid="sheet-undo">
+          Desfazer
+        </button>
+        <button type="button" disabled={!canRedo} onClick={redo}>
+          Refazer
+        </button>
+      </div>
       <button
         type="button"
         className="primary"
@@ -79,6 +94,31 @@ export function PranchasPanel({ env }: { env: Environment }) {
       )}
     </div>
   )
+  if (perspective)
+    return (
+      <section data-testid="pranchas-panel">
+        <h2>Perspectiva</h2>
+        <TextField
+          key={perspective.id}
+          label="Título da perspectiva"
+          value={perspective.title}
+          onCommit={(title) => useEditor.getState().renamePerspective(perspective.id, title)}
+        />
+        <p className="muted small">
+          Imagem capturada no 3D, sem escala. Para refletir alterações no modelo, faça uma nova
+          captura.
+        </p>
+        <SheetSetupFields env={env} />
+        {actions({ envId: env.id, perspectiveId: perspective.id })}
+        <button
+          type="button"
+          className="danger"
+          onClick={() => useEditor.getState().removePerspective(perspective.id)}
+        >
+          Excluir perspectiva
+        </button>
+      </section>
+    )
   if (detail && detailItem)
     return (
       <section data-testid="pranchas-panel">

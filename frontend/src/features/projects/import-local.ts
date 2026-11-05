@@ -16,27 +16,38 @@ async function uploadBasePlans(project: Project): Promise<{ project: Project; mi
   let missing = 0
   const environments = []
   for (const env of project.environments) {
-    if (!env.basePlan) {
-      environments.push(env)
-      continue
+    const perspectives = []
+    for (const view of env.perspectives ?? []) {
+      const url = await getAsset(view.assetId)
+      if (!url) {
+        missing++
+        continue
+      }
+      const blob = await dataUrlToBlob(url)
+      const assetId = await uploadAsset(blob, 'perspectiva.png')
+      perspectives.push({ ...view, assetId })
     }
-    const url = await getAsset(env.basePlan.assetId)
-    if (!url) {
-      missing++
-      environments.push({ ...env, basePlan: null })
-      continue
+    let basePlan = env.basePlan
+    if (basePlan) {
+      const url = await getAsset(basePlan.assetId)
+      if (!url) {
+        missing++
+        basePlan = null
+      } else {
+        const blob = await dataUrlToBlob(url)
+        const ext = blob.type.split('/')[1] ?? 'png'
+        const assetId = await uploadAsset(blob, `planta-${env.name}.${ext}`)
+        basePlan = { ...basePlan, assetId }
+      }
     }
-    const blob = await dataUrlToBlob(url)
-    const ext = blob.type.split('/')[1] ?? 'png'
-    const assetId = await uploadAsset(blob, `planta-${env.name}.${ext}`)
-    environments.push({ ...env, basePlan: { ...env.basePlan, assetId } })
+    environments.push({ ...env, basePlan, ...(env.perspectives ? { perspectives } : {}) })
   }
   return { project: { ...project, environments }, missing }
 }
 
 export interface ImportResult {
   id: string
-  /** Plantas base que não estavam neste navegador (ficaram de fora). */
+  /** Arquivos de planta ou perspectiva ausentes neste navegador (ficaram de fora). */
   missing: number
 }
 

@@ -10,6 +10,8 @@ import { ProjectSchema, SCHEMA_VERSION, type Project } from './schema'
 type Raw = Record<string, unknown>
 
 const MIGRATIONS: Record<number, (p: Raw) => Raw> = {
+  // v10 → v11: perspectivas opcionais por ambiente; nenhuma captura é inventada.
+  10: (p) => ({ ...p, schemaVersion: 11 }),
   // v1 → v2: esquadrias viram vãos na parede. A antiga "porta" como bloco solto é removida
   // (não dá para saber em que parede estava); o usuário reinsere como vão.
   1: (p) => ({

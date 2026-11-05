@@ -65,6 +65,19 @@ um dedo gira a vista e dois dedos movem/aproximam.
 Para conferir o catálogo em um teste automatizado de WebKit com tela de iPad, use
 `npx playwright install webkit` e `npx playwright test --config playwright.tablet.config.ts`.
 
+## Perspectivas do 3D nas pranchas
+
+Na aba **3D**, escolha o ambiente ou móvel, ajuste a câmera e clique em
+**Salvar perspectiva nas pranchas**. A captura fica no projeto e pode ser reaberta na aba
+**Pranchas**, renomeada ou excluída; **Desfazer/Refazer** permitem recuperar alterações.
+**Baixar só esta prancha** exporta a perspectiva, enquanto o PDF completo inclui todas as
+capturas. A folha segue a configuração do ambiente (A4–A1), com carimbo e indicação sem escala.
+
+A perspectiva é uma imagem da vista naquele momento. Depois de modificar o modelo, faça uma
+nova captura. No rascunho local, a imagem fica neste navegador; em projetos da conta, vai ao
+armazenamento do escritório. Ao enviar um rascunho para a conta, suas capturas são enviadas junto.
+Texturas fotográficas e render por IA ainda estão pendentes.
+
 ## Subir o ambiente completo
 
 Requer Docker com Compose v2.

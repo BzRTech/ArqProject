@@ -28,7 +28,7 @@ export const usePdf = create<PdfState>()((set) => ({
       })
       set({
         toast: {
-          text: `Planta exportada em PDF · ${r.pages} prancha(s) · escala ${r.scales.map((s) => `1:${s}`).join(', ')}`,
+          text: `Projeto exportado em PDF · ${r.pages} prancha(s) · ${r.scales.length ? `escala ${r.scales.map((s) => `1:${s}`).join(', ')}` : 'sem escala'}`,
         },
       })
     } catch (e) {

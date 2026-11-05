@@ -6,6 +6,7 @@ import { useEditor } from './store'
 export function SheetsPanel() {
   const project = useEditor((s) => s.project)
   const activeId = useEditor((s) => s.activeEnvId)
+  const perspectiveId = useEditor((s) => s.perspectiveId)
   const detailId = useEditor((s) => s.detailItemId)
   const { setActiveEnv, openDetail } = useEditor.getState()
   let n = 0
@@ -15,7 +16,7 @@ export function SheetsPanel() {
       <h2>Pranchas</h2>
       <p className="muted small">
         Uma prancha por ambiente e uma de detalhe por móvel de marcenaria detalhado. Clique para ver
-        cada uma.
+        cada uma. As perspectivas capturadas no 3D também aparecem aqui.
       </p>
       <ul className="list">
         {project.environments.flatMap((e) => {
@@ -24,7 +25,7 @@ export function SheetsPanel() {
             <li key={e.id}>
               <button
                 type="button"
-                className={`list__row ${e.id === activeId && !detailId ? 'is-selected' : ''}`}
+                className={`list__row ${e.id === activeId && !detailId && !perspectiveId ? 'is-selected' : ''}`}
                 onClick={() => setActiveEnv(e.id)}
               >
                 <span>
@@ -60,6 +61,23 @@ export function SheetsPanel() {
                   </button>
                 </li>
               )),
+            ...(e.perspectives ?? []).map((v) => (
+              <li key={v.id}>
+                <button
+                  type="button"
+                  className={`list__row ${perspectiveId === v.id ? 'is-selected' : ''}`}
+                  onClick={() => useEditor.getState().openPerspective(e.id, v.id)}
+                  data-testid={`sheet-perspective-${v.id}`}
+                >
+                  <span>
+                    <strong>
+                      <FileText size={13} strokeWidth={1.5} /> Prancha {num()}
+                    </strong>
+                    <span className="small muted">{v.title} · perspectiva</span>
+                  </span>
+                </button>
+              </li>
+            )),
           ]
         })}
       </ul>

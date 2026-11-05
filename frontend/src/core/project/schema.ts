@@ -10,12 +10,12 @@ import {
 import { SHEET_TEMPLATE_SEED } from '../library/seed'
 
 /**
- * Documento do projeto (formato v10 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
+ * Documento do projeto (formato v11 — versões antigas são migradas em `migrations.ts`). Fonte única da verdade: na Fase 2 este schema é
  * exportado como JSON Schema para o Django validar o JSONB.
  * Todas as medidas em MILÍMETROS INTEIROS.
  */
 
-export const SCHEMA_VERSION = 10
+export const SCHEMA_VERSION = 11
 
 const mm = z.number().int()
 const positiveMm = mm.positive()
@@ -295,6 +295,18 @@ export const EnvironmentSchema = z.object({
   drawings: z.array(DrawingSchema),
   openings: z.array(OpeningSchema),
   items: z.array(ItemSchema),
+  /** Capturas independentes do estado atual do modelo; arquivos no navegador/S3. */
+  perspectives: z
+    .array(
+      z.object({
+        id,
+        title: z.string().trim().min(1).max(120),
+        assetId: id,
+        widthPx: z.number().int().positive(),
+        heightPx: z.number().int().positive(),
+      }),
+    )
+    .optional(),
 })
 
 /**
@@ -334,6 +346,7 @@ export type Drawing = z.infer<typeof DrawingSchema>
 export type Item = z.infer<typeof ItemSchema>
 export type BasePlan = z.infer<typeof BasePlanSchema>
 export type Environment = z.infer<typeof EnvironmentSchema>
+export type Perspective = NonNullable<Environment['perspectives']>[number]
 export type Project = z.infer<typeof ProjectSchema>
 export type LibrarySnapshots = z.infer<typeof LibrarySnapshotsSchema>
 export type SheetSetup = z.infer<typeof SheetSetupSchema>

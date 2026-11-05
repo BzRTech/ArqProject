@@ -634,12 +634,13 @@ export function PropertiesPanel() {
   const drawing =
     selection?.kind === 'drawing' ? env.drawings.find((d) => d.id === selection.id) : undefined
   const stage = useEditor((s) => s.stage)
+  const perspectiveId = useEditor((s) => s.perspectiveId)
   const nothing = !many && !item && !drawing && !opening
   // Pranchas só mostra a folha: o painel é sempre o da prancha (nada se edita aqui).
   if (stage === 'pranchas')
     return (
       <aside className="panel panel--props" data-testid="properties">
-        <StageChecklist />
+        {!env.perspectives?.some((v) => v.id === perspectiveId) && <StageChecklist />}
         <PranchasPanel env={env} />
       </aside>
     )

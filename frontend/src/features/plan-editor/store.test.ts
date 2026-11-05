@@ -6,6 +6,25 @@ import { clearHistory, newId, redo, selectActiveEnv, undo, useEditor } from './s
 const S = () => useEditor.getState()
 const env = () => selectActiveEnv(S())
 
+describe('perspectivas', () => {
+  it('renomeia, remove e desfaz preservando a referência ao arquivo', () => {
+    const view = { id: 'v1', title: 'Sala', assetId: 'a1', widthPx: 1600, heightPx: 900 }
+    S().addPerspective('env-1', view)
+    S().openPerspective('env-1', 'v1')
+    expect(S().stage).toBe('pranchas')
+    expect(S().perspectiveId).toBe('v1')
+    S().renamePerspective('v1', '  Vista aberta  ')
+    expect(env().perspectives?.[0]?.title).toBe('Vista aberta')
+    S().removePerspective('v1')
+    expect(env().perspectives).toEqual([])
+    undo()
+    expect(env().perspectives?.[0]).toEqual({ ...view, title: 'Vista aberta' })
+    expect(ProjectSchema.safeParse(S().project).success).toBe(true)
+    S().setActiveEnv('env-1')
+    expect(S().perspectiveId).toBeNull()
+  })
+})
+
 beforeEach(() => {
   S().loadProject(newProject('env-1'))
   clearHistory()

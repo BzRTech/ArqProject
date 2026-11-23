@@ -12,6 +12,7 @@ backend/media/
 node_modules/
 frontend/dist/
 frontend/test-results/
+frontend/test-results-*/
 frontend/playwright-report/
 frontend/src/spikes/__out__/
 

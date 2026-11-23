@@ -18,7 +18,7 @@ abaixo).
 ```bash
 git clone https://github.com/BzRTech/ArqProject.git
 cd ArqProject
-git checkout fase-editor-blocos      # (ou main, depois que os PRs forem mesclados)
+git checkout main
 cd frontend
 npm ci
 npm run dev
@@ -39,7 +39,7 @@ Use **`npm ci`** (e não `npm install`): ele instala exatamente as versões do p
 `package-lock.json`. Se um `git pull` reclamar que esse arquivo "would be overwritten", descarte a
 alteração local com `git checkout -- frontend/package-lock.json` e repita o `git pull`.
 
-Sem Git: no GitHub, escolha a branch `fase-editor-blocos` → **Code → Download ZIP**, descompacte
+Sem Git: no GitHub, escolha a branch `main` → **Code → Download ZIP**, descompacte
 e rode os mesmos comandos a partir da pasta `frontend`.
 
 ## Testar no iPad pela rede local

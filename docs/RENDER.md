@@ -1,13 +1,16 @@
 # Ambiente de testes no Render
 
-O Blueprint `render.yaml` cria um serviço Docker (frontend compilado + Django/Gunicorn
-no mesmo domínio) e PostgreSQL 16. O bucket S3/R2 deve existir previamente e ser privado.
+O Blueprint `render.yaml` cria um serviço Docker gratuito (frontend compilado + Django/Gunicorn
+no mesmo domínio). O banco PostgreSQL fica no Neon Free, conectado por `DATABASE_URL`.
+O bucket S3/R2 deve existir previamente e ser privado.
 Uploads não dependem do disco temporário do Render. Redis não é necessário no fluxo atual.
 
 ## Antes de publicar
 
-- Revisar os custos exibidos pelo Render: o arquivo usa Web Starter e Postgres Basic 256 MB.
-  Nenhum recurso é criado apenas por commitar o arquivo. Deploy automático está desligado.
+- O arquivo usa Render Free e não cria banco no Render. Criar o projeto no Neon Free,
+  preferencialmente na mesma região do serviço (Virginia), e copiar a string de conexão
+  completa, incluindo `sslmode=require`, diretamente para `DATABASE_URL` no Render.
+  Não retirar parâmetros SSL fornecidos pelo Neon. Deploy automático está desligado.
 - Usar bucket e banco próprios de homologação. Não copiar documentos de clientes sem necessidade.
 - Fornecer as credenciais do bucket diretamente no painel de variáveis do Render, nunca no Git.
 - S3/R2 deve permitir leitura, gravação e consulta de objetos no bucket; não precisa de
@@ -16,8 +19,10 @@ Uploads não dependem do disco temporário do Render. Redis não é necessário 
 ## Publicação
 
 1. Render → New → Blueprint → conectar `BzRTech/ArqProject` e selecionar a branch da entrega.
-2. Revisar serviço, banco, região e preço antes de confirmar a criação.
-3. Preencher `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_REGION`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`.
+2. Confirmar plano Free e região. O banco é externo: não criar Render Postgres.
+3. Preencher `DATABASE_URL` do Neon, `S3_BUCKET`, `S3_ENDPOINT_URL`, `S3_REGION`,
+   `S3_ACCESS_KEY`, `S3_SECRET_KEY`. Definir `S3_KEY_PREFIX` com a pasta do bucket,
+   inicialmente `prancheta/testes`, sem incluir o nome do bucket.
    Para R2: endpoint da API S3 `https://<account-id>.r2.cloudflarestorage.com` e região `auto`.
    Para AWS: endpoint regional S3 e região do bucket. Não usar o domínio público de arquivos.
 4. Configurar CORS do bucket com a origem HTTPS exata do serviço Render. Exemplo S3 abaixo;
@@ -41,6 +46,12 @@ Uploads não dependem do disco temporário do Render. Redis não é necessário 
 Não definir `S3_PUBLIC_ENDPOINT_URL=same-origin` em produção: isso só funciona com o proxy
 Vite local. Quando não definida, o navegador usa o endpoint S3 configurado, com URLs assinadas.
 
+Exemplo de organização: `s3://SEU-BUCKET/prancheta/testes/orgs/<escritorio>/assets/<id>/<arquivo>`.
+A pasta é um prefixo S3 e aparece no primeiro upload, sem precisar criá-la manualmente.
+Credenciais podem ser limitadas a esse prefixo. Alterar o prefixo depois só afeta novos uploads;
+arquivos anteriores continuam sendo acessados pela chave salva no banco e precisam manter
+suas permissões. CORS é configurado no bucket, não na pasta. S3 tem cobrança própria conforme uso.
+
 ## Contas de teste
 
 Cadastro começa fechado (`ALLOW_SIGNUP=false`); convites ainda não foram implementados.
@@ -63,8 +74,12 @@ O build de produção não expõe `window.__editor`; os testes E2E que criam fix
 objeto continuam sendo executados no ambiente de desenvolvimento. A publicação requer
 smoke test pela interface e pelos endpoints reais.
 
-O plano gratuito pode servir para demonstração temporária, mas o Postgres gratuito expira
-após 30 dias e o serviço web pode hibernar. Por isso o Blueprint não usa esse plano por padrão.
+Render Free hiberna após 15 minutos sem tráfego; o primeiro acesso pode levar cerca de um
+minuto para despertar. Neon Free também pode suspender compute ocioso e possui limites próprios.
+As verificações de conexão recuperam conexões antigas e cursores no servidor estão desativados
+para compatibilidade com o endpoint pooled do Neon. Dados ficam no Neon/S3, não no disco do Render.
+O limite de 30 dias do Render Postgres Free não se aplica a esta arquitetura, que não o utiliza.
 
 Fontes: [Render Django](https://render.com/docs/deploy-django),
-[Blueprint](https://render.com/docs/blueprint-spec), [limites gratuitos](https://render.com/docs/free).
+[Blueprint](https://render.com/docs/blueprint-spec), [limites gratuitos](https://render.com/docs/free),
+[Neon e Django](https://neon.com/docs/guides/django).

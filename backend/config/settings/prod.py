@@ -17,6 +17,9 @@ SECURE_SSL_REDIRECT = True
 SECURE_REDIRECT_EXEMPT = [r"^api/health/$"]
 SECURE_HSTS_SECONDS = 3600
 ALLOW_SIGNUP = env_bool("ALLOW_SIGNUP", False)  # noqa: F405
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True  # noqa: F405
+# Neon also offers a PgBouncer transaction-pooling endpoint.
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True  # noqa: F405
 
 render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
 if render_host:

@@ -40,6 +40,20 @@ def test_presign_valida_tipo_e_tamanho(client_a):
     assert Asset.objects.count() == 0
 
 
+def test_prefixo_assina_upload_e_preserva_download_apos_mudar_pasta(client_a, org_a, settings):
+    settings.S3_KEY_PREFIX = "/prancheta/testes/"
+    response = presign(client_a)
+    assert response.status_code == 201
+    asset = Asset.objects.get(pk=response.data["asset"]["id"])
+    assert asset.key.startswith(f"prancheta/testes/orgs/{org_a.pk}/assets/")
+    assert urlparse(response.data["upload_url"]).path == f"/prancheta/{asset.key}"
+    settings.S3_KEY_PREFIX = "outra-pasta"
+    with patch(HEAD, _ok_head(1234)):
+        completed = client_a.post(f"/api/assets/{asset.pk}/complete/")
+    assert completed.status_code == 200
+    assert urlparse(completed.data["url"]).path == f"/prancheta/{asset.key}"
+
+
 HEAD = "apps.assets.services.head_object"
 
 

@@ -100,6 +100,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- Armazenamento de arquivos (S3 / MinIO) ---------------------------------
 AWS_STORAGE_BUCKET_NAME = os.environ.get("S3_BUCKET", "prancheta")
+S3_KEY_PREFIX = os.environ.get("S3_KEY_PREFIX", "").strip().strip("/")
 AWS_S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL") or None
 AWS_S3_CUSTOM_DOMAIN = os.environ.get("S3_PUBLIC_DOMAIN") or None
 AWS_S3_URL_PROTOCOL = os.environ.get("S3_PUBLIC_PROTOCOL", "https:")

@@ -49,6 +49,9 @@ def create_upload(
         raise AssetError("O arquivo deve ter até 25 MB.")
     asset_id = uuid.uuid4()
     key = f"orgs/{organization.pk}/assets/{asset_id}/{safe_filename(filename)}"
+    prefix = settings.S3_KEY_PREFIX.strip().strip("/")
+    if prefix:
+        key = f"{prefix}/{key}"
     asset = Asset.objects.create(
         id=asset_id,
         organization=organization,

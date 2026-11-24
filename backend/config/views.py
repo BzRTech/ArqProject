@@ -1,10 +1,24 @@
+from django.conf import settings
 from django.db import connection
+from django.http import FileResponse, Http404
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_safe
 from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.request import Request
 from rest_framework.response import Response
+
+
+@require_safe
+@never_cache
+def frontend(request):
+    """Serve the compiled SPA entrypoint; API/static misses must remain real 404s."""
+    directory = getattr(settings, "FRONTEND_DIST", None)
+    if directory is None or not (directory / "index.html").is_file():
+        raise Http404("Frontend não compilado neste ambiente.")
+    return FileResponse((directory / "index.html").open("rb"), content_type="text/html")
 
 
 @extend_schema(

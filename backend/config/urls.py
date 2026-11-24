@@ -1,9 +1,9 @@
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from apps.accounts.urls import auth_urls, org_urls
-from config.views import health
+from config.views import frontend, health
 
 api_patterns = [
     path("health/", health, name="health"),
@@ -19,4 +19,9 @@ api_patterns = [
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(api_patterns)),
+    re_path(
+        r"^(?:entrar|editor|escritorio|banco|projetos(?:/[0-9a-f-]{36})?|dev/primitivas|spikes/3d)?/?$",
+        frontend,
+        name="frontend",
+    ),
 ]

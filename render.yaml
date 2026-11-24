@@ -1,0 +1,40 @@
+# Paid, persistent testing environment. Review costs before creating this Blueprint.
+services:
+  - type: web
+    name: prancheta-testes
+    runtime: docker
+    plan: starter
+    region: virginia
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health/
+    autoDeployTrigger: "off"
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: prancheta-testes-db
+          property: connectionString
+      - key: ALLOW_SIGNUP
+        value: "false"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ENDPOINT_URL
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+databases:
+  - name: prancheta-testes-db
+    plan: basic-256mb
+    region: virginia
+    postgresMajorVersion: "16"
+    databaseName: prancheta
+    user: prancheta
+    ipAllowList: []

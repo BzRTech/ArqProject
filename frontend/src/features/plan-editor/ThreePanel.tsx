@@ -15,7 +15,7 @@ export default function ThreePanel() {
   const joineryTypes = useLibrary((s) => s.lib['joinery-types'])
   const [itemId, setItemId] = useState('')
   const [open, setOpen] = useState(false)
-  const [walls, setWalls] = useState(true)
+  const [walls, setWalls] = useState(false)
   const [reset, setReset] = useState(0)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState('')
@@ -146,6 +146,9 @@ export default function ThreePanel() {
         />
       </div>
       <p className="three-panel__hint">
+        {!item &&
+          !walls &&
+          'Paredes ocultas para visualizar o interior. Ative “Paredes e pilares” para exibi-las. '}
         <span className="mouse-help">
           Arraste para girar · botão direito para mover · roda para aproximar.{' '}
         </span>

@@ -7,6 +7,7 @@ memorial em PDF.
 - Plano completo: [`docs/PLANO.md`](docs/PLANO.md)
 - Regras para quem desenvolve (inclusive o Claude Code): [`CLAUDE.md`](CLAUDE.md)
 - Decisões de arquitetura: [`docs/adr/`](docs/adr/)
+- Hospedagem de testes no Render: [`docs/RENDER.md`](docs/RENDER.md)
 
 ## Testar na sua máquina (só o editor, sem Docker)
 

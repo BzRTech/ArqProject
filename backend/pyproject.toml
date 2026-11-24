@@ -15,6 +15,7 @@ dependencies = [
     "boto3>=1.35",
     "openpyxl>=3.1",
     "weasyprint>=66",
+    "whitenoise>=6.12,<7",
 ]
 
 [dependency-groups]
